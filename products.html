@@ -261,8 +261,6 @@
     }
 </script>
 
-
-
 <!-- =========================
      نافذة تفاصيل المنتج
 ========================= -->
@@ -272,7 +270,7 @@
     <div class="product-modal-box">
 
         <button
-            class="product-modal-close"
+            class="modal-close"
             onclick="closeProductModal()"
         >
             ×
@@ -281,48 +279,68 @@
         <div
             id="modalProductImage"
             class="modal-product-image"
-        ></div>
+        >
+        </div>
 
         <div class="modal-product-content">
 
             <div
                 id="modalProductType"
                 class="modal-product-type"
-            ></div>
+            >
+            </div>
 
             <h2 id="modalProductName">
-                اسم المنتج
+                المنتج
             </h2>
 
             <p
                 id="modalProductCompany"
-                class="modal-company"
-            ></p>
+                class="modal-info"
+            >
+            </p>
 
             <p
                 id="modalProductDescription"
                 class="modal-description"
-            ></p>
+            >
+            </p>
 
-            <div
-                id="modalProductDetails"
-                class="modal-details"
-            ></div>
 
-            <div
-                id="modalColors"
-                class="modal-options"
-            ></div>
+            <div class="modal-section">
 
-            <div
-                id="modalModels"
-                class="modal-options"
-            ></div>
+                <strong>
+                    🎨 الألوان المتوفرة
+                </strong>
+
+                <div
+                    id="modalColors"
+                    class="modal-options"
+                >
+                </div>
+
+            </div>
+
+
+            <div class="modal-section">
+
+                <strong>
+                    📱 الموديلات المتوفرة
+                </strong>
+
+                <div
+                    id="modalModels"
+                    class="modal-options"
+                >
+                </div>
+
+            </div>
+
 
             <div class="modal-bottom">
 
                 <strong
-                    id="modalProductPrice"
+                    id="modalPrice"
                     class="modal-price"
                 >
                     0 ر.س

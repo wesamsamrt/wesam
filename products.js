@@ -77,12 +77,23 @@ function renderProducts(products) {
     }
 
 
-    products.forEach(product => {
+   products.forEach(product => {
 
-       const card =
-    document.createElement("div");
+    const card =
+        document.createElement("div");
 
-card.className = "product-card";
+    card.className = "product-card";
+
+    // الضغط على البطاقة يفتح التفاصيل
+    card.onclick = function(e) {
+
+        // إذا ضغط على زر + لا نفتح البطاقة
+        if (e.target.closest(".add-button")) {
+            return;
+        }
+
+        openProductModal(product.id);
+    };
 
 card.style.cursor = "pointer";
 
@@ -549,7 +560,6 @@ async function addProduct(productId) {
 
 
 
-
 /* =========================
    فتح تفاصيل المنتج
 ========================= */
@@ -561,46 +571,32 @@ function openProductModal(productId) {
             item => item.id === productId
         );
 
-    if (!product) {
-
-        console.error("المنتج غير موجود");
-
-        return;
-    }
+    if (!product) return;
 
 
     const modal =
         document.getElementById("productModal");
 
 
-    // =========================
-    // الصورة
-    // =========================
-
     const image =
-        document.getElementById(
-            "modalProductImage"
-        );
+        document.getElementById("modalProductImage");
 
 
-    image.innerHTML =
-        product.image
+    if (product.image) {
 
-        ?
+        image.innerHTML = `
+            <img
+                src="${product.image}"
+                alt="${product.model || ""}"
+            >
+        `;
 
-        `<img
-            src="${product.image}"
-            alt="${product.model || "المنتج"}"
-        >`
+    } else {
 
-        :
+        image.innerHTML = "📱";
 
-        "📱";
+    }
 
-
-    // =========================
-    // البيانات الأساسية
-    // =========================
 
     document.getElementById(
         "modalProductType"
@@ -618,8 +614,8 @@ function openProductModal(productId) {
         "modalProductCompany"
     ).textContent =
         product.company
-        ? "الشركة: " + product.company
-        : "";
+            ? "الشركة: " + product.company
+            : "";
 
 
     document.getElementById(
@@ -630,246 +626,101 @@ function openProductModal(productId) {
 
 
     document.getElementById(
-        "modalProductPrice"
+        "modalPrice"
     ).textContent =
         `${product.price ?? 0} ر.س`;
 
 
-    // =========================
-    // التفاصيل
-    // =========================
+    /* =========================
+       اللون
+    ========================= */
 
-    const details =
-        document.getElementById(
-            "modalProductDetails"
-        );
+    const colors =
+        document.getElementById("modalColors");
 
 
-    details.innerHTML = "";
-
-
-    if (product.category) {
-
-        details.innerHTML += `
-
-            <div class="modal-detail">
-
-                <strong>
-                    التصنيف
-                </strong>
-
-                ${product.category}
-
-            </div>
-
-        `;
-
-    }
-
-
-    if (product.product_type) {
-
-        details.innerHTML += `
-
-            <div class="modal-detail">
-
-                <strong>
-                    نوع المنتج
-                </strong>
-
-                ${product.product_type}
-
-            </div>
-
-        `;
-
-    }
-
-
-    if (product.type) {
-
-        details.innerHTML += `
-
-            <div class="modal-detail">
-
-                <strong>
-                    النوع
-                </strong>
-
-                ${product.type}
-
-            </div>
-
-        `;
-
-    }
+    colors.innerHTML = "";
 
 
     if (product.color) {
 
-        details.innerHTML += `
+        const color =
+            document.createElement("span");
 
-            <div class="modal-detail">
+        color.className = "modal-option";
 
-                <strong>
-                    اللون
-                </strong>
+        color.textContent =
+            product.color;
 
-                ${product.color}
-
-            </div>
-
-        `;
-
-    }
-
-
-    // =========================
-    // الألوان المتوفرة
-    // =========================
-
-    const colorsBox =
-        document.getElementById(
-            "modalColors"
-        );
-
-
-    const colors =
-        allProducts
-            .filter(item => {
-
-                return (
-
-                    item.model === product.model
-
-                    ||
-
-                    item.product_type === product.product_type
-
-                );
-
-            })
-            .map(item => item.color)
-            .filter(Boolean);
-
-
-    const uniqueColors =
-        [...new Set(colors)];
-
-
-    if (uniqueColors.length > 0) {
-
-        colorsBox.innerHTML = `
-
-            <div class="modal-options-title">
-                🎨 الألوان المتوفرة
-            </div>
-
-            <div class="modal-option-list">
-
-                ${
-                    uniqueColors
-                        .map(color => `
-                            <span class="modal-option">
-                                ${color}
-                            </span>
-                        `)
-                        .join("")
-                }
-
-            </div>
-        `;
+        colors.appendChild(color);
 
     } else {
 
-        colorsBox.innerHTML = "";
+        colors.innerHTML = `
+            <span class="modal-option">
+                غير محدد
+            </span>
+        `;
 
     }
 
 
-    // =========================
-    // الموديلات المتوفرة
-    // =========================
-
-    const modelsBox =
-        document.getElementById(
-            "modalModels"
-        );
-
+    /* =========================
+       الموديل
+    ========================= */
 
     const models =
-        allProducts
-            .filter(item => {
-
-                return (
-
-                    item.product_type === product.product_type
-
-                    ||
-
-                    item.type === product.type
-
-                );
-
-            })
-            .map(item => item.model)
-            .filter(Boolean);
+        document.getElementById("modalModels");
 
 
-    const uniqueModels =
-        [...new Set(models)];
+    models.innerHTML = "";
 
 
-    if (uniqueModels.length > 0) {
+    if (product.model) {
 
-        modelsBox.innerHTML = `
+        const model =
+            document.createElement("span");
 
-            <div class="modal-options-title">
-                📱 الموديلات المتوفرة
-            </div>
+        model.className = "modal-option";
 
-            <div class="modal-option-list">
+        model.textContent =
+            product.model;
 
-                ${
-                    uniqueModels
-                        .map(model => `
-                            <span class="modal-option">
-                                ${model}
-                            </span>
-                        `)
-                        .join("")
-                }
-
-            </div>
-
-        `;
+        models.appendChild(model);
 
     } else {
 
-        modelsBox.innerHTML = "";
+        models.innerHTML = `
+            <span class="modal-option">
+                غير محدد
+            </span>
+        `;
 
     }
 
 
-    // =========================
-    // زر الإضافة
-    // =========================
+    /* =========================
+       زر الإضافة
+    ========================= */
 
-    document.getElementById(
-        "modalAddButton"
-    ).onclick = function() {
+    const addButton =
+        document.getElementById(
+            "modalAddButton"
+        );
+
+
+    addButton.onclick = function() {
 
         addProduct(product.id);
 
     };
 
 
-    // =========================
-    // إظهار النافذة
-    // =========================
+    /* =========================
+       فتح النافذة
+    ========================= */
 
     modal.classList.add("show");
-
 
     document.body.style.overflow = "hidden";
 
@@ -877,19 +728,15 @@ function openProductModal(productId) {
 
 
 /* =========================
-   إغلاق النافذة
+   إغلاق التفاصيل
 ========================= */
 
 function closeProductModal() {
 
     const modal =
-        document.getElementById(
-            "productModal"
-        );
-
+        document.getElementById("productModal");
 
     modal.classList.remove("show");
-
 
     document.body.style.overflow = "";
 
