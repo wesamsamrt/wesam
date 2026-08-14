@@ -194,7 +194,12 @@
         id="orders"
     ></div>
 
-
+<div
+    id="notifications"
+    style="
+        margin-top:15px;
+    "
+></div>
 <button
     onclick="showPreviousOrders()"
     style="
@@ -631,7 +636,8 @@ async function removeOrderItem(itemId) {
 
     await updateOrderTotal();
 
-    loadOrders();
+   loadOrders();
+loadNotifications();
 }
 
 
@@ -1252,6 +1258,159 @@ async function showPreviousOrders() {
     }
 
 }
+
+
+
+
+
+
+
+
+// =========================
+// إشعارات المستخدم
+// =========================
+// =========================
+// اختبار وتحميل الإشعارات
+// =========================
+
+async function loadNotifications() {
+
+    const container =
+        document.getElementById("notifications");
+
+    if (!container) {
+        console.log("لم يتم العثور على notifications");
+        return;
+    }
+
+
+    const {
+        data: { user },
+        error: userError
+    } = await supabaseClient.auth.getUser();
+
+
+    console.log("المستخدم الحالي:", user);
+
+
+    if (userError || !user) {
+
+        console.log("لا يوجد مستخدم مسجل دخول");
+
+        return;
+    }
+
+
+    const {
+        data: notifications,
+        error
+    } = await supabaseClient
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("id", {
+            ascending: false
+        });
+
+
+    console.log("الإشعارات:", notifications);
+    console.log("خطأ الإشعارات:", error);
+
+
+    if (error) {
+
+        container.innerHTML = `
+            <div style="
+                background:#fff0f3;
+                color:#e05265;
+                padding:15px;
+                border-radius:15px;
+                margin-bottom:15px;
+            ">
+                خطأ في تحميل الإشعارات:
+                ${error.message}
+            </div>
+        `;
+
+        return;
+    }
+
+
+    if (!notifications || notifications.length === 0) {
+
+        container.innerHTML = `
+            <div style="
+                background:white;
+                padding:15px;
+                border-radius:15px;
+                color:#858796;
+                margin-bottom:15px;
+            ">
+                لا توجد إشعارات
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        <div style="
+            background:white;
+            border-radius:22px;
+            padding:18px;
+            box-shadow:0 8px 25px rgba(50,50,100,.05);
+        ">
+
+            <h2 style="
+                font-size:18px;
+                font-weight:800;
+                margin-bottom:12px;
+            ">
+                🔔 الإشعارات
+            </h2>
+
+
+            ${notifications.map(notification => `
+
+                <div style="
+                    padding:13px 0;
+                    border-bottom:1px solid #eee;
+                ">
+
+                    <strong style="
+                        display:block;
+                        font-size:14px;
+                    ">
+                        ${notification.title}
+                    </strong>
+
+                    <p style="
+                        margin-top:5px;
+                        font-size:12px;
+                        color:#666;
+                    ">
+                        ${notification.message}
+                    </p>
+
+                </div>
+
+            `).join("")}
+
+        </div>
+
+    `;
+
+}
+
+
+
+
+
+
+
+
 
 
 </script>

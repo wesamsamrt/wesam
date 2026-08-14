@@ -1252,7 +1252,6 @@ backFromOrders.addEventListener(
 
 
 /* تحميل الطلبات */
-
 async function loadAdminOrders() {
 
     adminOrders.innerHTML = `
@@ -1261,15 +1260,15 @@ async function loadAdminOrders() {
         </div>
     `;
 
-
-    const { data: orders, error } =
-        await supabaseClient
-            .from("orders")
-            .select("*")
-            .order("created_at", {
-                ascending: false
-            });
-
+    const {
+        data: orders,
+        error
+    } = await supabaseClient
+        .from("orders")
+        .select("*")
+        .order("id", {
+            ascending: false
+        });
 
     if (error) {
 
@@ -1285,8 +1284,9 @@ async function loadAdminOrders() {
         return;
     }
 
+    console.log("الطلبات التي وصلت للإدارة:", orders);
 
-    if (!orders || !orders.length) {
+    if (!orders || orders.length === 0) {
 
         adminOrders.innerHTML = `
             <div class="message">
@@ -1297,9 +1297,7 @@ async function loadAdminOrders() {
         return;
     }
 
-
     adminOrders.innerHTML = "";
-
 
     for (const order of orders) {
 
@@ -1308,7 +1306,6 @@ async function loadAdminOrders() {
     }
 
 }
-
 
 /* عرض طلب واحد */
 
@@ -1346,7 +1343,7 @@ async function renderAdminOrder(order) {
                 dateStyle: "medium",
                 timeStyle: "short"
             });
-
+ 
 
     let productsHTML = "";
 
@@ -1413,6 +1410,42 @@ async function renderAdminOrder(order) {
     });
 
 
+
+    /* =========================
+   إحصائيات الأنواع
+========================= */
+
+const typeTotals = {};
+
+(items || []).forEach(item => {
+
+    const type =
+        item.type?.trim() || "بدون نوع";
+
+    const quantity =
+        Number(item.quantity || 1);
+
+    typeTotals[type] =
+        (typeTotals[type] || 0) + quantity;
+
+});
+
+
+let typeStatsHTML = "";
+
+Object.entries(typeTotals).forEach(
+    ([type, quantity]) => {
+
+        typeStatsHTML += `
+            <span class="type-stat">
+                ${type}: ${quantity} قطعة
+            </span>
+        `;
+
+    }
+);
+
+
     card.innerHTML = `
 
         <div class="admin-order-top">
@@ -1450,17 +1483,55 @@ async function renderAdminOrder(order) {
         </div>
 
 
-        <div class="admin-order-status">
+       <div class="admin-order-status">
 
-            <span>
-                الحالة:
-            </span>
+    <span>
+        الحالة:
+    </span>
 
-            <strong>
-                ${order.status || "جديد"}
-            </strong>
+    <select
+        class="order-status-select"
+        onchange="updateOrderStatus(${order.id}, this.value)"
+    >
 
-        </div>
+        <option
+            value="جديد"
+            ${order.status === "جديد" ? "selected" : ""}
+        >
+            جديد
+        </option>
+
+        <option
+            value="قيد التجهيز"
+            ${order.status === "قيد التجهيز" ? "selected" : ""}
+        >
+            قيد التجهيز
+        </option>
+
+        <option
+            value="تم شحن الطلب"
+            ${order.status === "تم شحن الطلب" ? "selected" : ""}
+        >
+            تم شحن الطلب
+        </option>
+
+        <option
+            value="تم استلام طلبك"
+            ${order.status === "تم استلام طلبك" ? "selected" : ""}
+        >
+            تم استلام طلبك
+        </option>
+
+        <option
+            value="ملغي"
+            ${order.status === "ملغي" ? "selected" : ""}
+        >
+            ملغي
+        </option>
+
+    </select>
+
+</div>
 
 
         <div class="admin-order-items">
@@ -1488,7 +1559,96 @@ async function renderAdminOrder(order) {
     adminOrders.appendChild(card);
 
 }
+/* =========================
+   تغيير حالة الطلب
+========================= */
+async function updateOrderStatus(orderId, newStatus) {
 
+    /* جلب صاحب الطلب */
+
+    const { data: order, error: orderError } =
+        await supabaseClient
+            .from("orders")
+            .select("id, user_id, status")
+            .eq("id", orderId)
+            .single();
+
+
+    if (orderError || !order) {
+
+        console.error(orderError);
+
+        alert("لم يتم العثور على الطلب");
+
+        return;
+    }
+
+
+    /* تحديث حالة الطلب */
+
+    const { error: updateError } =
+        await supabaseClient
+            .from("orders")
+            .update({
+                status: newStatus
+            })
+            .eq("id", orderId);
+
+
+    if (updateError) {
+
+        console.error(updateError);
+
+        alert(
+            "حدث خطأ أثناء تحديث حالة الطلب:\n" +
+            updateError.message
+        );
+
+        return;
+    }
+
+
+    /* إنشاء الإشعار */
+
+    if (order.user_id) {
+
+        const { error: notificationError } =
+            await supabaseClient
+                .from("notifications")
+                .insert({
+
+                    user_id: order.user_id,
+
+                    order_id: order.id,
+
+                    title: "تحديث حالة الطلب",
+
+                    message:
+                        `تم تحديث حالة طلبك #${order.id} إلى "${newStatus}"`
+
+                });
+
+
+        if (notificationError) {
+
+            console.error(
+                "خطأ في إنشاء الإشعار:",
+                notificationError
+            );
+
+            alert(
+                "تم تحديث حالة الطلب، لكن تعذر إنشاء الإشعار."
+            );
+
+            return;
+        }
+
+    }
+
+
+    alert("تم تحديث حالة الطلب وإرسال الإشعار ✅");
+
+}
 
 /* =========================
    طباعة الطلب
@@ -1557,6 +1717,30 @@ async function printOrder(orderId) {
         ========================= */
 
         let rowsHTML = "";
+        const typeTotals = {};
+
+(items || []).forEach(item => {
+
+    const type = item.type?.trim() || "بدون نوع";
+
+    const quantity = Number(item.quantity || 1);
+
+    typeTotals[type] =
+        (typeTotals[type] || 0) + quantity;
+
+});
+
+let typeStatsHTML = "";
+
+Object.entries(typeTotals).forEach(([type, quantity]) => {
+
+    typeStatsHTML += `
+        <span class="type-stat">
+            ${type}: ${quantity} قطعة
+        </span>
+    `;
+
+});
 
 
         (items || []).forEach((item, index) => {
@@ -2120,6 +2304,8 @@ async function printOrder(orderId) {
 
     <div class="total-section">
 
+    <div>
+
         <div class="total-box">
 
             <span>
@@ -2132,7 +2318,20 @@ async function printOrder(orderId) {
 
         </div>
 
+
+        <div class="type-stats">
+
+            <strong>
+                إحصائيات الأنواع:
+            </strong>
+
+            ${typeStatsHTML}
+
+        </div>
+
     </div>
+
+</div>
 
 
     <div class="footer">
