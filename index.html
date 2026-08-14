@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>متجرك</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --purple: #6557ed;
+            --purple-dark: #5547df;
+            --purple-light: #eeeaff;
+
+            --bg: #f8f9fd;
+            --text: #171827;
+            --muted: #858796;
+            --white: #ffffff;
+
+            --green-card: #e5f8ef;
+            --blue-card: #eaf2ff;
+            --pink-card: #fff0f5;
+            --yellow-card: #fff3dc;
+            --purple-card: #f0ecff;
+            --cyan-card: #e7f8fb;
+
+            --shadow: 0 10px 30px rgba(52, 48, 110, 0.07);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: "Cairo", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+
+        button,
+        input {
+            font-family: inherit;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+        }
+
+        /* =========================
+           TOP HEADER
+        ========================= */
+
+        .top-header {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 24px 0 12px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #eeeeff;
+            color: var(--purple);
+
+            font-size: 25px;
+        }
+
+        .brand-text h1 {
+            font-size: 21px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .brand-text span {
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon-button {
+            position: relative;
+
+            width: 46px;
+            height: 46px;
+
+            border-radius: 15px;
+            background: white;
+
+            box-shadow: var(--shadow);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 21px;
+        }
+
+        .notification {
+            position: absolute;
+            top: -5px;
+            right: -4px;
+
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+
+            border-radius: 20px;
+
+            background: #ff4d67;
+            color: white;
+
+            font-size: 10px;
+            font-weight: 800;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =========================
+           SEARCH
+        ========================= */
+
+        .search-area {
+            width: min(1100px, calc(100% - 32px));
+            margin: 12px auto 22px;
+        }
+
+        .search-box {
+            height: 58px;
+            background: white;
+            border-radius: 20px;
+
+            box-shadow: var(--shadow);
+
+            display: flex;
+            align-items: center;
+
+            padding: 0 20px;
+            gap: 12px;
+        }
+
+        .search-icon {
+            color: var(--purple);
+            font-size: 24px;
+        }
+
+        .search-box input {
+            border: none;
+            outline: none;
+
+            width: 100%;
+            height: 100%;
+
+            font-size: 14px;
+            color: var(--text);
+
+            background: transparent;
+        }
+
+        .search-box input::placeholder {
+            color: #aaaaba;
+        }
+
+        /* =========================
+           HERO
+        ========================= */
+
+        .hero {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto 30px;
+
+            min-height: 220px;
+
+            border-radius: 30px;
+
+            background:
+                radial-gradient(circle at 85% 20%, rgba(255,255,255,.20), transparent 25%),
+                linear-gradient(135deg, #6557ed, #7a6cf0);
+
+            color: white;
+
+            position: relative;
+            overflow: hidden;
+
+            box-shadow: 0 18px 45px rgba(101, 87, 237, .22);
+
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-content {
+            padding: 35px 40px;
+            width: 62%;
+            z-index: 2;
+        }
+
+        .hero-small {
+            font-size: 13px;
+            opacity: .85;
+            margin-bottom: 6px;
+        }
+
+        .hero h2 {
+            font-size: clamp(25px, 4vw, 40px);
+            font-weight: 800;
+            line-height: 1.35;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            font-size: 14px;
+            opacity: .9;
+            margin-bottom: 20px;
+        }
+
+        .hero-button {
+            background: white;
+            color: var(--purple-dark);
+
+            padding: 11px 22px;
+
+            border-radius: 15px;
+
+            font-weight: 800;
+            font-size: 13px;
+
+            transition: .2s;
+        }
+
+        .hero-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .hero-decoration {
+            position: absolute;
+            left: -20px;
+            bottom: -50px;
+
+            width: 300px;
+            height: 300px;
+
+            border-radius: 50%;
+
+            background: rgba(255,255,255,.08);
+        }
+
+        .hero-products {
+            position: absolute;
+            left: 5%;
+            bottom: 15px;
+
+            font-size: 100px;
+
+            transform: rotate(-5deg);
+
+            filter: drop-shadow(0 15px 15px rgba(0,0,0,.12));
+        }
+
+        /* =========================
+           SECTION TITLE
+        ========================= */
+
+        .section {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto 30px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 16px;
+        }
+
+        .section-title h2 {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .section-title span {
+            font-size: 22px;
+        }
+
+        /* =========================
+           CATEGORIES
+        ========================= */
+
+        .categories {
+            display: grid;
+
+            grid-template-columns: repeat(3, 1fr);
+
+            gap: 16px;
+        }
+
+        .category-card {
+            min-height: 170px;
+
+            border-radius: 25px;
+
+            padding: 20px;
+
+            position: relative;
+            overflow: hidden;
+
+            border: 1px solid rgba(0,0,0,.025);
+
+            box-shadow: 0 8px 25px rgba(50,50,100,.035);
+
+            cursor: pointer;
+
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(50,50,100,.08);
+        }
+
+        .category-card:active {
+            transform: scale(.98);
+        }
+
+        .category-icon {
+            width: 68px;
+            height: 68px;
+
+            border-radius: 21px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 34px;
+
+            margin-bottom: 13px;
+        }
+
+        .category-card h3 {
+            font-size: 18px;
+            font-weight: 800;
+
+            margin-bottom: 3px;
+        }
+
+        .category-card p {
+            font-size: 11px;
+            color: #858595;
+        }
+
+        .category-arrow {
+            position: absolute;
+
+            left: 18px;
+            bottom: 18px;
+
+            width: 34px;
+            height: 34px;
+
+            border-radius: 50%;
+
+            background: rgba(255,255,255,.6);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: var(--purple);
+
+            font-size: 19px;
+        }
+
+        /* Card colors */
+
+        .card-blue {
+            background: var(--blue-card);
+        }
+
+        .card-blue .category-icon {
+            background: #d8e7ff;
+        }
+
+        .card-green {
+            background: var(--green-card);
+        }
+
+        .card-green .category-icon {
+            background: #cff1e1;
+        }
+
+        .card-pink {
+            background: var(--pink-card);
+        }
+
+        .card-pink .category-icon {
+            background: #ffddea;
+        }
+
+        .card-yellow {
+            background: var(--yellow-card);
+        }
+
+        .card-yellow .category-icon {
+            background: #ffe4ae;
+        }
+
+        .card-purple {
+            background: var(--purple-card);
+        }
+
+        .card-purple .category-icon {
+            background: #ded5ff;
+        }
+
+        .card-cyan {
+            background: var(--cyan-card);
+        }
+
+        .card-cyan .category-icon {
+            background: #cceff4;
+        }
+
+        /* =========================
+           ORDERS CARD
+        ========================= */
+
+        .orders-card {
+            background: linear-gradient(135deg, #eef1ff, #f5f3ff);
+
+            border-radius: 27px;
+
+            min-height: 120px;
+
+            padding: 20px 25px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            box-shadow: var(--shadow);
+
+            cursor: pointer;
+
+            transition: .2s;
+        }
+
+        .orders-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .orders-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .orders-icon {
+            width: 68px;
+            height: 68px;
+
+            border-radius: 21px;
+
+            background: #dce5ff;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 32px;
+
+            position: relative;
+        }
+
+        .orders-badge {
+            position: absolute;
+
+            top: -7px;
+            right: -7px;
+
+            width: 25px;
+            height: 25px;
+
+            background: #ff4d67;
+            color: white;
+
+            border-radius: 50%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .orders-text h3 {
+            font-size: 19px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .orders-text p {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .orders-arrow {
+            width: 45px;
+            height: 45px;
+
+            border-radius: 50%;
+
+            background: var(--purple);
+
+            color: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 25px;
+
+            box-shadow: 0 8px 20px rgba(101,87,237,.25);
+        }
+
+        /* =========================
+           BOTTOM NAVIGATION
+        ========================= */
+
+        .bottom-nav {
+            position: fixed;
+
+            left: 50%;
+            bottom: 14px;
+
+            transform: translateX(-50%);
+
+            width: min(650px, calc(100% - 28px));
+
+            height: 78px;
+
+            background: rgba(255,255,255,.94);
+
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            border-radius: 28px;
+
+            box-shadow:
+                0 15px 45px rgba(40,40,90,.13),
+                0 2px 8px rgba(40,40,90,.04);
+
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+
+            align-items: center;
+
+            z-index: 1000;
+        }
+
+        .nav-item {
+            height: 100%;
+
+            background: transparent;
+
+            color: #9698a5;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            gap: 3px;
+
+            font-size: 10px;
+
+            position: relative;
+        }
+
+        .nav-icon {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .nav-item.active {
+            color: var(--purple);
+            font-weight: 800;
+        }
+
+        .nav-home {
+            width: 70px;
+            height: 70px;
+
+            border-radius: 50%;
+
+            background: var(--purple);
+
+            color: white !important;
+
+            margin: -30px auto 0;
+
+            box-shadow:
+                0 10px 25px rgba(101,87,237,.35),
+                0 0 0 7px white;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-home .nav-icon {
+            font-size: 29px;
+        }
+
+        .nav-home span:last-child {
+            position: absolute;
+            top: 48px;
+
+            font-size: 9px;
+        }
+
+        .nav-badge {
+            position: absolute;
+
+            top: 12px;
+            right: calc(50% - 20px);
+
+            width: 18px;
+            height: 18px;
+
+            border-radius: 50%;
+
+            background: #ff4d67;
+            color: white;
+
+            font-size: 9px;
+            font-weight: 800;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 800px) {
+
+            .categories {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero {
+                min-height: 210px;
+            }
+
+            .hero-content {
+                width: 75%;
+                padding: 28px;
+            }
+
+            .hero-products {
+                left: -30px;
+                font-size: 80px;
+                opacity: .55;
+            }
+        }
+
+        @media (max-width: 550px) {
+
+            body {
+                padding-bottom: 105px;
+            }
+
+            .top-header {
+                padding-top: 18px;
+            }
+
+            .brand-icon {
+                width: 43px;
+                height: 43px;
+                border-radius: 14px;
+            }
+
+            .brand-text h1 {
+                font-size: 18px;
+            }
+
+            .icon-button {
+                width: 42px;
+                height: 42px;
+                border-radius: 14px;
+            }
+
+            .search-box {
+                height: 53px;
+                border-radius: 18px;
+            }
+
+            .hero {
+                min-height: 205px;
+                border-radius: 25px;
+            }
+
+            .hero-content {
+                width: 100%;
+                padding: 28px 24px;
+            }
+
+            .hero h2 {
+                font-size: 25px;
+            }
+
+            .hero p {
+                font-size: 12px;
+                max-width: 210px;
+            }
+
+            .hero-products {
+                left: -10px;
+                bottom: 5px;
+                font-size: 70px;
+                opacity: .25;
+            }
+
+            .section-title h2 {
+                font-size: 20px;
+            }
+
+            .categories {
+                gap: 13px;
+            }
+
+            .category-card {
+                min-height: 155px;
+                padding: 17px;
+                border-radius: 22px;
+            }
+
+            .category-icon {
+                width: 58px;
+                height: 58px;
+                border-radius: 18px;
+                font-size: 29px;
+            }
+
+            .category-card h3 {
+                font-size: 16px;
+            }
+
+            .category-card p {
+                font-size: 10px;
+            }
+
+            .orders-card {
+                padding: 17px;
+                border-radius: 23px;
+            }
+
+            .orders-icon {
+                width: 58px;
+                height: 58px;
+                font-size: 27px;
+            }
+
+            .orders-text h3 {
+                font-size: 17px;
+            }
+
+            .orders-text p {
+                font-size: 10px;
+            }
+
+            .orders-arrow {
+                width: 39px;
+                height: 39px;
+            }
+
+            .bottom-nav {
+                height: 73px;
+                bottom: 10px;
+                border-radius: 25px;
+            }
+
+            .nav-home {
+                width: 64px;
+                height: 64px;
+            }
+
+            .nav-home span:last-child {
+                top: 44px;
+            }
+        }
+
+        @media (max-width: 360px) {
+
+            .category-card {
+                min-height: 145px;
+            }
+
+            .category-icon {
+                width: 52px;
+                height: 52px;
+            }
+
+            .category-card h3 {
+                font-size: 14px;
+            }
+
+            .category-card p {
+                display: none;
+            }
+        }
+    </style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+
+
+
+</head>
+
+<body>
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <header class="top-header">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                🛍️
+            </div>
+
+            <div class="brand-text">
+                <h1>متجرك</h1>
+                <span>كل ما تحتاجه بسهولة</span>
+            </div>
+
+        </div>
+
+        <div class="header-actions">
+
+            <button class="icon-button" onclick="openNotifications()">
+                🔔
+                <span class="notification">5</span>
+            </button>
+
+            <button class="icon-button" onclick="openProfile()">
+                👤
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         SEARCH
+    ========================== -->
+
+    <div class="search-area">
+
+        <div class="search-box">
+
+            <span class="search-icon">⌕</span>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="ابحث عن منتج أو موديل..."
+                oninput="searchProducts(this.value)"
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         HERO
+    ========================== -->
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <div class="hero-small">
+                🛍️ تسوق بسهولة
+            </div>
+
+            <h2>
+                كل ما تحتاجه
+            </h2>
+
+            <p>
+                اكتشف منتجاتنا واطلبها بكل سهولة
+            </p>
+
+            <button
+                class="hero-button"
+                onclick="scrollToCategories()"
+            >
+                تسوق الآن ←
+            </button>
+
+        </div>
+
+        <div class="hero-products">
+            📱
+        </div>
+
+        <div class="hero-decoration"></div>
+
+    </section>
+
+
+    <!-- =========================
+         CATEGORIES
+    ========================== -->
+
+    <main>
+
+        <section class="section" id="categoriesSection">
+
+            <div class="section-title">
+
+                <h2>
+                    التصنيفات
+                </h2>
+
+                <span>▦</span>
+
+            </div>
+
+
+            <div class="categories" id="categoriesContainer">
+
+                 جاري تحميل التصنيفات...
+
+                </div>
+
+        </section>
+
+
+        <!-- =========================
+             ORDERS
+        ========================== -->
+
+        <section class="section">
+
+            <div
+                class="orders-card"
+                onclick="openOrders()"
+            >
+
+                <div class="orders-right">
+
+                    <div class="orders-icon">
+
+                        🛍️
+
+                        <span class="orders-badge">
+                            5
+                        </span>
+
+                    </div>
+
+                    <div class="orders-text">
+
+                        <h3>
+                            الطلبات
+                        </h3>
+
+                        <p>
+                            عرض ومتابعة جميع الطلبات الواردة
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="orders-arrow">
+                    ←
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================
+         BOTTOM NAVIGATION
+    ========================== -->
+
+    <nav class="bottom-nav">
+
+        <button
+            class="nav-item"
+            onclick="openMore()"
+        >
+            <span class="nav-icon">•••</span>
+            <span>المزيد</span>
+        </button>
+
+
+        <button
+            class="nav-item"
+            onclick="openAccount()"
+        >
+            <span class="nav-icon">👤</span>
+            <span>الحساب</span>
+        </button>
+
+
+        <button
+            class="nav-item nav-home active"
+            onclick="goHome()"
+        >
+            <span class="nav-icon">⌂</span>
+            <span>الرئيسية</span>
+        </button>
+
+
+        <button
+            class="nav-item"
+            onclick="openOrders()"
+        >
+
+            <span class="nav-icon">
+                🛍️
+            </span>
+
+            <span class="nav-badge">
+                5
+            </span>
+
+            <span>
+                الطلبات
+            </span>
+
+        </button>
+
+
+        <button
+            class="nav-item"
+            onclick="openCategories()"
+        >
+            <span class="nav-icon">▦</span>
+            <span>التصنيفات</span>
+        </button>
+
+    </nav>
+
+
+    <script>
+
+        /* =========================
+           NAVIGATION
+        ========================== */
+
+        function goHome() {
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
+
+
+        function openOrders() {
+            alert("صفحة الطلبات ستفتح هنا");
+        }
+
+
+        function openAccount() {
+            alert("صفحة الحساب ستفتح هنا");
+        }
+
+
+        function openCategories() {
+
+            document
+                .getElementById("categoriesSection")
+                .scrollIntoView({
+                    behavior: "smooth"
+                });
+
+        }
+
+
+        function openMore() {
+            alert("صفحة المزيد ستفتح هنا");
+        }
+
+
+        function openNotifications() {
+            alert("الإشعارات ستظهر هنا");
+        }
+
+
+        function openProfile() {
+            alert("الحساب الشخصي");
+        }
+
+
+        /* =========================
+           CATEGORY
+        ========================== */
+
+        function openCategory(category) {
+
+            alert(
+                "تم اختيار تصنيف: " + category
+            );
+
+            /*
+                لاحقًا بدل alert:
+
+                window.location.href =
+                    "category.html?category=" +
+                    encodeURIComponent(category);
+            */
+
+        }
+
+
+        /* =========================
+           SEARCH
+        ========================== */
+
+        function searchProducts(value) {
+
+            if (!value.trim()) {
+                return;
+            }
+
+            console.log(
+                "البحث عن:",
+                value
+            );
+
+            /*
+                لاحقًا نربط البحث بـ Supabase:
+
+                searchProducts(value)
+                ↓
+                Supabase
+                ↓
+                عرض المنتجات المطابقة
+            */
+        }
+
+
+        /* =========================
+           HERO BUTTON
+        ========================== */
+
+        function scrollToCategories() {
+
+            document
+                .getElementById("categoriesSection")
+                .scrollIntoView({
+                    behavior: "smooth"
+                });
+
+        }
+async function loadCategories() {
+
+    const container =
+        document.getElementById("categoriesContainer");
+
+    const { data, error } =
+        await supabaseClient
+            .from("categories")
+            .select("*")
+            .order("id", { ascending: true });
+
+    if (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            "حدث خطأ في تحميل التصنيفات";
+
+        return;
+    }
+
+    container.innerHTML = "";
+
+    data.forEach((category, index) => {
+
+        const card =
+            document.createElement("div");
+
+        const colors = [
+            "card-blue",
+            "card-green",
+            "card-purple",
+            "card-yellow",
+            "card-pink",
+            "card-cyan"
+        ];
+
+        card.className =
+            "category-card " +
+            colors[index % colors.length];
+
+            
+            card.onclick = function () {
+
+            window.location.href =
+             "category.html?id=" +
+             encodeURIComponent(category.id);
+
+            };
+
+        card.innerHTML = `
+
+            <div class="category-icon">
+                ${category.icon || "📦"}
+            </div>
+
+            <h3>
+                ${category.name}
+            </h3>
+
+            <p>
+                منتجات ${category.name}
+            </p>
+
+            <div class="category-arrow">
+                ←
+            </div>
+
+        `;
+
+        container.appendChild(card);
+
+    });
+
+}
+
+loadCategories();
+    </script>
+
+</body>
+</html>

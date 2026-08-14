@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>التصنيف</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --purple: #6557ed;
+            --bg: #f8f9fd;
+            --text: #171827;
+            --muted: #858796;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: "Cairo", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        button,
+        input {
+            font-family: inherit;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+        }
+
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        .header {
+
+            width: min(1100px, calc(100% - 32px));
+
+            margin: auto;
+
+            padding: 22px 0;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+        }
+
+
+        .back-button {
+
+            width: 46px;
+            height: 46px;
+
+            border-radius: 15px;
+
+            background: white;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.07);
+
+            font-size: 23px;
+
+            cursor: pointer;
+        }
+
+
+        .header-title h1 {
+
+            font-size: 22px;
+
+            font-weight: 800;
+        }
+
+
+        .header-title p {
+
+            font-size: 11px;
+
+            color: var(--muted);
+        }
+
+
+        /* =========================
+           SEARCH
+        ========================= */
+
+        .search {
+
+            width: min(1100px, calc(100% - 32px));
+
+            margin: 5px auto 28px;
+        }
+
+
+        .search-box {
+
+            height: 56px;
+
+            background: white;
+
+            border-radius: 19px;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.06);
+
+            display: flex;
+
+            align-items: center;
+
+            padding: 0 18px;
+
+            gap: 10px;
+        }
+
+
+        .search-box span {
+
+            font-size: 23px;
+
+            color: var(--purple);
+        }
+
+
+        .search-box input {
+
+            border: none;
+
+            outline: none;
+
+            width: 100%;
+
+            font-family: inherit;
+
+            font-size: 13px;
+
+            background: transparent;
+        }
+
+
+        /* =========================
+           CONTENT
+        ========================= */
+
+        .content {
+
+            width: min(1100px, calc(100% - 32px));
+
+            margin: auto;
+        }
+
+
+        .section-title {
+
+            margin-bottom: 15px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+        }
+
+
+        .section-title h2 {
+
+            font-size: 20px;
+
+            font-weight: 800;
+        }
+
+
+        .section-title span {
+
+            color: var(--muted);
+
+            font-size: 12px;
+        }
+
+
+        /* =========================
+           TYPES
+        ========================= */
+
+        .types {
+
+            display: grid;
+
+            grid-template-columns: repeat(2, 1fr);
+
+            gap: 15px;
+        }
+
+
+        .type-card {
+
+            min-height: 155px;
+
+            border-radius: 24px;
+
+            padding: 20px;
+
+            cursor: pointer;
+
+            transition: .2s;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.035);
+        }
+
+
+        .type-card:hover {
+
+            transform: translateY(-4px);
+        }
+
+
+        .type-card:active {
+
+            transform: scale(.98);
+        }
+
+
+        .type-icon {
+
+            width: 60px;
+            height: 60px;
+
+            border-radius: 19px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 30px;
+
+            margin-bottom: 12px;
+        }
+
+
+        .type-card h3 {
+
+            font-size: 17px;
+
+            font-weight: 800;
+
+            margin-bottom: 3px;
+        }
+
+
+        .type-card p {
+
+            font-size: 11px;
+
+            color: #858595;
+        }
+
+
+        /* =========================
+           COLORS
+        ========================= */
+
+        .card-1 {
+
+            background: #eaf2ff;
+        }
+
+        .card-1 .type-icon {
+
+            background: #d6e6ff;
+        }
+
+
+        .card-2 {
+
+            background: #fff0f5;
+        }
+
+        .card-2 .type-icon {
+
+            background: #ffdce9;
+        }
+
+
+        .card-3 {
+
+            background: #e5f8ef;
+        }
+
+        .card-3 .type-icon {
+
+            background: #cff1e1;
+        }
+
+
+        .card-4 {
+
+            background: #fff3dc;
+        }
+
+        .card-4 .type-icon {
+
+            background: #ffe4ae;
+        }
+
+
+        .card-5 {
+
+            background: #f0ecff;
+        }
+
+        .card-5 .type-icon {
+
+            background: #ded5ff;
+        }
+
+
+        .card-6 {
+
+            background: #e7f8fb;
+        }
+
+        .card-6 .type-icon {
+
+            background: #cceff4;
+        }
+
+
+        /* =========================
+           LOADING
+        ========================= */
+
+        .loading {
+
+            text-align: center;
+
+            padding: 40px 10px;
+
+            color: var(--muted);
+
+            font-size: 13px;
+        }
+
+
+        .empty {
+
+            text-align: center;
+
+            padding: 40px 10px;
+
+            color: var(--muted);
+
+            font-size: 13px;
+
+            background: white;
+
+            border-radius: 20px;
+        }
+
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 550px) {
+
+            .types {
+
+                grid-template-columns: 1fr;
+            }
+
+            .type-card {
+
+                min-height: 140px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         HEADER
+    ========================= -->
+
+    <header class="header">
+
+        <button
+            class="back-button"
+            onclick="history.back()"
+        >
+            →
+        </button>
+
+
+        <div class="header-title">
+
+            <h1 id="categoryTitle">
+                جاري التحميل...
+            </h1>
+
+            <p id="categoryDescription">
+                جاري تحميل التصنيف...
+            </p>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         SEARCH
+    ========================= -->
+
+    <div class="search">
+
+        <div class="search-box">
+
+            <span>
+                ⌕
+            </span>
+
+            <input
+                id="searchInput"
+                type="text"
+                placeholder="ابحث عن نوع المنتج..."
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         CONTENT
+    ========================= -->
+
+    <main class="content">
+
+
+        <div class="section-title">
+
+            <h2>
+                أنواع المنتجات
+            </h2>
+
+            <span id="countText">
+                ...
+            </span>
+
+        </div>
+
+
+        <div
+            class="types"
+            id="typesContainer"
+        >
+
+            <div class="loading">
+                جاري تحميل الأنواع...
+            </div>
+
+        </div>
+
+
+    </main>
+
+
+
+    <script>
+
+
+        /* =========================
+           VARIABLES
+        ========================= */
+
+        let currentCategory = null;
+
+        let allTypes = [];
+
+
+
+        /* =========================
+           GET CATEGORY ID
+        ========================= */
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+
+        const categoryId =
+            params.get("id");
+
+
+
+        /* =========================
+           LOAD CATEGORY
+        ========================= */
+
+        async function loadCategory() {
+
+
+            if (!categoryId) {
+
+                document
+                    .getElementById("categoryTitle")
+                    .textContent =
+                    "التصنيف غير موجود";
+
+
+                document
+                    .getElementById("categoryDescription")
+                    .textContent =
+                    "لم يتم تحديد تصنيف";
+
+
+                return;
+            }
+
+
+
+            const { data, error } =
+
+                await supabaseClient
+
+                    .from("categories")
+
+                    .select("*")
+
+                    .eq("id", categoryId)
+
+                    .single();
+
+
+
+            if (error) {
+
+                console.error(error);
+
+
+                document
+                    .getElementById("categoryTitle")
+                    .textContent =
+                    "حدث خطأ";
+
+
+                document
+                    .getElementById("categoryDescription")
+                    .textContent =
+                    "تعذر تحميل التصنيف";
+
+
+                return;
+            }
+
+
+
+            currentCategory = data;
+
+
+
+            document
+                .getElementById("categoryTitle")
+                .textContent =
+                (data.icon || "📦") +
+                " " +
+                data.name;
+
+
+
+            document
+                .getElementById("categoryDescription")
+                .textContent =
+                "اختر ما تريد من " +
+                data.name;
+
+
+
+            /* بعد معرفة التصنيف */
+
+            loadProductTypes();
+
+        }
+
+
+
+        /* =========================
+           LOAD PRODUCT TYPES
+        ========================= */
+
+        async function loadProductTypes() {
+
+
+            const container =
+                document.getElementById(
+                    "typesContainer"
+                );
+
+
+            container.innerHTML = `
+
+                <div class="loading">
+                    جاري تحميل الأنواع...
+                </div>
+
+            `;
+
+
+
+            const { data, error } =
+
+                await supabaseClient
+
+                    .from("products")
+
+                    .select("product_type")
+
+                    .eq(
+                        "category",
+                        currentCategory.name
+                    );
+
+
+
+            if (error) {
+
+                console.error(error);
+
+
+                container.innerHTML = `
+
+                    <div class="empty">
+                        حدث خطأ في تحميل أنواع المنتجات
+                    </div>
+
+                `;
+
+                return;
+            }
+
+
+
+            /* إزالة الأنواع المكررة */
+
+            allTypes = [
+
+                ...new Set(
+
+                    data
+
+                        .map(item =>
+                            item.product_type
+                        )
+
+                        .filter(type =>
+                            type &&
+                            type.trim() !== ""
+                        )
+
+                )
+
+            ];
+
+
+
+            document
+                .getElementById("countText")
+                .textContent =
+                allTypes.length +
+                " أنواع";
+
+
+
+            renderTypes(allTypes);
+
+        }
+
+
+
+        /* =========================
+           DISPLAY TYPES
+        ========================= */
+
+        function renderTypes(types) {
+
+
+            const container =
+                document.getElementById(
+                    "typesContainer"
+                );
+
+
+            container.innerHTML = "";
+
+
+
+            if (!types.length) {
+
+                container.innerHTML = `
+
+                    <div class="empty">
+
+                        لا توجد أنواع منتجات
+                        لهذا التصنيف حاليًا
+
+                    </div>
+
+                `;
+
+                return;
+            }
+
+
+
+            types.forEach(
+                (type, index) => {
+
+
+                    const card =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    const colorNumber =
+                        (index % 6) + 1;
+
+
+                    card.className =
+                        "type-card card-" +
+                        colorNumber;
+
+
+
+                    /* أيقونة مؤقتة */
+
+                    let icon = "📦";
+
+
+                    if (
+                        type.includes("شاشة")
+                    ) {
+
+                        icon = "🛡️";
+
+                    } else if (
+                        type.includes("كاميرا")
+                    ) {
+
+                        icon = "📷";
+
+                    } else if (
+                        type.includes("كفر")
+                    ) {
+
+                        icon = "📱";
+
+                    } else if (
+                        type.includes("شاحن")
+                    ) {
+
+                        icon = "🔌";
+
+                    } else if (
+                        type.includes("سماعة")
+                    ) {
+
+                        icon = "🎧";
+
+                    }
+
+
+
+                    card.innerHTML = `
+
+                        <div class="type-icon">
+                            ${icon}
+                        </div>
+
+                        <h3>
+                            ${type}
+                        </h3>
+
+                        <p>
+                            منتجات ${type}
+                        </p>
+
+                    `;
+
+
+
+                    card.onclick =
+                        function () {
+
+
+                            window.location.href =
+
+                                "products.html" +
+
+                                "?category=" +
+
+                                encodeURIComponent(
+                                    currentCategory.name
+                                ) +
+
+                                "&type=" +
+
+                                encodeURIComponent(
+                                    type
+                                );
+
+                        };
+
+
+
+                    container.appendChild(card);
+
+                }
+            );
+
+        }
+
+
+
+        /* =========================
+           SEARCH
+        ========================= */
+
+        document
+            .getElementById("searchInput")
+            .addEventListener(
+                "input",
+                function () {
+
+
+                    const search =
+                        this.value
+                            .trim()
+                            .toLowerCase();
+
+
+
+                    if (!search) {
+
+                        renderTypes(allTypes);
+
+                        return;
+
+                    }
+
+
+
+                    const filtered =
+                        allTypes.filter(
+                            type =>
+                                type
+                                    .toLowerCase()
+                                    .includes(search)
+                        );
+
+
+                    renderTypes(filtered);
+
+                }
+            );
+
+
+
+        /* =========================
+           START
+        ========================= */
+
+        loadCategory();
+
+
+    </script>
+
+
+</body>
+
+</html>
