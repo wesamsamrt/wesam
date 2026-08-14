@@ -79,10 +79,22 @@ function renderProducts(products) {
 
     products.forEach(product => {
 
-        const card =
-            document.createElement("div");
+       const card =
+    document.createElement("div");
 
-        card.className = "product-card";
+card.className = "product-card";
+
+card.style.cursor = "pointer";
+
+card.onclick = function(event) {
+
+    // إذا ضغط على زر + لا نفتح النافذة
+    if (event.target.closest(".add-button")) {
+        return;
+    }
+
+    openProductModal(product.id);
+};
 
 card.innerHTML = `
 
@@ -530,3 +542,398 @@ async function addProduct(productId) {
         alert("حدث خطأ غير متوقع");
     }
 }
+
+
+
+
+
+
+
+
+/* =========================
+   فتح تفاصيل المنتج
+========================= */
+
+function openProductModal(productId) {
+
+    const product =
+        allProducts.find(
+            item => item.id === productId
+        );
+
+    if (!product) {
+
+        console.error("المنتج غير موجود");
+
+        return;
+    }
+
+
+    const modal =
+        document.getElementById("productModal");
+
+
+    // =========================
+    // الصورة
+    // =========================
+
+    const image =
+        document.getElementById(
+            "modalProductImage"
+        );
+
+
+    image.innerHTML =
+        product.image
+
+        ?
+
+        `<img
+            src="${product.image}"
+            alt="${product.model || "المنتج"}"
+        >`
+
+        :
+
+        "📱";
+
+
+    // =========================
+    // البيانات الأساسية
+    // =========================
+
+    document.getElementById(
+        "modalProductType"
+    ).textContent =
+        product.type || product.product_type || "منتج";
+
+
+    document.getElementById(
+        "modalProductName"
+    ).textContent =
+        product.model || "بدون موديل";
+
+
+    document.getElementById(
+        "modalProductCompany"
+    ).textContent =
+        product.company
+        ? "الشركة: " + product.company
+        : "";
+
+
+    document.getElementById(
+        "modalProductDescription"
+    ).textContent =
+        product.description ||
+        "منتج عالي الجودة ومناسب للاستخدام اليومي.";
+
+
+    document.getElementById(
+        "modalProductPrice"
+    ).textContent =
+        `${product.price ?? 0} ر.س`;
+
+
+    // =========================
+    // التفاصيل
+    // =========================
+
+    const details =
+        document.getElementById(
+            "modalProductDetails"
+        );
+
+
+    details.innerHTML = "";
+
+
+    if (product.category) {
+
+        details.innerHTML += `
+
+            <div class="modal-detail">
+
+                <strong>
+                    التصنيف
+                </strong>
+
+                ${product.category}
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (product.product_type) {
+
+        details.innerHTML += `
+
+            <div class="modal-detail">
+
+                <strong>
+                    نوع المنتج
+                </strong>
+
+                ${product.product_type}
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (product.type) {
+
+        details.innerHTML += `
+
+            <div class="modal-detail">
+
+                <strong>
+                    النوع
+                </strong>
+
+                ${product.type}
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (product.color) {
+
+        details.innerHTML += `
+
+            <div class="modal-detail">
+
+                <strong>
+                    اللون
+                </strong>
+
+                ${product.color}
+
+            </div>
+
+        `;
+
+    }
+
+
+    // =========================
+    // الألوان المتوفرة
+    // =========================
+
+    const colorsBox =
+        document.getElementById(
+            "modalColors"
+        );
+
+
+    const colors =
+        allProducts
+            .filter(item => {
+
+                return (
+
+                    item.model === product.model
+
+                    ||
+
+                    item.product_type === product.product_type
+
+                );
+
+            })
+            .map(item => item.color)
+            .filter(Boolean);
+
+
+    const uniqueColors =
+        [...new Set(colors)];
+
+
+    if (uniqueColors.length > 0) {
+
+        colorsBox.innerHTML = `
+
+            <div class="modal-options-title">
+                🎨 الألوان المتوفرة
+            </div>
+
+            <div class="modal-option-list">
+
+                ${
+                    uniqueColors
+                        .map(color => `
+                            <span class="modal-option">
+                                ${color}
+                            </span>
+                        `)
+                        .join("")
+                }
+
+            </div>
+        `;
+
+    } else {
+
+        colorsBox.innerHTML = "";
+
+    }
+
+
+    // =========================
+    // الموديلات المتوفرة
+    // =========================
+
+    const modelsBox =
+        document.getElementById(
+            "modalModels"
+        );
+
+
+    const models =
+        allProducts
+            .filter(item => {
+
+                return (
+
+                    item.product_type === product.product_type
+
+                    ||
+
+                    item.type === product.type
+
+                );
+
+            })
+            .map(item => item.model)
+            .filter(Boolean);
+
+
+    const uniqueModels =
+        [...new Set(models)];
+
+
+    if (uniqueModels.length > 0) {
+
+        modelsBox.innerHTML = `
+
+            <div class="modal-options-title">
+                📱 الموديلات المتوفرة
+            </div>
+
+            <div class="modal-option-list">
+
+                ${
+                    uniqueModels
+                        .map(model => `
+                            <span class="modal-option">
+                                ${model}
+                            </span>
+                        `)
+                        .join("")
+                }
+
+            </div>
+
+        `;
+
+    } else {
+
+        modelsBox.innerHTML = "";
+
+    }
+
+
+    // =========================
+    // زر الإضافة
+    // =========================
+
+    document.getElementById(
+        "modalAddButton"
+    ).onclick = function() {
+
+        addProduct(product.id);
+
+    };
+
+
+    // =========================
+    // إظهار النافذة
+    // =========================
+
+    modal.classList.add("show");
+
+
+    document.body.style.overflow = "hidden";
+
+}
+
+
+/* =========================
+   إغلاق النافذة
+========================= */
+
+function closeProductModal() {
+
+    const modal =
+        document.getElementById(
+            "productModal"
+        );
+
+
+    modal.classList.remove("show");
+
+
+    document.body.style.overflow = "";
+
+}
+
+
+/* =========================
+   الضغط خارج البطاقة
+========================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        const modal =
+            document.getElementById(
+                "productModal"
+            );
+
+        if (
+            event.target === modal
+        ) {
+
+            closeProductModal();
+
+        }
+
+    }
+);
+
+
+/* =========================
+   زر ESC
+========================= */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Escape") {
+
+            closeProductModal();
+
+        }
+
+    }
+);

@@ -174,6 +174,69 @@
 
     <!-- JavaScript -->
 
+
+<!-- =========================
+     نافذة تفاصيل المنتج
+========================= -->
+
+<div
+    id="productModal"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,.55);
+        z-index:9999;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+    "
+>
+
+    <div
+        id="productModalContent"
+        style="
+            width:min(500px, 100%);
+            max-height:90vh;
+            overflow-y:auto;
+            background:white;
+            border-radius:28px;
+            padding:20px;
+            position:relative;
+        "
+    >
+
+        <button
+            onclick="closeProductModal()"
+            style="
+                position:absolute;
+                top:12px;
+                left:12px;
+                width:40px;
+                height:40px;
+                border:none;
+                border-radius:12px;
+                background:#f1f1f1;
+                font-size:20px;
+                cursor:pointer;
+                z-index:2;
+            "
+        >
+            ✕
+        </button>
+
+
+        <div id="productModalBody">
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
     <script src="products.js"></script>
 
 
@@ -200,7 +263,85 @@
 
 
 
+<!-- =========================
+     نافذة تفاصيل المنتج
+========================= -->
 
+<div id="productModal" class="product-modal">
+
+    <div class="product-modal-box">
+
+        <button
+            class="product-modal-close"
+            onclick="closeProductModal()"
+        >
+            ×
+        </button>
+
+        <div
+            id="modalProductImage"
+            class="modal-product-image"
+        ></div>
+
+        <div class="modal-product-content">
+
+            <div
+                id="modalProductType"
+                class="modal-product-type"
+            ></div>
+
+            <h2 id="modalProductName">
+                اسم المنتج
+            </h2>
+
+            <p
+                id="modalProductCompany"
+                class="modal-company"
+            ></p>
+
+            <p
+                id="modalProductDescription"
+                class="modal-description"
+            ></p>
+
+            <div
+                id="modalProductDetails"
+                class="modal-details"
+            ></div>
+
+            <div
+                id="modalColors"
+                class="modal-options"
+            ></div>
+
+            <div
+                id="modalModels"
+                class="modal-options"
+            ></div>
+
+            <div class="modal-bottom">
+
+                <strong
+                    id="modalProductPrice"
+                    class="modal-price"
+                >
+                    0 ر.س
+                </strong>
+
+                <button
+                    id="modalAddButton"
+                    class="modal-add-button"
+                >
+                    + إضافة للسلة
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 </body>
 
 </html>
