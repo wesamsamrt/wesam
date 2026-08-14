@@ -636,7 +636,10 @@ async function removeOrderItem(itemId) {
 
     await updateOrderTotal();
 
-   loadOrders();
+  loadOrders();
+
+console.log("🔥 بدأ تشغيل الإشعارات");
+
 loadNotifications();
 }
 
