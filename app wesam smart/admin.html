@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>لوحة الإدارة</title>
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="admin.css"
+    >
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase.js"></script>
+
+</head>
+
+
+<body>
+
+    <!-- شاشة الدخول -->
+
+    <div
+        class="login-page"
+        id="loginPage"
+    >
+
+        <div class="login-card">
+
+            <div class="login-icon">
+                🔐
+            </div>
+
+            <h1>
+                لوحة الإدارة
+            </h1>
+
+            <p>
+                أدخل رمز الإدارة للمتابعة
+            </p>
+
+            <input
+                id="adminCode"
+                type="password"
+                placeholder="رمز الإدارة"
+                autocomplete="off"
+            >
+
+            <button
+                id="loginButton"
+            >
+                دخول
+            </button>
+
+            <div
+                id="loginMessage"
+                class="login-message"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- لوحة الإدارة -->
+
+    <div
+        class="admin-page"
+        id="adminPage"
+        style="display:none;"
+    >
+
+        <header class="admin-header">
+
+            <div>
+
+                <h1>
+                    لوحة الإدارة
+                </h1>
+
+                <p>
+                    إدارة المتجر
+                </p>
+
+            </div>
+
+            <button
+                id="logoutButton"
+                class="logout"
+            >
+                تسجيل الخروج
+            </button>
+
+        </header>
+
+
+        <main class="admin-content">
+
+            <div class="welcome-card">
+
+                <div>
+
+                    <span>
+                        👋 أهلاً بك
+                    </span>
+
+                    <h2>
+                        ماذا تريد أن تدير؟
+                    </h2>
+
+                </div>
+
+              </div>
+
+
+             <div class="admin-grid">
+
+                  <button class="admin-card" id="productsButton">
+
+                 <div class="admin-card-icon">
+                      📦
+                  </div>
+
+                 <h3>
+                  المنتجات
+                   </h3>
+
+                    <p>
+                   إضافة وتعديل وحذف المنتجات
+                     </p>
+
+                    </button>
+
+
+                <button class="admin-card">
+
+                    <div class="admin-card-icon">
+                        📋
+                    </div>
+
+                    <h3>
+                        الطلبات
+                    </h3>
+
+                    <p>
+                        مشاهدة وإدارة طلبات العملاء
+                    </p>
+
+                </button>
+
+
+                <button class="admin-card" id="categoriesButton">
+
+                 <div class="admin-card-icon">
+                 🗂️  
+                 </div>
+
+                     <h3>
+                        التصنيفات
+                     </h3>
+
+                  <p>
+                     إدارة تصنيفات المتجر
+                 </p>
+
+                    </button>
+
+
+                <button class="admin-card">
+
+                    <div class="admin-card-icon">
+                        👥
+                    </div>
+
+                    <h3>
+                        العملاء
+                    </h3>
+
+                    <p>
+                        مشاهدة بيانات العملاء
+                    </p>
+
+                </button>
+
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+
+
+
+
+<section
+    class="products-admin"
+    id="productsAdmin"
+    style="display:none;"
+>
+
+    <div class="products-admin-header">
+
+        <button
+            class="back-admin"
+            id="backToDashboard"
+        >
+            ← رجوع
+        </button>
+
+        <div>
+            <h2>إدارة المنتجات</h2>
+            <p>إضافة وتعديل وحذف منتجات المتجر</p>
+        </div>
+
+        <button
+            class="add-product-button"
+            id="addProductButton"
+        >
+            + إضافة منتج
+
+        </button>
+<div
+    class="product-form-card"
+    id="productFormCard"
+    style="display:none;"
+>
+
+    <h2>إضافة منتج جديد</h2>
+
+    <p>أدخل بيانات المنتج ثم اضغط حفظ</p>
+
+
+    <div class="product-form-grid">
+
+        <div class="form-group">
+            <label>التصنيف</label>
+
+            <input
+                id="productCategory"
+                type="text"
+                placeholder="مثال: حمايات"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>نوع المنتج</label>
+
+            <input
+                id="productProductType"
+                type="text"
+                placeholder="مثال: حماية شاشة"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>النوع</label>
+
+            <input
+                id="productType"
+                type="text"
+                placeholder="مثال: قزاز عادي"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>الشركة</label>
+
+            <input
+                id="productCompany"
+                type="text"
+                placeholder="مثال: Apple"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>الموديل</label>
+
+            <input
+                id="productModel"
+                type="text"
+                placeholder="مثال: iPhone 15"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>اللون</label>
+
+            <input
+                id="productColor"
+                type="text"
+                placeholder="مثال: شفاف"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>الكمية</label>
+
+            <input
+                id="productQuantity"
+                type="number"
+                min="0"
+                placeholder="0"
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label>السعر</label>
+
+            <input
+                id="productPrice"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+            >
+        </div>
+
+    </div>
+
+
+    <div class="product-form-actions">
+
+        <button
+            id="saveProductButton"
+            class="save-product"
+        >
+            حفظ المنتج
+        </button>
+
+        <button
+            id="cancelProductButton"
+            class="cancel-product"
+        >
+            إلغاء
+        </button>
+
+    </div>
+
+
+    <div
+        id="productFormMessage"
+        class="product-form-message"
+    ></div>
+
+</div>
+    </div>
+
+
+    <div class="admin-search">
+
+        <input
+            type="text"
+            id="adminProductSearch"
+            placeholder="ابحث عن موديل أو شركة..."
+        >
+
+    </div>
+
+
+    <div
+        class="admin-products"
+        id="adminProducts"
+    ></div>
+
+</section>
+
+<section
+    class="categories-admin"
+    id="categoriesAdmin"
+    style="display:none;"
+>
+
+    <div class="categories-admin-header">
+
+        <button
+            class="back-admin"
+            id="backFromCategories"
+        >
+            ← رجوع
+        </button>
+
+        <div>
+
+            <h2>
+                إدارة التصنيفات
+            </h2>
+
+            <p>
+                إضافة وتعديل وحذف تصنيفات المتجر
+            </p>
+
+        </div>
+
+        <button
+            class="add-product-button"
+            id="addCategoryButton"
+        >
+            + إضافة تصنيف
+        </button>
+
+    </div>
+
+
+    <div
+        class="category-form-card"
+        id="categoryFormCard"
+        style="display:none;"
+    >
+
+        <h3>
+            إضافة تصنيف
+        </h3>
+
+        <input
+            id="categoryName"
+            type="text"
+            placeholder="اسم التصنيف"
+        >
+
+        <input
+            id="categoryIcon"
+            type="text"
+            placeholder="الأيقونة مثال: 📱"
+        >
+
+        <div class="category-form-actions">
+
+            <button
+                id="saveCategoryButton"
+                class="save-product"
+            >
+                حفظ التصنيف
+            </button>
+
+            <button
+                id="cancelCategoryButton"
+                class="cancel-product"
+            >
+                إلغاء
+            </button>
+
+        </div>
+
+        <div
+            id="categoryFormMessage"
+            class="product-form-message"
+        ></div>
+
+    </div>
+
+
+    <div
+        class="categories-list"
+        id="categoriesList"
+    ></div>
+
+</section>
+    <script src="admin.js"></script>
+
+</body>
+
+</html>

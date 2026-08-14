@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>حماية شاشة</title>
+
+
+    <!-- الخط -->
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+
+    <!-- CSS -->
+
+    <link
+        rel="stylesheet"
+        href="products.css"
+    >
+
+
+    <!-- Supabase -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase.js"></script>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <header class="header">
+
+        <button
+            class="back-button"
+            onclick="history.back()"
+        >
+            →
+        </button>
+
+
+        <div class="header-title">
+
+            <h1>
+                🛡️ حماية شاشة
+            </h1>
+
+            <p>
+                اختر الحماية المناسبة
+            </p>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =========================
+         SEARCH
+    ========================== -->
+
+    <div class="search">
+
+        <div class="search-box">
+
+            <span>
+                ⌕
+            </span>
+
+            <input
+                id="searchInput"
+                type="text"
+                placeholder="ابحث عن موديل مثل iPhone 15..."
+                oninput="searchProducts()"
+            >
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================
+         FILTERS
+    ========================== -->
+
+    <div class="filters">
+
+        <button
+            class="filter active"
+        >
+            الكل
+        </button>
+
+        <button class="filter">
+            قزاز عادي
+        </button>
+
+        <button class="filter">
+            خصوصية
+        </button>
+
+        <button class="filter">
+            21D
+        </button>
+
+        <button class="filter">
+            مات
+        </button>
+
+    </div>
+
+
+
+    <!-- =========================
+         PRODUCTS
+    ========================== -->
+
+    <main class="content">
+
+        <div class="section-title">
+
+            <h2>
+                المنتجات
+            </h2>
+
+            <span>
+                من المخزون
+            </span>
+
+        </div>
+
+
+        <!--
+            المنتجات ستأتي من Supabase
+            عن طريق products.js
+        -->
+
+        <div
+            class="products"
+            id="products"
+        ></div>
+
+    </main>
+
+
+
+    <!-- JavaScript -->
+
+    <script src="products.js"></script>
+
+</body>
+
+</html>
