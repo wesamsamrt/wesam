@@ -713,3 +713,188 @@ body {
     }
 
 }
+
+
+/* =========================
+   الطلبات
+========================= */
+
+.orders-admin {
+    width: min(1100px, calc(100% - 32px));
+    margin: 30px auto;
+}
+
+.orders-admin-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 25px;
+}
+
+.orders-admin-header h2 {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.orders-admin-header p {
+    color: #858796;
+    font-size: 12px;
+}
+
+.admin-orders {
+    display: grid;
+    gap: 18px;
+}
+
+.admin-order-card {
+    background: white;
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 8px 30px rgba(50,50,100,.06);
+}
+
+.admin-order-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eeeef5;
+}
+
+.admin-order-number {
+    display: inline-block;
+    background: #eeeaff;
+    color: #6557ed;
+    padding: 5px 10px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.admin-order-top h3 {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 3px;
+}
+
+.admin-order-top p {
+    color: #858796;
+    font-size: 12px;
+}
+
+.admin-order-date {
+    color: #858796;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.admin-order-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+    font-size: 12px;
+}
+
+.admin-order-status strong {
+    background: #e5f8ef;
+    color: #2e9d69;
+    padding: 6px 12px;
+    border-radius: 10px;
+}
+
+.admin-order-items {
+    display: grid;
+    gap: 10px;
+}
+
+.admin-order-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8f9fd;
+    border-radius: 16px;
+    padding: 12px;
+}
+
+.admin-order-item-image {
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+    background: #eeeaff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-size: 25px;
+}
+
+.admin-order-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-order-item-info {
+    flex: 1;
+}
+
+.admin-order-item-info h4 {
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 3px;
+}
+
+.admin-order-item-info p {
+    font-size: 10px;
+    color: #858796;
+    margin-bottom: 4px;
+}
+
+.admin-order-item-info span {
+    font-size: 10px;
+    color: #6557ed;
+    font-weight: 700;
+}
+
+.admin-order-item-price {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.admin-order-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #eeeef5;
+}
+
+.admin-order-total {
+    color: #6557ed;
+    font-size: 18px;
+}
+
+@media (max-width: 600px) {
+
+    .orders-admin-header {
+        align-items: flex-start;
+    }
+
+    .admin-order-top {
+        flex-direction: column;
+    }
+
+    .admin-order-date {
+        white-space: normal;
+    }
+
+    .admin-order-item-price {
+        font-size: 11px;
+    }
+
+}

@@ -1200,8 +1200,983 @@ async function deleteCategory(id) {
 
 
 
+/* =========================
+   إدارة الطلبات
+========================= */
+
+const ordersButton =
+    document.getElementById("ordersButton");
+
+const ordersAdmin =
+    document.getElementById("ordersAdmin");
+
+const backFromOrders =
+    document.getElementById("backFromOrders");
+
+const adminOrders =
+    document.getElementById("adminOrders");
 
 
+/* فتح الطلبات */
+
+ordersButton.addEventListener(
+    "click",
+    async function () {
+
+        dashboardContent.style.display = "none";
+
+        productsAdmin.style.display = "none";
+
+        categoriesAdmin.style.display = "none";
+
+        ordersAdmin.style.display = "block";
+
+        await loadAdminOrders();
+
+    }
+);
+
+
+/* الرجوع للوحة الرئيسية */
+
+backFromOrders.addEventListener(
+    "click",
+    function () {
+
+        ordersAdmin.style.display = "none";
+
+        dashboardContent.style.display = "block";
+
+    }
+);
+
+
+/* تحميل الطلبات */
+
+async function loadAdminOrders() {
+
+    adminOrders.innerHTML = `
+        <div class="message">
+            جاري تحميل الطلبات...
+        </div>
+    `;
+
+
+    const { data: orders, error } =
+        await supabaseClient
+            .from("orders")
+            .select("*")
+            .order("created_at", {
+                ascending: false
+            });
+
+
+    if (error) {
+
+        console.error(error);
+
+        adminOrders.innerHTML = `
+            <div class="message error">
+                حدث خطأ أثناء تحميل الطلبات:
+                ${error.message}
+            </div>
+        `;
+
+        return;
+    }
+
+
+    if (!orders || !orders.length) {
+
+        adminOrders.innerHTML = `
+            <div class="message">
+                لا توجد طلبات حتى الآن 📋
+            </div>
+        `;
+
+        return;
+    }
+
+
+    adminOrders.innerHTML = "";
+
+
+    for (const order of orders) {
+
+        await renderAdminOrder(order);
+
+    }
+
+}
+
+
+/* عرض طلب واحد */
+
+async function renderAdminOrder(order) {
+
+    const { data: items, error } =
+        await supabaseClient
+            .from("order_items")
+            .select("*")
+            .eq("order_id", order.id)
+            .order("id", {
+                ascending: true
+            });
+
+
+    if (error) {
+
+        console.error(error);
+
+        return;
+
+    }
+
+
+    const card =
+        document.createElement("div");
+
+    card.className =
+        "admin-order-card";
+
+
+    const date =
+        new Date(order.created_at)
+            .toLocaleString("ar-SA", {
+                dateStyle: "medium",
+                timeStyle: "short"
+            });
+
+
+    let productsHTML = "";
+
+
+    (items || []).forEach(item => {
+
+        const itemTotal =
+            Number(item.price || 0) *
+            Number(item.quantity || 1);
+
+
+        productsHTML += `
+
+            <div class="admin-order-item">
+
+                <div class="admin-order-item-image">
+
+                    ${
+                        item.image
+                        ?
+                        `<img
+                            src="${item.image}"
+                            alt=""
+                        >`
+                        :
+                        "📦"
+                    }
+
+                </div>
+
+
+                <div class="admin-order-item-info">
+
+                    <h4>
+                        ${item.model || "بدون موديل"}
+                    </h4>
+
+                    <p>
+                        ${item.company || ""}
+                        ${
+                            item.color
+                            ? " • " + item.color
+                            : ""
+                        }
+                    </p>
+
+                    <span>
+                        الكمية: ${item.quantity || 1}
+                    </span>
+
+                </div>
+
+
+                <div class="admin-order-item-price">
+
+                    ${itemTotal.toFixed(2)} ر.س
+
+                </div>
+
+            </div>
+
+        `;
+
+    });
+
+
+    card.innerHTML = `
+
+        <div class="admin-order-top">
+
+            <div>
+
+                <span class="admin-order-number">
+                    الطلب #${order.id}
+                </span>
+
+                <h3>
+                    ${order.customer_name}
+                </h3>
+
+                <p>
+                    📱 ${order.customer_phone}
+                </p>
+
+            </div>
+
+
+           <div class="admin-order-date">
+
+    ${date}
+
+    <button
+        class="print-order-button"
+        onclick="printOrder(${order.id})"
+    >
+        🖨️ طباعة الطلب
+    </button>
+
+</div>
+
+        </div>
+
+
+        <div class="admin-order-status">
+
+            <span>
+                الحالة:
+            </span>
+
+            <strong>
+                ${order.status || "جديد"}
+            </strong>
+
+        </div>
+
+
+        <div class="admin-order-items">
+
+            ${productsHTML}
+
+        </div>
+
+
+        <div class="admin-order-bottom">
+
+            <strong>
+                الإجمالي
+            </strong>
+
+            <strong class="admin-order-total">
+                ${Number(order.total || 0).toFixed(2)} ر.س
+            </strong>
+
+        </div>
+
+    `;
+
+
+    adminOrders.appendChild(card);
+
+}
+
+
+/* =========================
+   طباعة الطلب
+========================= */
+
+async function printOrder(orderId) {
+
+    try {
+
+        /* =========================
+           جلب الطلب
+        ========================= */
+
+        const { data: order, error: orderError } =
+            await supabaseClient
+                .from("orders")
+                .select("*")
+                .eq("id", orderId)
+                .single();
+
+
+        if (orderError || !order) {
+
+            console.error(orderError);
+
+            alert("لم يتم العثور على الطلب");
+
+            return;
+        }
+
+
+        /* =========================
+           جلب منتجات الطلب
+        ========================= */
+
+        const { data: items, error: itemsError } =
+            await supabaseClient
+                .from("order_items")
+                .select("*")
+                .eq("order_id", orderId)
+                .order("id", {
+                    ascending: true
+                });
+
+
+        if (itemsError) {
+
+            console.error(itemsError);
+
+            alert("حدث خطأ أثناء تحميل منتجات الطلب");
+
+            return;
+        }
+
+
+        const date =
+            new Date(order.created_at)
+                .toLocaleString("ar-SA", {
+                    dateStyle: "medium",
+                    timeStyle: "short"
+                });
+
+
+        /* =========================
+           بناء صفوف الجدول
+        ========================= */
+
+        let rowsHTML = "";
+
+
+        (items || []).forEach((item, index) => {
+
+            const quantity =
+                Number(item.quantity || 1);
+
+            const price =
+                Number(item.price || 0);
+
+            const total =
+                quantity * price;
+
+
+            rowsHTML += `
+
+                <tr>
+
+                    <td>
+                        ${index + 1}
+                    </td>
+
+                    <td>
+                        ${item.category || "-"}
+                    </td>
+
+                    <td>
+                        ${item.product_type || "-"}
+                    </td>
+
+                    <td>
+                        ${item.type || "-"}
+                    </td>
+
+                    <td>
+                        ${item.company || "-"}
+                    </td>
+
+                    <td>
+                        ${item.model || "-"}
+                    </td>
+
+                    <td>
+                        ${item.color || "-"}
+                    </td>
+
+                    <td>
+                        ${quantity}
+                    </td>
+
+                    <td>
+                        ${price.toFixed(2)} ر.س
+                    </td>
+
+                    <td>
+                        ${total.toFixed(2)} ر.س
+                    </td>
+
+                </tr>
+
+            `;
+
+        });
+
+
+        /* =========================
+           فتح صفحة الطباعة
+        ========================= */
+
+        const printWindow =
+            window.open(
+                "",
+                "_blank",
+                "width=1200,height=800"
+            );
+
+
+        if (!printWindow) {
+
+            alert(
+                "المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى."
+            );
+
+            return;
+        }
+
+
+        printWindow.document.write(`
+
+<!DOCTYPE html>
+
+<html
+    lang="ar"
+    dir="rtl"
+>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        طلب #${order.id}
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            font-family:
+                Arial,
+                Tahoma,
+                sans-serif;
+
+            margin: 0;
+
+            padding: 30px;
+
+            background: white;
+
+            color: #111;
+
+        }
+
+
+        .print-page {
+
+            width: 100%;
+
+            max-width: 1200px;
+
+            margin: auto;
+
+        }
+
+
+        /* =========================
+           العنوان
+        ========================= */
+
+        .header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: flex-start;
+
+            border-bottom: 2px solid #111;
+
+            padding-bottom: 18px;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        .header h1 {
+
+            margin: 0 0 8px;
+
+            font-size: 25px;
+
+        }
+
+
+        .header p {
+
+            margin: 4px 0;
+
+            font-size: 13px;
+
+        }
+
+
+        .order-number {
+
+            font-size: 22px;
+
+            font-weight: bold;
+
+        }
+
+
+        /* =========================
+           معلومات العميل
+        ========================= */
+
+        .customer-info {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            border: 1px solid #111;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        .customer-box {
+
+            padding: 12px;
+
+            border-left: 1px solid #111;
+
+        }
+
+
+        .customer-box:last-child {
+
+            border-left: none;
+
+        }
+
+
+        .customer-label {
+
+            display: block;
+
+            font-size: 11px;
+
+            color: #555;
+
+            margin-bottom: 5px;
+
+        }
+
+
+        .customer-value {
+
+            font-size: 14px;
+
+            font-weight: bold;
+
+        }
+
+
+        /* =========================
+           الجدول
+        ========================= */
+
+        table {
+
+            width: 100%;
+
+            border-collapse: collapse;
+
+            table-layout: fixed;
+
+            font-size: 11px;
+
+        }
+
+
+        th,
+        td {
+
+            border: 1px solid #111;
+
+            padding: 9px 5px;
+
+            text-align: center;
+
+            vertical-align: middle;
+
+            word-break: break-word;
+
+        }
+
+
+        th {
+
+            background: #eeeeee;
+
+            font-weight: bold;
+
+        }
+
+
+        tbody tr:nth-child(even) {
+
+            background: #fafafa;
+
+        }
+
+
+        /* =========================
+           الإجمالي
+        ========================= */
+
+        .total-section {
+
+            margin-top: 20px;
+
+            display: flex;
+
+            justify-content: flex-end;
+
+        }
+
+
+        .total-box {
+
+            border: 2px solid #111;
+
+            min-width: 280px;
+
+            display: flex;
+
+            justify-content: space-between;
+
+            padding: 14px 18px;
+
+            font-size: 17px;
+
+            font-weight: bold;
+
+        }
+
+
+        /* =========================
+           الطباعة
+        ========================= */
+
+        .footer {
+
+            margin-top: 30px;
+
+            padding-top: 12px;
+
+            border-top: 1px solid #aaa;
+
+            text-align: center;
+
+            font-size: 11px;
+
+            color: #555;
+
+        }
+
+
+        @media print {
+
+            body {
+
+                padding: 10px;
+
+            }
+
+
+            .print-page {
+
+                max-width: none;
+
+            }
+
+
+            @page {
+
+                size: A4 landscape;
+
+                margin: 10mm;
+
+            }
+
+
+            th {
+
+                background: #eeeeee !important;
+
+                -webkit-print-color-adjust: exact;
+
+                print-color-adjust: exact;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="print-page">
+
+
+    <!-- =========================
+         رأس الطلب
+    ========================= -->
+
+    <div class="header">
+
+        <div>
+
+            <h1>
+                فاتورة / كشف طلب
+            </h1>
+
+            <p>
+                رقم الطلب: <strong>#${order.id}</strong>
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <div class="order-number">
+                طلب #${order.id}
+            </div>
+
+            <p>
+                ${date}
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         معلومات العميل
+    ========================= -->
+
+    <div class="customer-info">
+
+
+        <div class="customer-box">
+
+            <span class="customer-label">
+                اسم العميل
+            </span>
+
+            <span class="customer-value">
+                ${order.customer_name || "-"}
+            </span>
+
+        </div>
+
+
+        <div class="customer-box">
+
+            <span class="customer-label">
+                رقم الجوال
+            </span>
+
+            <span class="customer-value">
+                ${order.customer_phone || "-"}
+            </span>
+
+        </div>
+
+
+        <div class="customer-box">
+
+            <span class="customer-label">
+                حالة الطلب
+            </span>
+
+            <span class="customer-value">
+                ${order.status || "جديد"}
+            </span>
+
+        </div>
+
+
+        <div class="customer-box">
+
+            <span class="customer-label">
+                رقم الطلب
+            </span>
+
+            <span class="customer-value">
+                #${order.id}
+            </span>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =========================
+         جدول المنتجات
+    ========================= -->
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>
+                    #
+                </th>
+
+                <th>
+                    التصنيف
+                </th>
+
+                <th>
+                    نوع المنتج
+                </th>
+
+                <th>
+                    النوع
+                </th>
+
+                <th>
+                    الشركة
+                </th>
+
+                <th>
+                    الموديل
+                </th>
+
+                <th>
+                    اللون
+                </th>
+
+                <th>
+                    الكمية
+                </th>
+
+                <th>
+                    السعر
+                </th>
+
+                <th>
+                    الإجمالي
+                </th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+            ${rowsHTML}
+
+        </tbody>
+
+    </table>
+
+
+    <!-- =========================
+         الإجمالي
+    ========================= -->
+
+    <div class="total-section">
+
+        <div class="total-box">
+
+            <span>
+                إجمالي الطلب
+            </span>
+
+            <span>
+                ${Number(order.total || 0).toFixed(2)} ر.س
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer">
+
+        تم إنشاء هذا الكشف من لوحة إدارة المتجر
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+    window.onload = function () {
+
+        window.print();
+
+    };
+
+<\/script>
+
+
+</body>
+
+</html>
+
+        `);
+
+
+        printWindow.document.close();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "حدث خطأ أثناء تجهيز الطلب للطباعة"
+        );
+
+    }
+
+}
 
 
 

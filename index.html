@@ -883,16 +883,26 @@
 
         <div class="header-actions">
 
-            <button class="icon-button" onclick="openNotifications()">
-                🔔
-                <span class="notification">5</span>
-            </button>
+    <button class="icon-button" onclick="openNotifications()">
+        🔔
+        <span class="notification">5</span>
+    </button>
 
-            <button class="icon-button" onclick="openProfile()">
-                👤
-            </button>
+    <button class="icon-button" onclick="window.location.href='profile.html'">
+        👤
+    </button>
 
-        </div>
+    <button
+        id="logoutButton"
+        class="icon-button"
+        onclick="logout()"
+        title="تسجيل الخروج"
+        style="display:none;"
+    >
+        🚪
+    </button>
+
+</div>
 
     </header>
 
@@ -1050,7 +1060,7 @@
 
         <button
             class="nav-item"
-            onclick="openAccount()"
+            onclick="window.location.href='profile.html'"
         >
             <span class="nav-icon">👤</span>
             <span>الحساب</span>
@@ -1112,8 +1122,8 @@
 
 
         function openOrders() {
-            alert("صفحة الطلبات ستفتح هنا");
-        }
+    window.location.href = "orders.html";
+}
 
 
         function openAccount() {
@@ -1145,7 +1155,7 @@
         function openProfile() {
             alert("الحساب الشخصي");
         }
-
+  
 
         /* =========================
            CATEGORY
@@ -1287,5 +1297,60 @@ async function loadCategories() {
 loadCategories();
     </script>
 
+
+
+
+
+
+
+
+<script>
+
+async function checkLoginStatus() {
+
+    const {
+        data: { user }
+    } = await supabaseClient.auth.getUser();
+
+    const logoutButton =
+        document.getElementById("logoutButton");
+
+    if (!logoutButton) return;
+
+    if (user) {
+
+        logoutButton.style.display = "block";
+
+    } else {
+
+        logoutButton.style.display = "none";
+
+    }
+
+}
+
+
+async function logout() {
+
+    const { error } =
+        await supabaseClient.auth.signOut();
+
+    if (error) {
+
+        console.error(error);
+
+        alert("حدث خطأ أثناء تسجيل الخروج");
+
+        return;
+    }
+
+    window.location.href = "login.html";
+
+}
+
+
+checkLoginStatus();
+
+</script>
 </body>
 </html>

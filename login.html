@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>تسجيل الدخول</title>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase.js"></script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Cairo", sans-serif;
+            background: #f8f9fd;
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 20px;
+        }
+
+
+        .login-card {
+
+            width: 100%;
+            max-width: 420px;
+
+            background: white;
+
+            border-radius: 28px;
+
+            padding: 30px;
+
+            box-shadow:
+                0 15px 40px rgba(50,50,100,.08);
+        }
+
+
+        .icon {
+
+            width: 70px;
+            height: 70px;
+
+            margin: 0 auto 20px;
+
+            border-radius: 22px;
+
+            background: #eeeaff;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            font-size: 34px;
+        }
+
+
+        h1 {
+
+            text-align: center;
+
+            font-size: 24px;
+
+            font-weight: 800;
+
+            margin-bottom: 7px;
+        }
+
+
+        .description {
+
+            text-align: center;
+
+            color: #858796;
+
+            font-size: 12px;
+
+            margin-bottom: 25px;
+        }
+
+
+        .field {
+
+            margin-bottom: 15px;
+        }
+
+
+        .field label {
+
+            display: block;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            margin-bottom: 7px;
+        }
+
+
+        .field input {
+
+            width: 100%;
+
+            height: 52px;
+
+            border: 1px solid #eee;
+
+            border-radius: 15px;
+
+            padding: 0 15px;
+
+            font-family: inherit;
+
+            outline: none;
+
+            font-size: 13px;
+
+            background: white;
+        }
+
+
+        .field input:focus {
+
+            border-color: #6557ed;
+        }
+
+
+        .login-button {
+
+            width: 100%;
+
+            height: 52px;
+
+            border: none;
+
+            border-radius: 15px;
+
+            background: #6557ed;
+
+            color: white;
+
+            font-family: inherit;
+
+            font-size: 14px;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+            margin-top: 5px;
+
+            transition: .2s;
+        }
+
+
+        .login-button:hover {
+
+            opacity: .92;
+        }
+
+
+        .login-button:disabled {
+
+            opacity: .6;
+
+            cursor: not-allowed;
+        }
+
+
+        .register {
+
+            text-align: center;
+
+            margin-top: 20px;
+
+            font-size: 12px;
+
+            color: #858796;
+        }
+
+
+        .register a {
+
+            color: #6557ed;
+
+            font-weight: 800;
+
+            text-decoration: none;
+        }
+
+
+        .message {
+
+            margin-top: 15px;
+
+            padding: 12px;
+
+            border-radius: 12px;
+
+            font-size: 12px;
+
+            text-align: center;
+
+            display: none;
+        }
+
+
+        .message.error {
+
+            background: #fff0f3;
+
+            color: #e33b55;
+        }
+
+
+        .message.success {
+
+            background: #e8f8ef;
+
+            color: #198754;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="login-card">
+
+
+    <div class="icon">
+        🔐
+    </div>
+
+
+    <h1>
+        تسجيل الدخول
+    </h1>
+
+
+    <p class="description">
+        سجل دخولك لإضافة المنتجات إلى طلباتك
+    </p>
+
+
+    <!-- البريد -->
+
+    <div class="field">
+
+        <label>
+            البريد الإلكتروني
+        </label>
+
+        <input
+            id="email"
+            type="email"
+            placeholder="example@email.com"
+            autocomplete="email"
+        >
+
+    </div>
+
+
+    <!-- كلمة المرور -->
+
+    <div class="field">
+
+        <label>
+            كلمة المرور
+        </label>
+
+        <input
+            id="password"
+            type="password"
+            placeholder="كلمة المرور"
+            autocomplete="current-password"
+        >
+
+    </div>
+
+
+    <!-- زر الدخول -->
+
+    <button
+        class="login-button"
+        id="loginButton"
+        onclick="login()"
+    >
+        تسجيل الدخول
+    </button>
+
+
+    <!-- الرسالة -->
+
+    <div
+        class="message"
+        id="message"
+    ></div>
+
+
+
+
+
+
+
+    <button
+    type="button"
+    onclick="guestLogin()"
+    style="
+        width:100%;
+        height:52px;
+        border:none;
+        border-radius:15px;
+        background:#f0efff;
+        color:#6557ed;
+        font-family:inherit;
+        font-size:14px;
+        font-weight:800;
+        cursor:pointer;
+        margin-top:10px;
+    "
+>
+    الدخول كضيف
+</button>
+    <!-- التسجيل -->
+
+    <div class="register">
+
+        ما عندك حساب؟
+
+        <a href="register.html">
+            إنشاء حساب
+        </a>
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+
+/* =========================
+   عرض الرسائل
+========================= */
+
+function showMessage(text, type = "error") {
+
+    const message =
+        document.getElementById("message");
+
+    message.textContent = text;
+
+    message.className =
+        "message " + type;
+
+    message.style.display = "block";
+}
+
+
+
+/* =========================
+   تسجيل الدخول
+========================= */
+
+async function login() {
+
+    const email =
+        document
+            .getElementById("email")
+            .value
+            .trim()
+            .toLowerCase();
+
+
+    const password =
+        document
+            .getElementById("password")
+            .value;
+
+
+    const button =
+        document.getElementById("loginButton");
+
+
+    const message =
+        document.getElementById("message");
+
+
+    message.style.display = "none";
+
+
+    /* التحقق من البيانات */
+
+    if (!email || !password) {
+
+        showMessage(
+            "اكتب البريد الإلكتروني وكلمة المرور"
+        );
+
+        return;
+    }
+
+
+    if (!email.includes("@")) {
+
+        showMessage(
+            "اكتب بريدًا إلكترونيًا صحيحًا"
+        );
+
+        return;
+    }
+
+
+    /* تعطيل الزر */
+
+    button.disabled = true;
+
+    button.textContent =
+        "جاري تسجيل الدخول...";
+
+
+    try {
+
+
+        /* تسجيل الدخول في Supabase */
+
+        const { data, error } =
+            await supabaseClient.auth.signInWithPassword({
+
+                email: email,
+
+                password: password
+
+            });
+
+
+        /* في حالة وجود خطأ */
+
+        if (error) {
+
+            console.error(
+                "Login Error:",
+                error
+            );
+
+
+            let errorMessage =
+                "حدث خطأ أثناء تسجيل الدخول";
+
+
+            if (
+                error.message
+                    .toLowerCase()
+                    .includes("invalid login credentials")
+            ) {
+
+                errorMessage =
+                    "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+
+            }
+
+
+            else if (
+                error.message
+                    .toLowerCase()
+                    .includes("email not confirmed")
+            ) {
+
+                errorMessage =
+                    "يجب تأكيد البريد الإلكتروني أولًا";
+
+            }
+
+
+            else if (
+                error.message
+                    .toLowerCase()
+                    .includes("too many requests")
+            ) {
+
+                errorMessage =
+                    "محاولات كثيرة، حاول مرة أخرى بعد قليل";
+
+            }
+
+
+            showMessage(errorMessage);
+
+            button.disabled = false;
+
+            button.textContent =
+                "تسجيل الدخول";
+
+            return;
+        }
+
+
+        /* التأكد من وجود المستخدم */
+
+        if (!data || !data.user) {
+
+            showMessage(
+                "لم يتم العثور على الحساب"
+            );
+
+            button.disabled = false;
+
+            button.textContent =
+                "تسجيل الدخول";
+
+            return;
+        }
+
+
+        console.log(
+            "تم تسجيل الدخول:",
+            data.user
+        );
+
+
+        /* نجاح */
+
+        showMessage(
+            "تم تسجيل الدخول بنجاح",
+            "success"
+        );
+
+
+        button.textContent =
+            "تم تسجيل الدخول ✓";
+
+
+        /*
+         * ننتظر قليلًا حتى تظهر رسالة النجاح
+         */
+
+        setTimeout(function() {
+
+            /*
+             * إذا كان المستخدم جاء من صفحة معينة
+             * نرجعه لها
+             */
+
+            const redirect =
+                sessionStorage.getItem(
+                    "loginRedirect"
+                );
+
+
+            if (redirect) {
+
+                sessionStorage.removeItem(
+                    "loginRedirect"
+                );
+
+
+                window.location.href =
+                    redirect;
+
+            }
+
+            else {
+
+                /*
+                 * الصفحة الافتراضية
+                 */
+
+                window.location.href =
+                    "index.html";
+
+            }
+
+        }, 700);
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Unexpected Login Error:",
+            error
+        );
+
+
+        showMessage(
+            "حدث خطأ غير متوقع، حاول مرة أخرى"
+        );
+
+
+        button.disabled = false;
+
+        button.textContent =
+            "تسجيل الدخول";
+    }
+
+}
+
+function guestLogin() {
+
+    window.location.href = "index.html";
+
+}
+
+</script>
+
+
+
+</script>
+
+
+</body>
+
+</html>
