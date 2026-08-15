@@ -2429,7 +2429,7 @@ async function printOrder(orderId) {
         <div>
 
             <h1>
-                فاتورة / كشف طلب
+               تحضير
             </h1>
 
             <p>
