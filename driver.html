@@ -10,7 +10,7 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>طلبات المندوب</title>
+    <title>صفحة المندوب</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -93,6 +93,13 @@
         }
 
 
+        .header-info {
+
+            flex: 1;
+
+        }
+
+
         .header h1 {
 
             font-size: 22px;
@@ -112,10 +119,163 @@
 
 
         /* =========================
-           بطاقة المندوب
+           بطاقة تسجيل المندوب
         ========================= */
 
-        .driver-card {
+        .login-card {
+
+            background: white;
+
+            border-radius: 25px;
+
+            padding: 35px 25px;
+
+            text-align: center;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+            margin-top: 20px;
+
+        }
+
+
+        .login-icon {
+
+            width: 80px;
+
+            height: 80px;
+
+            margin: auto;
+
+            border-radius: 25px;
+
+            background: #eeeaff;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 40px;
+
+            margin-bottom: 18px;
+
+        }
+
+
+        .login-card h2 {
+
+            font-size: 21px;
+
+            font-weight: 800;
+
+        }
+
+
+        .login-card p {
+
+            margin-top: 7px;
+
+            color: #858796;
+
+            font-size: 12px;
+
+        }
+
+
+        .code-input {
+
+            width: 100%;
+
+            height: 55px;
+
+            margin-top: 22px;
+
+            border: 1px solid #e4e5ef;
+
+            border-radius: 16px;
+
+            padding: 0 16px;
+
+            font-family: inherit;
+
+            font-size: 15px;
+
+            font-weight: 700;
+
+            text-align: center;
+
+            outline: none;
+
+            direction: ltr;
+
+        }
+
+
+        .code-input:focus {
+
+            border-color: #6557ed;
+
+            box-shadow:
+                0 0 0 3px rgba(101,87,237,.10);
+
+        }
+
+
+        .login-button {
+
+            width: 100%;
+
+            height: 53px;
+
+            margin-top: 12px;
+
+            border: none;
+
+            border-radius: 16px;
+
+            background: #6557ed;
+
+            color: white;
+
+            font-family: inherit;
+
+            font-size: 14px;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+        }
+
+
+        .login-button:disabled {
+
+            opacity: .6;
+
+            cursor: not-allowed;
+
+        }
+
+
+        .login-message {
+
+            margin-top: 12px;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+        }
+
+
+        /* =========================
+           معلومات المندوب
+        ========================= */
+
+        .driver-header {
 
             background: white;
 
@@ -126,18 +286,11 @@
             box-shadow:
                 0 8px 25px rgba(50,50,100,.05);
 
-            margin-bottom: 15px;
-
-        }
-
-
-        .driver-top {
-
             display: flex;
 
             align-items: center;
 
-            gap: 14px;
+            gap: 15px;
 
         }
 
@@ -147,6 +300,8 @@
             width: 65px;
 
             height: 65px;
+
+            flex-shrink: 0;
 
             border-radius: 20px;
 
@@ -158,9 +313,7 @@
 
             justify-content: center;
 
-            font-size: 30px;
-
-            flex-shrink: 0;
+            font-size: 32px;
 
         }
 
@@ -183,11 +336,43 @@
 
         .driver-info p {
 
-            margin-top: 3px;
-
             color: #858796;
 
-            font-size: 12px;
+            font-size: 11px;
+
+            margin-top: 3px;
+
+        }
+
+
+        .driver-number {
+
+            direction: ltr;
+
+            text-align: right;
+
+        }
+
+
+        .logout-driver {
+
+            border: none;
+
+            background: #fff0f3;
+
+            color: #ff4d67;
+
+            border-radius: 13px;
+
+            padding: 9px 12px;
+
+            font-family: inherit;
+
+            font-size: 11px;
+
+            font-weight: 800;
+
+            cursor: pointer;
 
         }
 
@@ -200,31 +385,41 @@
 
             display: grid;
 
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
 
-            gap: 10px;
+            gap: 12px;
 
-            margin-top: 18px;
-
-        }
-
-
-        .stat {
-
-            background: #f8f9fd;
-
-            border-radius: 15px;
-
-            padding: 14px;
-
-            text-align: center;
+            margin-top: 15px;
 
         }
 
 
-        .stat span {
+        .stat-card {
+
+            background: white;
+
+            border-radius: 19px;
+
+            padding: 18px;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+        }
+
+
+        .stat-icon {
+
+            font-size: 24px;
+
+        }
+
+
+        .stat-card span {
 
             display: block;
+
+            margin-top: 7px;
 
             color: #858796;
 
@@ -233,13 +428,15 @@
         }
 
 
-        .stat strong {
+        .stat-card strong {
 
             display: block;
 
-            margin-top: 3px;
+            margin-top: 2px;
 
             font-size: 20px;
+
+            font-weight: 800;
 
         }
 
@@ -256,14 +453,14 @@
 
             align-items: center;
 
-            margin: 20px 3px 12px;
+            margin: 25px 2px 12px;
 
         }
 
 
         .orders-title h2 {
 
-            font-size: 17px;
+            font-size: 18px;
 
             font-weight: 800;
 
@@ -284,29 +481,29 @@
 
             font-size: 11px;
 
-            font-weight: 700;
+            font-weight: 800;
 
             cursor: pointer;
 
             box-shadow:
-                0 5px 18px rgba(50,50,100,.05);
+                0 5px 15px rgba(50,50,100,.05);
 
         }
 
 
         /* =========================
-           الطلب
+           كرت الطلب
         ========================= */
 
         .order-card {
 
             background: white;
 
-            border-radius: 22px;
+            border-radius: 24px;
 
-            padding: 18px;
+            padding: 20px;
 
-            margin-bottom: 12px;
+            margin-bottom: 15px;
 
             box-shadow:
                 0 8px 25px rgba(50,50,100,.05);
@@ -314,7 +511,7 @@
         }
 
 
-        .order-header {
+        .order-top {
 
             display: flex;
 
@@ -324,7 +521,7 @@
 
             gap: 10px;
 
-            padding-bottom: 14px;
+            padding-bottom: 15px;
 
             border-bottom: 1px solid #f0f0f5;
 
@@ -333,7 +530,7 @@
 
         .order-number {
 
-            font-size: 15px;
+            font-size: 17px;
 
             font-weight: 800;
 
@@ -376,83 +573,54 @@
 
         .customer-info {
 
-            display: grid;
+            padding: 15px 0;
 
-            gap: 9px;
-
-            margin-top: 14px;
+            border-bottom: 1px solid #f0f0f5;
 
         }
 
 
-        .customer-row {
+        .customer-name {
 
-            display: flex;
+            font-size: 15px;
 
-            align-items: center;
-
-            gap: 9px;
-
-            font-size: 12px;
+            font-weight: 800;
 
         }
 
 
-        .customer-row .icon {
+        .customer-phone {
 
-            width: 32px;
+            margin-top: 5px;
 
-            height: 32px;
+            color: #858796;
 
-            border-radius: 10px;
+            font-size: 11px;
 
-            background: #f8f9fd;
+            direction: ltr;
 
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            flex-shrink: 0;
+            text-align: right;
 
         }
 
 
-        .customer-row strong {
+        .map-button {
 
-            font-weight: 700;
+            display: inline-block;
 
-        }
+            margin-top: 10px;
 
-
-        /* =========================
-           الموقع
-        ========================= */
-
-        .location-button {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            width: 100%;
-
-            min-height: 48px;
-
-            margin-top: 14px;
-
-            border-radius: 14px;
+            padding: 8px 12px;
 
             background: #eeeaff;
 
             color: #6557ed;
 
+            border-radius: 11px;
+
             text-decoration: none;
 
-            font-size: 12px;
+            font-size: 11px;
 
             font-weight: 800;
 
@@ -461,21 +629,138 @@
 
         .no-location {
 
-            width: 100%;
+            display: inline-block;
 
-            margin-top: 14px;
-
-            padding: 12px;
-
-            border-radius: 14px;
-
-            background: #f8f9fd;
+            margin-top: 8px;
 
             color: #999;
 
-            text-align: center;
+            font-size: 10px;
+
+        }
+
+
+        /* =========================
+           المنتجات
+        ========================= */
+
+        .products-title {
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+            margin: 15px 0 10px;
+
+        }
+
+
+        .product-item {
+
+            background: #f8f9fd;
+
+            border-radius: 16px;
+
+            padding: 13px;
+
+            margin-bottom: 9px;
+
+            display: flex;
+
+            gap: 12px;
+
+            align-items: center;
+
+        }
+
+
+        .product-image {
+
+            width: 55px;
+
+            height: 55px;
+
+            border-radius: 13px;
+
+            background: #eeeaff;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            overflow: hidden;
+
+            flex-shrink: 0;
+
+            font-size: 24px;
+
+        }
+
+
+        .product-image img {
+
+            width: 100%;
+
+            height: 100%;
+
+            object-fit: cover;
+
+        }
+
+
+        .product-info {
+
+            flex: 1;
+
+            min-width: 0;
+
+        }
+
+
+        .product-name {
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+        }
+
+
+        .product-details {
+
+            margin-top: 4px;
+
+            color: #858796;
+
+            font-size: 10px;
+
+            line-height: 1.8;
+
+        }
+
+
+        .product-quantity {
+
+            margin-top: 3px;
+
+            color: #6557ed;
 
             font-size: 11px;
+
+            font-weight: 800;
+
+        }
+
+
+        .product-price {
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            white-space: nowrap;
 
         }
 
@@ -486,24 +771,33 @@
 
         .order-bottom {
 
+            margin-top: 15px;
+
+            padding-top: 15px;
+
+            border-top: 1px solid #f0f0f5;
+
             display: flex;
 
             justify-content: space-between;
 
             align-items: center;
 
-            margin-top: 15px;
+        }
 
-            padding-top: 14px;
 
-            border-top: 1px solid #f0f0f5;
+        .total-label {
+
+            color: #858796;
+
+            font-size: 11px;
 
         }
 
 
-        .order-total {
+        .total-price {
 
-            font-size: 16px;
+            font-size: 18px;
 
             font-weight: 800;
 
@@ -511,35 +805,34 @@
 
 
         /* =========================
-           الحالات
+           تحميل
         ========================= */
 
         .loading {
 
-            background: white;
-
-            border-radius: 22px;
+            text-align: center;
 
             padding: 60px 20px;
 
-            text-align: center;
-
             color: #858796;
 
-            box-shadow:
-                0 8px 25px rgba(50,50,100,.05);
+            font-size: 12px;
 
         }
 
 
         .loading-icon {
 
-            font-size: 45px;
+            font-size: 40px;
 
             margin-bottom: 10px;
 
         }
 
+
+        /* =========================
+           لا توجد طلبات
+        ========================= */
 
         .empty {
 
@@ -559,14 +852,14 @@
 
         .empty-icon {
 
-            font-size: 50px;
+            font-size: 45px;
 
             margin-bottom: 10px;
 
         }
 
 
-        .empty h2 {
+        .empty h3 {
 
             font-size: 17px;
 
@@ -577,14 +870,18 @@
 
         .empty p {
 
+            margin-top: 6px;
+
             color: #858796;
 
             font-size: 11px;
 
-            margin-top: 5px;
-
         }
 
+
+        /* =========================
+           خطأ
+        ========================= */
 
         .error {
 
@@ -592,39 +889,44 @@
 
             color: #e05265;
 
-            border-radius: 18px;
+            padding: 15px;
 
-            padding: 20px;
+            border-radius: 15px;
 
             text-align: center;
 
             font-size: 12px;
 
+            font-weight: 700;
+
         }
 
 
-        .back-profile {
+        @media (max-width: 500px) {
 
-            width: 100%;
+            .order-top {
 
-            height: 50px;
+                flex-direction: column;
 
-            border: none;
+            }
 
-            border-radius: 15px;
+            .status {
 
-            background: white;
+                align-self: flex-start;
 
-            box-shadow:
-                0 8px 25px rgba(50,50,100,.05);
+            }
 
-            font-family: inherit;
+            .product-item {
 
-            font-weight: 800;
+                align-items: flex-start;
 
-            cursor: pointer;
+            }
 
-            margin-top: 15px;
+            .product-price {
+
+                font-size: 11px;
+
+            }
 
         }
 
@@ -639,9 +941,7 @@
 <div class="page">
 
 
-    <!-- =========================
-         الهيدر
-    ========================= -->
+    <!-- الهيدر -->
 
     <header class="header">
 
@@ -652,14 +952,15 @@
             →
         </button>
 
-        <div>
+
+        <div class="header-info">
 
             <h1>
-                🚚 لوحة المندوب
+                🚚 صفحة المندوب
             </h1>
 
             <p>
-                طلباتك المسندة إليك
+                إدارة الطلبات المسندة إليك
             </p>
 
         </div>
@@ -667,9 +968,7 @@
     </header>
 
 
-    <!-- =========================
-         المحتوى
-    ========================= -->
+    <!-- المحتوى -->
 
     <main id="content">
 
@@ -679,7 +978,7 @@
                 🚚
             </div>
 
-            جاري تحميل بيانات المندوب...
+            جاري التحميل...
 
         </div>
 
@@ -689,235 +988,438 @@
 </div>
 
 
+
 <script>
 
 
-// =========================
-// حماية الصفحة
-// =========================
+/* =========================================================
+   المتغيرات
+========================================================= */
 
-async function loadDriverPage() {
+let currentDriver = null;
 
-    const content =
-        document.getElementById("content");
+
+/* =========================================================
+   عناصر الصفحة
+========================================================= */
+
+const content =
+    document.getElementById("content");
+
+
+/* =========================================================
+   حماية HTML
+========================================================= */
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+/* =========================================================
+   تسجيل المندوب
+========================================================= */
+
+function showDriverLogin() {
+
+    content.innerHTML = `
+
+        <div class="login-card">
+
+            <div class="login-icon">
+                🚚
+            </div>
+
+
+            <h2>
+                تسجيل ك مندوب
+            </h2>
+
+
+            <p>
+                أدخل الرمز السري الخاص بك للدخول إلى صفحة المندوب
+            </p>
+
+
+            <input
+                id="driverCode"
+                class="code-input"
+                type="text"
+                placeholder="أدخل رمز المندوب"
+                autocomplete="off"
+            >
+
+
+            <button
+                id="driverLoginButton"
+                class="login-button"
+                onclick="loginDriver()"
+            >
+                تسجيل الدخول
+            </button>
+
+
+            <div
+                id="driverLoginMessage"
+                class="login-message"
+            ></div>
+
+        </div>
+
+    `;
+
+
+    const input =
+        document.getElementById("driverCode");
+
+
+    input.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (event.key === "Enter") {
+
+                loginDriver();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   التحقق من رمز المندوب
+========================================================= */
+
+async function loginDriver() {
+
+    const input =
+        document.getElementById("driverCode");
+
+    const button =
+        document.getElementById("driverLoginButton");
+
+    const message =
+        document.getElementById("driverLoginMessage");
+
+
+    const code =
+        input.value.trim();
+
+
+    if (!code) {
+
+        message.textContent =
+            "اكتب رمز المندوب";
+
+        message.style.color =
+            "#e05265";
+
+        return;
+
+    }
+
+
+    button.disabled = true;
+
+    button.textContent =
+        "جاري التحقق...";
+
+
+    message.textContent = "";
 
 
     try {
 
-        // =========================
-        // المستخدم الحالي
-        // =========================
-
         const {
-            data: { user },
-            error: userError
-        } =
-            await supabaseClient.auth.getUser();
+            data,
+            error
+        } = await supabaseClient
+            .from("drivers")
+            .select(`
+                id,
+                driver_number,
+                name,
+                secret_code
+            `)
+            .eq("secret_code", code)
+            .maybeSingle();
 
 
-        if (userError || !user) {
+        if (error) {
 
-            showError(
-                "يجب تسجيل الدخول أولاً"
-            );
+            console.error(error);
+
+            message.textContent =
+                "حدث خطأ أثناء التحقق";
+
+            message.style.color =
+                "#e05265";
+
+            button.disabled = false;
+
+            button.textContent =
+                "تسجيل الدخول";
 
             return;
+
         }
 
 
-        // =========================
-        // بيانات المندوب
-        // =========================
+        if (!data) {
 
-        const metadata =
-            user.user_metadata || {};
+            message.textContent =
+                "رمز المندوب غير صحيح";
 
+            message.style.color =
+                "#e05265";
 
-        const isDriver =
-            metadata.is_driver === true;
+            button.disabled = false;
 
-
-        const driverName =
-            metadata.driver_name || "";
-
-
-        const driverNumber =
-            metadata.driver_number || "";
-
-
-        // =========================
-        // التحقق
-        // =========================
-
-        if (
-            !isDriver ||
-            !driverNumber
-        ) {
-
-            content.innerHTML = `
-
-                <div class="empty">
-
-                    <div class="empty-icon">
-                        🚫
-                    </div>
-
-                    <h2>
-                        أنت غير مسجل كمندوب
-                    </h2>
-
-                    <p>
-                        سجل كمندوب من صفحة الملف الشخصي أولاً
-                    </p>
-
-                </div>
-
-                <button
-                    class="back-profile"
-                    onclick="window.location.href='profile.html'"
-                >
-                    العودة إلى الملف الشخصي
-                </button>
-
-            `;
+            button.textContent =
+                "تسجيل الدخول";
 
             return;
+
         }
 
 
-        // =========================
-        // عرض بطاقة المندوب
-        // =========================
+        /* حفظ بيانات المندوب */
 
-        content.innerHTML = `
-
-            <section class="driver-card">
-
-                <div class="driver-top">
-
-                    <div class="driver-avatar">
-                        🚚
-                    </div>
-
-                    <div class="driver-info">
-
-                        <h2>
-                            ${escapeHtml(driverName)}
-                        </h2>
-
-                        <p>
-                            رقم المندوب:
-                            ${escapeHtml(driverNumber)}
-                        </p>
-
-                    </div>
-
-                </div>
+        currentDriver = data;
 
 
-                <div class="stats">
-
-                    <div class="stat">
-
-                        <span>
-                            عدد الطلبات
-                        </span>
-
-                        <strong id="ordersCount">
-                            0
-                        </strong>
-
-                    </div>
+        localStorage.setItem(
+            "loggedDriver",
+            JSON.stringify({
+                id: data.id,
+                driver_number: data.driver_number,
+                name: data.name
+            })
+        );
 
 
-                    <div class="stat">
-
-                        <span>
-                            الطلبات الحالية
-                        </span>
-
-                        <strong id="activeOrdersCount">
-                            0
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <div class="orders-title">
-
-                <h2>
-                    📋 طلباتي
-                </h2>
-
-                <button
-                    class="refresh-button"
-                    onclick="loadDriverOrders()"
-                >
-                    🔄 تحديث
-                </button>
-
-            </div>
-
-
-            <div id="ordersList">
-
-                <div class="loading">
-
-                    جاري تحميل الطلبات...
-
-                </div>
-
-            </div>
-
-        `;
-
-
-        // تحميل الطلبات
-
-        await loadDriverOrders();
-
+        await showDriverPage();
 
     }
 
     catch (error) {
 
-        console.error(
-            "Driver Page Error:",
-            error
-        );
+        console.error(error);
 
-        showError(
-            "حدث خطأ أثناء تحميل صفحة المندوب"
-        );
+        message.textContent =
+            "حدث خطأ غير متوقع";
+
+        message.style.color =
+            "#e05265";
+
+        button.disabled = false;
+
+        button.textContent =
+            "تسجيل الدخول";
 
     }
 
 }
 
 
-// =========================
-// تحميل الطلبات
-// =========================
+/* =========================================================
+   تحميل المندوب المحفوظ
+========================================================= */
+
+function getSavedDriver() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                "loggedDriver"
+            );
+
+
+        if (!saved) {
+
+            return null;
+
+        }
+
+
+        return JSON.parse(saved);
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        localStorage.removeItem(
+            "loggedDriver"
+        );
+
+        return null;
+
+    }
+
+}
+
+
+/* =========================================================
+   عرض صفحة المندوب
+========================================================= */
+
+async function showDriverPage() {
+
+    if (!currentDriver) {
+
+        showDriverLogin();
+
+        return;
+
+    }
+
+
+    content.innerHTML = `
+
+        <section class="driver-header">
+
+            <div class="driver-avatar">
+                🚚
+            </div>
+
+
+            <div class="driver-info">
+
+                <h2>
+                    ${escapeHtml(currentDriver.name)}
+                </h2>
+
+                <p>
+                    رقم المندوب:
+                    <span class="driver-number">
+                        ${escapeHtml(currentDriver.driver_number)}
+                    </span>
+                </p>
+
+            </div>
+
+
+            <button
+                class="logout-driver"
+                onclick="logoutDriver()"
+            >
+                خروج
+            </button>
+
+        </section>
+
+
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    📦
+                </div>
+
+                <span>
+                    عدد الطلبات
+                </span>
+
+                <strong id="ordersCount">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    💰
+                </div>
+
+                <span>
+                    إجمالي الطلبات
+                </span>
+
+                <strong id="ordersTotal">
+                    0 ر.س
+                </strong>
+
+            </div>
+
+        </section>
+
+
+        <div class="orders-title">
+
+            <h2>
+                الطلبات المسندة إليك
+            </h2>
+
+
+            <button
+                class="refresh-button"
+                onclick="loadDriverOrders()"
+            >
+                🔄 تحديث
+            </button>
+
+        </div>
+
+
+        <div id="driverOrders">
+
+            <div class="loading">
+
+                <div class="loading-icon">
+                    📦
+                </div>
+
+                جاري تحميل الطلبات...
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    await loadDriverOrders();
+
+}
+
+
+/* =========================================================
+   تحميل طلبات المندوب
+========================================================= */
 
 async function loadDriverOrders() {
 
-    const ordersList =
-        document.getElementById("ordersList");
+    const ordersContainer =
+        document.getElementById(
+            "driverOrders"
+        );
 
 
-    if (!ordersList) return;
+    if (!ordersContainer) return;
 
 
-    ordersList.innerHTML = `
+    ordersContainer.innerHTML = `
 
         <div class="loading">
 
             <div class="loading-icon">
-                📋
+                📦
             </div>
 
             جاري تحميل الطلبات...
@@ -929,91 +1431,54 @@ async function loadDriverOrders() {
 
     try {
 
-        // =========================
-        // المستخدم
-        // =========================
-
-        const {
-            data: { user }
-        } =
-            await supabaseClient.auth.getUser();
-
-
-        if (!user) {
-
-            window.location.href =
-                "login.html";
-
-            return;
-        }
-
-
-        const metadata =
-            user.user_metadata || {};
-
-
-        const driverNumber =
-            metadata.driver_number;
-
-
-        if (!driverNumber) {
-
-            showError(
-                "لم يتم العثور على رقم المندوب"
-            );
-
-            return;
-        }
-
-
-        // =========================
-        // جلب الطلبات
-        // =========================
+        /*
+         * نجيب الطلبات التي driver_number
+         * فيها يساوي رقم المندوب الحالي
+         */
 
         const {
             data: orders,
             error
-        } =
-            await supabaseClient
-                .from("orders")
-                .select(`
-                    id,
-                    status,
-                    customer_name,
-                    customer_phone,
-                    customer_lat,
-                    customer_lng,
-                    total,
-                    created_at,
-                    driver_name,
-                    driver_number
-                `)
-                .eq(
-                    "driver_number",
-                    driverNumber
-                )
-                .order(
-                    "id",
-                    {
-                        ascending: false
-                    }
-                );
+        } = await supabaseClient
+            .from("orders")
+            .select(`
+                id,
+                status,
+                customer_name,
+                customer_phone,
+                customer_lat,
+                customer_lng,
+                total,
+                created_at,
+                driver_number
+            `)
+            .eq(
+                "driver_number",
+                currentDriver.driver_number
+            )
+            .order(
+                "id",
+                {
+                    ascending: false
+                }
+            );
 
 
         if (error) {
 
             console.error(
-                "Orders Error:",
+                "Driver Orders Error:",
                 error
             );
 
-            ordersList.innerHTML = `
+
+            ordersContainer.innerHTML = `
 
                 <div class="error">
 
                     حدث خطأ أثناء تحميل الطلبات:
 
-                    <br><br>
+                    <br>
 
                     ${escapeHtml(error.message)}
 
@@ -1022,76 +1487,28 @@ async function loadDriverOrders() {
             `;
 
             return;
-        }
-
-
-        const allOrders =
-            orders || [];
-
-
-        // =========================
-        // الإحصائيات
-        // =========================
-
-        const ordersCount =
-            document.getElementById(
-                "ordersCount"
-            );
-
-
-        const activeOrdersCount =
-            document.getElementById(
-                "activeOrdersCount"
-            );
-
-
-        if (ordersCount) {
-
-            ordersCount.textContent =
-                allOrders.length;
 
         }
 
 
-        const activeOrders =
-            allOrders.filter(order => {
+        if (!orders || orders.length === 0) {
 
-                return (
-                    order.status !== "تم استلام طلبك" &&
-                    order.status !== "ملغي"
-                );
+            updateStats([]);
 
-            });
-
-
-        if (activeOrdersCount) {
-
-            activeOrdersCount.textContent =
-                activeOrders.length;
-
-        }
-
-
-        // =========================
-        // لا توجد طلبات
-        // =========================
-
-        if (!allOrders.length) {
-
-            ordersList.innerHTML = `
+            ordersContainer.innerHTML = `
 
                 <div class="empty">
 
                     <div class="empty-icon">
-                        📦
+                        📭
                     </div>
 
-                    <h2>
+                    <h3>
                         لا توجد طلبات
-                    </h2>
+                    </h3>
 
                     <p>
-                        لا توجد طلبات مسندة إليك حالياً
+                        لا توجد حالياً طلبات مسندة إلى رقمك
                     </p>
 
                 </div>
@@ -1099,24 +1516,29 @@ async function loadDriverOrders() {
             `;
 
             return;
+
         }
 
 
-        // =========================
-        // عرض الطلبات
-        // =========================
-
-        ordersList.innerHTML = "";
+        updateStats(orders);
 
 
-        allOrders.forEach(order => {
+        ordersContainer.innerHTML = "";
 
-            renderDriverOrder(
+
+        /*
+         * لكل طلب:
+         * نجيب المنتجات الموجودة في order_items
+         */
+
+        for (const order of orders) {
+
+            await renderDriverOrder(
                 order,
-                ordersList
+                ordersContainer
             );
 
-        });
+        }
 
     }
 
@@ -1124,7 +1546,8 @@ async function loadDriverOrders() {
 
         console.error(error);
 
-        ordersList.innerHTML = `
+
+        ordersContainer.innerHTML = `
 
             <div class="error">
 
@@ -1139,14 +1562,101 @@ async function loadDriverOrders() {
 }
 
 
-// =========================
-// عرض طلب
-// =========================
+/* =========================================================
+   إحصائيات
+========================================================= */
 
-function renderDriverOrder(
+function updateStats(orders) {
+
+    const count =
+        document.getElementById(
+            "ordersCount"
+        );
+
+
+    const total =
+        document.getElementById(
+            "ordersTotal"
+        );
+
+
+    if (!count || !total) return;
+
+
+    count.textContent =
+        orders.length;
+
+
+    const totalAmount =
+        orders.reduce(
+            (sum, order) => {
+
+                return sum +
+                    Number(order.total || 0);
+
+            },
+            0
+        );
+
+
+    total.textContent =
+        totalAmount.toFixed(2) + " ر.س";
+
+}
+
+
+/* =========================================================
+   عرض طلب واحد
+========================================================= */
+
+async function renderDriverOrder(
     order,
     container
 ) {
+
+    /*
+     * جلب منتجات الطلب
+     */
+
+    const {
+        data: items,
+        error
+    } = await supabaseClient
+        .from("order_items")
+        .select(`
+            id,
+            category,
+            product_type,
+            type,
+            company,
+            model,
+            color,
+            quantity,
+            price,
+            image
+        `)
+        .eq(
+            "order_id",
+            order.id
+        )
+        .order(
+            "id",
+            {
+                ascending: true
+            }
+        );
+
+
+    if (error) {
+
+        console.error(
+            "Order Items Error:",
+            error
+        );
+
+        return;
+
+    }
 
 
     const card =
@@ -1170,72 +1680,249 @@ function renderDriverOrder(
                 }
             )
             :
-            "";
+            "-";
 
 
-    const lat =
-        Number(order.customer_lat);
+    /* =========================
+       الموقع
+    ========================= */
+
+    let locationHTML = "";
 
 
-    const lng =
-        Number(order.customer_lng);
+    if (
+        order.customer_lat !== null &&
+        order.customer_lat !== undefined &&
+        order.customer_lng !== null &&
+        order.customer_lng !== undefined
+    ) {
+
+        const lat =
+            encodeURIComponent(
+                order.customer_lat
+            );
 
 
-    const hasLocation =
-        Number.isFinite(lat) &&
-        Number.isFinite(lng);
+        const lng =
+            encodeURIComponent(
+                order.customer_lng
+            );
 
 
-    const locationHTML =
-        hasLocation
-
-        ?
-
-        `
+        locationHTML = `
 
             <a
-                class="location-button"
                 href="https://www.google.com/maps?q=${lat},${lng}"
                 target="_blank"
                 rel="noopener noreferrer"
+                class="map-button"
             >
                 🗺️ فتح موقع العميل
             </a>
 
-        `
+        `;
 
-        :
+    }
 
-        `
+    else {
+
+        locationHTML = `
+
+            <span class="no-location">
+                📍 لم يتم تحديد موقع العميل
+            </span>
+
+        `;
+
+    }
+
+
+    /* =========================
+       المنتجات
+    ========================= */
+
+    let productsHTML = "";
+
+
+    if (!items || items.length === 0) {
+
+        productsHTML = `
 
             <div class="no-location">
-                📍 لم يتم تحديد موقع العميل
+                لا توجد منتجات لهذا الطلب
             </div>
 
         `;
 
+    }
+
+    else {
+
+        items.forEach(item => {
+
+            const quantity =
+                Number(
+                    item.quantity || 1
+                );
+
+
+            const price =
+                Number(
+                    item.price || 0
+                );
+
+
+            const itemTotal =
+                quantity * price;
+
+
+            const details = [];
+
+
+            if (item.category)
+                details.push(
+                    "التصنيف: " +
+                    item.category
+                );
+
+
+            if (item.product_type)
+                details.push(
+                    "نوع المنتج: " +
+                    item.product_type
+                );
+
+
+            if (item.type)
+                details.push(
+                    "النوع: " +
+                    item.type
+                );
+
+
+            if (item.company)
+                details.push(
+                    "الشركة: " +
+                    item.company
+                );
+
+
+            if (item.color)
+                details.push(
+                    "اللون: " +
+                    item.color
+                );
+
+
+            const detailsHTML =
+                details
+                    .map(
+                        detail =>
+                            escapeHtml(detail)
+                    )
+                    .join(" • ");
+
+
+            productsHTML += `
+
+                <div class="product-item">
+
+                    <div class="product-image">
+
+                        ${
+                            item.image
+                            ?
+                            `
+                            <img
+                                src="${escapeHtml(item.image)}"
+                                alt=""
+                            >
+                            `
+                            :
+                            "📦"
+                        }
+
+                    </div>
+
+
+                    <div class="product-info">
+
+                        <div class="product-name">
+
+                            ${escapeHtml(
+                                item.model ||
+                                "بدون موديل"
+                            )}
+
+                        </div>
+
+
+                        <div class="product-details">
+
+                            ${detailsHTML || "بدون تفاصيل إضافية"}
+
+                        </div>
+
+
+                        <div class="product-quantity">
+
+                            الكمية:
+                            ${quantity}
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="product-price">
+
+                        ${itemTotal.toFixed(2)}
+                        ر.س
+
+                    </div>
+
+                </div>
+
+            `;
+
+        });
+
+    }
+
+
+    /* =========================
+       بناء الطلب
+    ========================= */
 
     card.innerHTML = `
 
-        <div class="order-header">
+        <div class="order-top">
 
             <div>
 
                 <div class="order-number">
+
                     الطلب #${order.id}
+
                 </div>
 
+
                 <div class="order-date">
+
                     ${escapeHtml(date)}
+
                 </div>
 
             </div>
 
 
             <div class="status">
+
                 ${escapeHtml(
-                    order.status || "جديد"
+                    order.status ||
+                    "جديد"
                 )}
+
             </div>
 
         </div>
@@ -1243,83 +1930,57 @@ function renderDriverOrder(
 
         <div class="customer-info">
 
+            <div class="customer-name">
 
-            <div class="customer-row">
-
-                <div class="icon">
-                    👤
-                </div>
-
-                <div>
-                    العميل:
-                    <strong>
-                        ${escapeHtml(
-                            order.customer_name ||
-                            "غير محدد"
-                        )}
-                    </strong>
-                </div>
+                👤
+                ${escapeHtml(
+                    order.customer_name ||
+                    "بدون اسم"
+                )}
 
             </div>
 
 
-            <div class="customer-row">
+            <div class="customer-phone">
 
-                <div class="icon">
-                    📱
-                </div>
-
-                <div>
-
-                    الجوال:
-
-                    <strong dir="ltr">
-                        ${escapeHtml(
-                            order.customer_phone ||
-                            "غير محدد"
-                        )}
-                    </strong>
-
-                </div>
+                📱
+                ${escapeHtml(
+                    order.customer_phone ||
+                    "لا يوجد رقم"
+                )}
 
             </div>
 
 
-            <div class="customer-row">
-
-                <div class="icon">
-                    🚚
-                </div>
-
-                <div>
-
-                    المندوب:
-
-                    <strong>
-                        ${escapeHtml(
-                            order.driver_name ||
-                            "غير محدد"
-                        )}
-                    </strong>
-
-                </div>
-
-            </div>
-
+            ${locationHTML}
 
         </div>
 
 
-        ${locationHTML}
+        <div class="products-title">
+
+            📦 منتجات الطلب
+
+        </div>
+
+
+        <div>
+
+            ${productsHTML}
+
+        </div>
 
 
         <div class="order-bottom">
 
-            <span>
+            <span class="total-label">
+
                 إجمالي الطلب
+
             </span>
 
-            <span class="order-total">
+
+            <strong class="total-price">
 
                 ${Number(
                     order.total || 0
@@ -1327,7 +1988,7 @@ function renderDriverOrder(
 
                 ر.س
 
-            </span>
+            </strong>
 
         </div>
 
@@ -1339,66 +2000,102 @@ function renderDriverOrder(
 }
 
 
-// =========================
-// عرض خطأ
-// =========================
+/* =========================================================
+   تسجيل خروج المندوب
+========================================================= */
 
-function showError(message) {
+function logoutDriver() {
 
-    const content =
-        document.getElementById("content");
+    const confirmed =
+        confirm(
+            "هل تريد تسجيل الخروج من حساب المندوب؟"
+        );
 
 
-    content.innerHTML = `
+    if (!confirmed) return;
 
-        <div class="error">
 
-            ${escapeHtml(message)}
+    localStorage.removeItem(
+        "loggedDriver"
+    );
 
-        </div>
 
-        <button
-            class="back-profile"
-            onclick="window.location.href='profile.html'"
-        >
-            العودة إلى الملف الشخصي
-        </button>
+    currentDriver = null;
 
-    `;
+
+    showDriverLogin();
 
 }
 
 
-// =========================
-// حماية النصوص
-// =========================
+/* =========================================================
+   تشغيل الصفحة
+========================================================= */
 
-function escapeHtml(value) {
+async function initDriverPage() {
 
-    return String(value)
+    const savedDriver =
+        getSavedDriver();
 
-        .replace(/&/g, "&amp;")
 
-        .replace(/</g, "&lt;")
+    if (!savedDriver) {
 
-        .replace(/>/g, "&gt;")
+        showDriverLogin();
 
-        .replace(/"/g, "&quot;")
+        return;
 
-        .replace(/'/g, "&#039;");
+    }
+
+
+    /*
+     * نتحقق أن المندوب ما زال موجوداً
+     */
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("drivers")
+        .select(`
+            id,
+            driver_number,
+            name
+        `)
+        .eq(
+            "id",
+            savedDriver.id
+        )
+        .maybeSingle();
+
+
+    if (error || !data) {
+
+        localStorage.removeItem(
+            "loggedDriver"
+        );
+
+
+        showDriverLogin();
+
+        return;
+
+    }
+
+
+    currentDriver = data;
+
+
+    await showDriverPage();
 
 }
 
 
-// =========================
-// تشغيل الصفحة
-// =========================
+/* تشغيل */
 
-loadDriverPage();
+initDriverPage();
 
 
 </script>
-
 
 </body>
 
