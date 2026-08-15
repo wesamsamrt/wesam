@@ -222,25 +222,78 @@
 
 
 
-    <button
-        id="submitOrderButton"
-        onclick="submitOrder()"
+    <div
+    style="
+        background:white;
+        border-radius:22px;
+        padding:20px;
+        margin-top:20px;
+        box-shadow:0 8px 25px rgba(50,50,100,.05);
+    "
+>
+
+    <label
+        for="driverNumber"
         style="
-            width:100%;
-            height:55px;
-            margin-top:20px;
-            border:none;
-            border-radius:17px;
-            background:#6557ed;
-            color:white;
-            font-family:inherit;
-            font-size:15px;
+            display:block;
+            font-size:14px;
             font-weight:800;
-            cursor:pointer;
+            margin-bottom:10px;
         "
     >
-        تقديم الطلب
-    </button>
+        🚚 رقم المندوب
+    </label>
+
+    <input
+        id="driverNumber"
+        type="text"
+        inputmode="numeric"
+        placeholder="اكتب رقم المندوب"
+        style="
+            width:100%;
+            height:50px;
+            border:1px solid #e5e5e5;
+            border-radius:14px;
+            padding:0 15px;
+            font-family:inherit;
+            font-size:14px;
+            outline:none;
+        "
+    >
+
+    <p
+        id="driverMessage"
+        style="
+            margin-top:8px;
+            font-size:12px;
+            font-weight:700;
+        "
+    ></p>
+
+</div>
+
+
+<button
+    id="submitOrderButton"
+    onclick="submitOrder()"
+    style="
+        width:100%;
+        height:55px;
+        margin-top:15px;
+        border:none;
+        border-radius:17px;
+        background:#6557ed;
+        color:white;
+        font-family:inherit;
+        font-size:15px;
+        font-weight:800;
+        cursor:pointer;
+    "
+>
+    تقديم الطلب
+</button>
+
+
 <div
     id="previousOrders"
     style="margin-top:20px;"
@@ -773,28 +826,131 @@ loadOrders();
 
 
 
-
 async function submitOrder() {
 
     try {
 
-        // 1 - التأكد من تسجيل الدخول
-        const {
-            data: { user },
-            error: userError
-        } = await supabaseClient.auth.getUser();
+        // =========================
+        // رقم المندوب
+        // =========================
 
-        if (userError || !user) {
+        const driverInput =
+            document.getElementById("driverNumber");
 
-            alert("يجب تسجيل الدخول أولاً");
+        const driverMessage =
+            document.getElementById("driverMessage");
 
-            window.location.href = "login.html";
+        const driverNumber =
+            driverInput.value.trim();
+
+
+        // =========================
+        // التأكد من إدخال الرقم
+        // =========================
+
+        if (!driverNumber) {
+
+            driverMessage.textContent =
+                "⚠️ يجب كتابة رقم المندوب أولاً";
+
+            driverMessage.style.color =
+                "#e05265";
+
+            driverInput.focus();
 
             return;
         }
 
 
-        // 2 - البحث عن السلة الحالية
+        driverMessage.textContent =
+            "جاري التحقق من رقم المندوب...";
+
+        driverMessage.style.color =
+            "#6557ed";
+
+
+        // =========================
+        // البحث عن المندوب
+        // =========================
+
+        const {
+            data: driver,
+            error: driverError
+        } = await supabaseClient
+            .from("drivers")
+            .select("id, driver_number, name")
+            .eq("driver_number", driverNumber)
+            .maybeSingle();
+
+
+        if (driverError) {
+
+            console.error(driverError);
+
+            driverMessage.textContent =
+                "حدث خطأ أثناء التحقق من رقم المندوب";
+
+            driverMessage.style.color =
+                "#e05265";
+
+            return;
+        }
+
+
+        // =========================
+        // الرقم غير موجود
+        // =========================
+
+        if (!driver) {
+
+            driverMessage.textContent =
+                "❌ رقم المندوب غير صحيح";
+
+            driverMessage.style.color =
+                "#e05265";
+
+            driverInput.focus();
+
+            return;
+        }
+
+
+        // =========================
+        // المندوب صحيح
+        // =========================
+
+        driverMessage.textContent =
+            `✅ المندوب: ${driver.name}`;
+
+        driverMessage.style.color =
+            "#2e9d69";
+
+
+        // =========================
+        // التأكد من تسجيل الدخول
+        // =========================
+
+        const {
+            data: { user },
+            error: userError
+        } = await supabaseClient.auth.getUser();
+
+
+        if (userError || !user) {
+
+            alert("يجب تسجيل الدخول أولاً");
+
+            window.location.href =
+                "login.html";
+
+            return;
+        }
+
+
+        // =========================
+        // البحث عن السلة الحالية
+        // =========================
+
         const {
             data: orders,
             error: ordersError
@@ -813,13 +969,18 @@ async function submitOrder() {
 
             console.error(ordersError);
 
-            alert("حدث خطأ أثناء البحث عن الطلب");
+            alert(
+                "حدث خطأ أثناء البحث عن الطلب"
+            );
 
             return;
         }
 
 
-        // 3 - إذا ما فيه طلب مفتوح
+        // =========================
+        // لا توجد سلة
+        // =========================
+
         if (!orders || orders.length === 0) {
 
             alert("السلة فارغة");
@@ -831,7 +992,10 @@ async function submitOrder() {
         const order = orders[0];
 
 
-        // 4 - جلب المنتجات الموجودة في السلة
+        // =========================
+        // جلب المنتجات
+        // =========================
+
         const {
             data: items,
             error: itemsError
@@ -845,13 +1009,14 @@ async function submitOrder() {
 
             console.error(itemsError);
 
-            alert("حدث خطأ أثناء قراءة المنتجات");
+            alert(
+                "حدث خطأ أثناء قراءة المنتجات"
+            );
 
             return;
         }
 
 
-        // 5 - التأكد أن السلة ليست فارغة
         if (!items || items.length === 0) {
 
             alert("السلة فارغة");
@@ -860,13 +1025,24 @@ async function submitOrder() {
         }
 
 
-        // 6 - تحويل الطلب إلى طلب مقدم
+        // =========================
+        // تقديم الطلب
+        // =========================
+
         const {
             error: updateError
         } = await supabaseClient
             .from("orders")
             .update({
-                status: "مقدم"
+
+                status: "مقدم",
+
+                driver_number:
+                    driver.driver_number,
+
+                driver_name:
+                    driver.name
+
             })
             .eq("id", order.id)
             .eq("user_id", user.id);
@@ -876,33 +1052,49 @@ async function submitOrder() {
 
             console.error(updateError);
 
-            alert("حدث خطأ أثناء تقديم الطلب");
+            alert(
+                "حدث خطأ أثناء تقديم الطلب:\n" +
+                updateError.message
+            );
 
             return;
         }
 
 
-        // 7 - إظهار نجاح العملية
+        // =========================
+        // نجاح
+        // =========================
+
         alert(
             "تم تقديم الطلب بنجاح ✅\n\n" +
-            "رقم الطلب: " + order.id
+            "رقم الطلب: " +
+            order.id +
+            "\n" +
+            "المندوب: " +
+            driver.name
         );
 
 
-        // 8 - إعادة تحميل السلة
+        // =========================
+        // إعادة التحميل
+        // =========================
+
         location.reload();
 
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(error);
 
-        alert("حدث خطأ غير متوقع");
+        alert(
+            "حدث خطأ غير متوقع"
+        );
 
     }
 
 }
-
 
 
 
@@ -1075,8 +1267,21 @@ async function showPreviousOrders() {
                 ">
                     ${order.status || "غير محدد"}
                 </div>
-
-            </div>
+                    <div style="
+                  margin-top:8px;
+             font-size:12px;
+             color:#555;
+             font-weight:700;
+            ">
+             🚚 المندوب:
+             ${order.driver_name || "غير محدد"}
+              ${
+             order.driver_number
+                ? " • رقم " + order.driver_number
+                : ""
+              }
+                /div>
+                  </div>
 
 
             <div

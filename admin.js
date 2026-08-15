@@ -1634,13 +1634,26 @@ async function renderAdminOrder(order) {
                 </h3>
 
                 <p>
-                    📱 ${order.customer_phone}
+                         📱 ${order.customer_phone}
+                    </p>
+
+                    <p>
+              🚚 المندوب:
+                 <strong>
+                ${order.courier_name || "غير محدد"}
+                 </strong>
+
+                 ${
+                 order.courier_number
+                    ? ` • رقم المندوب: ${order.courier_number}`
+                   : ""
+                  }
                 </p>
 
-            </div>
+                  </div>
 
 
-            <div class="admin-order-date">
+          <div class="admin-order-date">
 
                 ${date}
 
@@ -1742,43 +1755,52 @@ async function renderAdminOrder(order) {
 /* =========================
    تغيير حالة الطلب
 ========================= */
+async function updateOrderStatus(orderId, newStatus) {
 
-async function updateOrderStatus(
-    orderId,
-    newStatus
-) {
+    try {
 
-    /* جلب صاحب الطلب */
+        // =========================
+        // 1 - جلب الطلب
+        // =========================
 
-    const {
-        data: order,
-        error: orderError
-    } =
-        await supabaseClient
+        const {
+            data: order,
+            error: orderError
+        } = await supabaseClient
             .from("orders")
             .select("id, user_id, status")
             .eq("id", orderId)
             .single();
 
 
-    if (orderError || !order) {
+        if (orderError || !order) {
 
-        console.error(orderError);
+            console.error(orderError);
 
-        alert(
-            "لم يتم العثور على الطلب"
-        );
+            alert("لم يتم العثور على الطلب");
 
-        return;
-    }
+            return;
+        }
 
 
-    /* تحديث الحالة */
+        // =========================
+        // 2 - إذا نفس الحالة
+        // =========================
 
-    const {
-        error: updateError
-    } =
-        await supabaseClient
+        if (order.status === newStatus) {
+
+            return;
+
+        }
+
+
+        // =========================
+        // 3 - تحديث حالة الطلب
+        // =========================
+
+        const {
+            error: updateError
+        } = await supabaseClient
             .from("orders")
             .update({
                 status: newStatus
@@ -1786,27 +1808,28 @@ async function updateOrderStatus(
             .eq("id", orderId);
 
 
-    if (updateError) {
+        if (updateError) {
 
-        console.error(updateError);
+            console.error(updateError);
 
-        alert(
-            "حدث خطأ أثناء تحديث حالة الطلب:\n" +
-            updateError.message
-        );
+            alert(
+                "حدث خطأ أثناء تحديث حالة الطلب:\n" +
+                updateError.message
+            );
 
-        return;
-    }
+            return;
+        }
 
 
-    /* إنشاء الإشعار */
+        // =========================
+        // 4 - إنشاء إشعار للمستخدم
+        // =========================
 
-    if (order.user_id) {
+        if (order.user_id) {
 
-        const {
-            error: notificationError
-        } =
-            await supabaseClient
+            const {
+                error: notificationError
+            } = await supabaseClient
                 .from("notifications")
                 .insert({
 
@@ -1814,8 +1837,7 @@ async function updateOrderStatus(
 
                     order_id: order.id,
 
-                    title:
-                        "تحديث حالة الطلب",
+                    title: "تحديث حالة الطلب 🔔",
 
                     message:
                         `تم تحديث حالة طلبك #${order.id} إلى "${newStatus}"`
@@ -1823,26 +1845,53 @@ async function updateOrderStatus(
                 });
 
 
-        if (notificationError) {
+            if (notificationError) {
 
-            console.error(
-                "خطأ في إنشاء الإشعار:",
-                notificationError
-            );
+                console.error(
+                    "خطأ في إنشاء الإشعار:",
+                    notificationError
+                );
 
-            alert(
-                "تم تحديث حالة الطلب، لكن تعذر إنشاء الإشعار."
-            );
+                alert(
+                    "تم تحديث حالة الطلب، لكن حدث خطأ في إرسال الإشعار."
+                );
 
-            return;
+                return;
+            }
+
         }
+
+
+        // =========================
+        // 5 - نجاح
+        // =========================
+
+        alert(
+            `تم تحديث الطلب #${order.id} إلى "${newStatus}" ✅`
+        );
+
+
+        // =========================
+        // 6 - إعادة تحميل الطلبات في الإدارة
+        // =========================
+
+        await loadAdminOrders();
+
 
     }
 
+    catch (error) {
 
-    alert(
-        "تم تحديث حالة الطلب وإرسال الإشعار ✅"
-    );
+        console.error(
+            "Update Order Status Error:",
+            error
+        );
+
+        alert(
+            "حدث خطأ غير متوقع أثناء تحديث الطلب"
+        );
+
+    }
 
 }
 
@@ -2139,17 +2188,15 @@ async function printOrder(orderId) {
 
         .customer-info {
 
-            display: grid;
+    display: grid;
 
-            grid-template-columns:
-                repeat(4, 1fr);
+    grid-template-columns:
+        repeat(5, 1fr);
 
-            border: 1px solid #111;
+    border: 1px solid #111;
 
-            margin-bottom: 20px;
-
-        }
-
+    margin-bottom: 20px;
+}
 
         .customer-box {
 
@@ -2427,8 +2474,23 @@ async function printOrder(orderId) {
                 ${order.status || "جديد"}
             </span>
 
-        </div>
+                  </div>
+                <div class="customer-box">
 
+              <span class="customer-label">
+                 المندوب
+                 </span>
+
+             <span class="customer-value">
+             ${order.courier_name || "-"}
+              ${
+                 order.courier_number
+            ? ` (${order.courier_number})`
+              : ""
+              }
+             </span>
+
+                </div>
 
         <div class="customer-box">
 
