@@ -20,6 +20,7 @@
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- ملف Supabase الخاص بك -->
     <script src="supabase.js"></script>
 
 
@@ -193,7 +194,7 @@
 
 
         /* =========================
-           زر Google
+           Google Button
         ========================= */
 
         .google-button {
@@ -248,11 +249,21 @@
 
         .google-icon {
 
-            font-size: 20px;
+            width: 22px;
 
-            font-weight: 800;
+            height: 22px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
 
             font-family: Arial, sans-serif;
+
+            font-size: 19px;
+
+            font-weight: bold;
         }
 
 
@@ -320,10 +331,14 @@
 <div class="login-card">
 
 
+    <!-- الأيقونة -->
+
     <div class="icon">
         🔐
     </div>
 
+
+    <!-- العنوان -->
 
     <h1>
         تسجيل الدخول
@@ -335,7 +350,9 @@
     </p>
 
 
-    <!-- البريد -->
+    <!-- =========================
+         البريد الإلكتروني
+    ========================= -->
 
     <div class="field">
 
@@ -353,7 +370,9 @@
     </div>
 
 
-    <!-- كلمة المرور -->
+    <!-- =========================
+         كلمة المرور
+    ========================= -->
 
     <div class="field">
 
@@ -371,7 +390,9 @@
     </div>
 
 
-    <!-- زر الدخول -->
+    <!-- =========================
+         تسجيل الدخول العادي
+    ========================= -->
 
     <button
         class="login-button"
@@ -383,7 +404,7 @@
 
 
     <!-- =========================
-         تسجيل الدخول باستخدام Google
+         Google
     ========================= -->
 
     <button
@@ -402,7 +423,7 @@
     </button>
 
 
-    <!-- الرسالة -->
+    <!-- الرسائل -->
 
     <div
         class="message"
@@ -410,7 +431,9 @@
     ></div>
 
 
-    <!-- الدخول كضيف -->
+    <!-- =========================
+         الدخول كضيف
+    ========================= -->
 
     <button
         type="button"
@@ -433,7 +456,9 @@
     </button>
 
 
-    <!-- التسجيل -->
+    <!-- =========================
+         إنشاء حساب
+    ========================= -->
 
     <div class="register">
 
@@ -453,9 +478,9 @@
 <script>
 
 
-/* =========================
+/* =====================================================
    عرض الرسائل
-========================= */
+===================================================== */
 
 function showMessage(text, type = "error") {
 
@@ -472,9 +497,44 @@ function showMessage(text, type = "error") {
 
 
 
-/* =========================
-   تسجيل الدخول العادي
-========================= */
+/* =====================================================
+   تحويل المستخدم للصفحة المطلوبة
+===================================================== */
+
+function goAfterLogin() {
+
+    const redirect =
+        sessionStorage.getItem(
+            "loginRedirect"
+        );
+
+
+    if (redirect) {
+
+        sessionStorage.removeItem(
+            "loginRedirect"
+        );
+
+
+        window.location.href =
+            redirect;
+
+    }
+
+    else {
+
+        window.location.href =
+            "index.html";
+
+    }
+
+}
+
+
+
+/* =====================================================
+   تسجيل الدخول بالبريد وكلمة المرور
+===================================================== */
 
 async function login() {
 
@@ -493,15 +553,22 @@ async function login() {
 
 
     const button =
-        document.getElementById("loginButton");
+        document.getElementById(
+            "loginButton"
+        );
 
 
     const message =
-        document.getElementById("message");
+        document.getElementById(
+            "message"
+        );
 
 
-    message.style.display = "none";
+    message.style.display =
+        "none";
 
+
+    /* التحقق */
 
     if (!email || !password) {
 
@@ -510,6 +577,7 @@ async function login() {
         );
 
         return;
+
     }
 
 
@@ -520,8 +588,11 @@ async function login() {
         );
 
         return;
+
     }
 
+
+    /* تعطيل الزر */
 
     button.disabled = true;
 
@@ -541,6 +612,8 @@ async function login() {
             });
 
 
+        /* الخطأ */
+
         if (error) {
 
             console.error(
@@ -556,7 +629,9 @@ async function login() {
             if (
                 error.message
                     .toLowerCase()
-                    .includes("invalid login credentials")
+                    .includes(
+                        "invalid login credentials"
+                    )
             ) {
 
                 errorMessage =
@@ -568,7 +643,9 @@ async function login() {
             else if (
                 error.message
                     .toLowerCase()
-                    .includes("email not confirmed")
+                    .includes(
+                        "email not confirmed"
+                    )
             ) {
 
                 errorMessage =
@@ -580,7 +657,9 @@ async function login() {
             else if (
                 error.message
                     .toLowerCase()
-                    .includes("too many requests")
+                    .includes(
+                        "too many requests"
+                    )
             ) {
 
                 errorMessage =
@@ -589,29 +668,46 @@ async function login() {
             }
 
 
-            showMessage(errorMessage);
+            showMessage(
+                errorMessage
+            );
 
-            button.disabled = false;
+
+            button.disabled =
+                false;
+
 
             button.textContent =
                 "تسجيل الدخول";
 
+
             return;
+
         }
 
 
-        if (!data || !data.user) {
+        /* التأكد من المستخدم */
+
+        if (
+            !data ||
+            !data.user
+        ) {
 
             showMessage(
                 "لم يتم العثور على الحساب"
             );
 
-            button.disabled = false;
+
+            button.disabled =
+                false;
+
 
             button.textContent =
                 "تسجيل الدخول";
 
+
             return;
+
         }
 
 
@@ -631,34 +727,14 @@ async function login() {
             "تم تسجيل الدخول ✓";
 
 
-        setTimeout(function() {
+        setTimeout(
+            function() {
 
-            const redirect =
-                sessionStorage.getItem(
-                    "loginRedirect"
-                );
+                goAfterLogin();
 
-
-            if (redirect) {
-
-                sessionStorage.removeItem(
-                    "loginRedirect"
-                );
-
-
-                window.location.href =
-                    redirect;
-
-            }
-
-            else {
-
-                window.location.href =
-                    "index.html";
-
-            }
-
-        }, 700);
+            },
+            700
+        );
 
 
     }
@@ -676,7 +752,9 @@ async function login() {
         );
 
 
-        button.disabled = false;
+        button.disabled =
+            false;
+
 
         button.textContent =
             "تسجيل الدخول";
@@ -687,17 +765,21 @@ async function login() {
 
 
 
-/* =========================
+/* =====================================================
    تسجيل الدخول باستخدام Google
-========================= */
+===================================================== */
 
 async function loginWithGoogle() {
 
     const button =
-        document.getElementById("googleButton");
+        document.getElementById(
+            "googleButton"
+        );
 
 
-    button.disabled = true;
+    button.disabled =
+        true;
+
 
     button.innerHTML =
         '<span class="google-icon">G</span> جاري التحويل إلى Google...';
@@ -708,7 +790,8 @@ async function loginWithGoogle() {
         const { error } =
             await supabaseClient.auth.signInWithOAuth({
 
-                provider: "google",
+                provider:
+                    "google",
 
                 options: {
 
@@ -734,7 +817,9 @@ async function loginWithGoogle() {
             );
 
 
-            button.disabled = false;
+            button.disabled =
+                false;
+
 
             button.innerHTML =
                 '<span class="google-icon">G</span> تسجيل الدخول باستخدام Google';
@@ -756,7 +841,9 @@ async function loginWithGoogle() {
         );
 
 
-        button.disabled = false;
+        button.disabled =
+            false;
+
 
         button.innerHTML =
             '<span class="google-icon">G</span> تسجيل الدخول باستخدام Google';
@@ -767,9 +854,82 @@ async function loginWithGoogle() {
 
 
 
-/* =========================
+/* =====================================================
+   التحقق من جلسة Google بعد الرجوع من Google
+===================================================== */
+
+async function checkGoogleLogin() {
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.auth.getSession();
+
+
+        if (error) {
+
+            console.error(
+                "Session Error:",
+                error
+            );
+
+            return;
+
+        }
+
+
+        /* إذا كان المستخدم مسجل دخول */
+
+        if (
+            data &&
+            data.session &&
+            data.session.user
+        ) {
+
+            console.log(
+                "تم العثور على جلسة المستخدم:",
+                data.session.user
+            );
+
+
+            showMessage(
+                "تم تسجيل الدخول بنجاح",
+                "success"
+            );
+
+
+            setTimeout(
+                function() {
+
+                    goAfterLogin();
+
+                },
+                500
+            );
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Google Session Error:",
+            error
+        );
+
+    }
+
+}
+
+
+
+/* =====================================================
    الدخول كضيف
-========================= */
+===================================================== */
 
 function guestLogin() {
 
@@ -777,6 +937,15 @@ function guestLogin() {
         "index.html";
 
 }
+
+
+
+/* =====================================================
+   تشغيل فحص جلسة Google
+===================================================== */
+
+checkGoogleLogin();
+
 
 </script>
 
