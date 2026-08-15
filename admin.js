@@ -1420,14 +1420,36 @@ async function loadAdminOrders() {
 
 
     const {
-        data: orders,
-        error
-    } = await supabaseClient
-        .from("orders")
-        .select("*")
-        .order("id", {
-            ascending: false
-        });
+    data: orders,
+    error
+} = await supabaseClient
+    .from("orders")
+    .select(`
+        id,
+        status,
+        customer_name,
+        customer_phone,
+        total,
+        created_at,
+        user_id,
+        driver_name,
+        driver_number
+    `)
+    .order("id", {
+        ascending: false
+    });
+
+console.log("ORDERS FROM ADMIN:", orders);
+
+if (orders) {
+    orders.forEach(order => {
+        console.log(
+            "طلب #" + order.id,
+            "driver_name =", order.driver_name,
+            "driver_number =", order.driver_number
+        );
+    });
+}
 
 
     if (error) {
@@ -1640,12 +1662,12 @@ async function renderAdminOrder(order) {
                     <p>
               🚚 المندوب:
                  <strong>
-                ${order.courier_name || "غير محدد"}
+                ${order.driver_name || "غير محدد"}
                  </strong>
 
                  ${
-                 order.courier_number
-                    ? ` • رقم المندوب: ${order.courier_number}`
+                 order.driver_number
+                    ? ` • رقم المندوب: ${order.driver_number}`
                    : ""
                   }
                 </p>
@@ -2482,10 +2504,10 @@ async function printOrder(orderId) {
                  </span>
 
              <span class="customer-value">
-             ${order.courier_name || "-"}
+             ${order.driver_name || "-"}
               ${
-                 order.courier_number
-            ? ` (${order.courier_number})`
+                 order.driver_number
+            ? ` (${order.driverr_number})`
               : ""
               }
              </span>
