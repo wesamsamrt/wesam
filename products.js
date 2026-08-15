@@ -497,27 +497,62 @@ function openProductModal(variants) {
 
                     </select>
 
+<!-- السعر -->
 
-                    <!-- السعر -->
-
-                    <div
-                        id="selectedProductPrice"
-                        class="selected-product-price"
-                    >
-                        اختر المنتج
-                    </div>
+<div
+    id="selectedProductPrice"
+    class="selected-product-price"
+>
+    اختر المنتج
+</div>
 
 
-                    <!-- زر الإضافة -->
+<!-- الكمية -->
 
-                    <button
-                        type="button"
-                        id="confirmAddProduct"
-                        class="confirm-add-product"
-                        disabled
-                    >
-                        إضافة للسلة
-                    </button>
+<label>
+    الكمية
+</label>
+
+<div class="quantity-control">
+
+    <button
+        type="button"
+        id="quantityMinus"
+        class="quantity-button"
+    >
+        −
+    </button>
+
+    <input
+        type="number"
+        id="quantityInput"
+        class="quantity-input"
+        value="1"
+        min="1"
+        step="1"
+    >
+
+    <button
+        type="button"
+        id="quantityPlus"
+        class="quantity-button"
+    >
+        +
+    </button>
+
+</div>
+
+
+<!-- زر الإضافة -->
+
+<button
+    type="button"
+    id="confirmAddProduct"
+    class="confirm-add-product"
+    disabled
+>
+    إضافة للسلة
+</button>
 
                 </div>
 
@@ -562,11 +597,63 @@ function openProductModal(variants) {
         document.getElementById("selectedProductPrice");
 
     const addButton =
-        document.getElementById("confirmAddProduct");
+    document.getElementById("confirmAddProduct");
+
+const quantityInput =
+    document.getElementById("quantityInput");
+
+const quantityMinus =
+    document.getElementById("quantityMinus");
+
+const quantityPlus =
+    document.getElementById("quantityPlus");
 
 
     let selectedProduct = null;
+/* =====================================================
+   التحكم بالكمية
+===================================================== */
 
+quantityPlus.addEventListener("click", function () {
+
+    let quantity =
+        parseInt(quantityInput.value) || 1;
+
+    quantity++;
+
+    quantityInput.value = quantity;
+
+});
+
+
+quantityMinus.addEventListener("click", function () {
+
+    let quantity =
+        parseInt(quantityInput.value) || 1;
+
+    if (quantity > 1) {
+        quantity--;
+    }
+
+    quantityInput.value = quantity;
+
+});
+
+
+/*
+   السماح بكتابة الكمية يدوياً
+*/
+
+quantityInput.addEventListener("input", function () {
+
+    let quantity =
+        parseInt(this.value);
+
+    if (isNaN(quantity) || quantity < 1) {
+        this.value = 1;
+    }
+
+});
 
     /* =====================================================
        اختيار الماركة
@@ -919,10 +1006,13 @@ function openProductModal(variants) {
            إضافة المنتج للسلة
            بدون إغلاق البطاقة
         */
+const quantity =
+    parseInt(quantityInput.value) || 1;
 
-        await addProduct(
-            selectedProduct.id
-        );
+await addProduct(
+    selectedProduct.id,
+    quantity
+);
 
         /*
            بعد الإضافة:
@@ -950,9 +1040,12 @@ function openProductModal(variants) {
         modelSelect.disabled = true;
         colorSelect.disabled = true;
 
-        priceBox.textContent = "اختر المنتج";
 
-        addButton.disabled = true;
+priceBox.textContent = "اختر المنتج";
+
+quantityInput.value = 1;
+
+addButton.disabled = true;
 
     }
 );
@@ -1303,6 +1396,95 @@ function addProductModalStyles() {
         }
 
 
+
+.quantity-control {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 8px;
+
+}
+
+
+.quantity-button {
+
+    width: 50px;
+
+    height: 50px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background: #4935b5;
+
+    color: white;
+
+    font-size: 28px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+}
+
+
+.quantity-button:hover {
+
+    opacity: 0.9;
+
+}
+
+
+.quantity-input {
+
+    width: 120px;
+
+    height: 50px;
+
+    border: 1px solid #ddd;
+
+    border-radius: 12px;
+
+    text-align: center;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    outline: none;
+
+}
+
+
+.quantity-input:focus {
+
+    border-color: #4935b5;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(73,53,181,0.1);
+
+}
+
+
+/* إخفاء أسهم input number */
+
+.quantity-input::-webkit-inner-spin-button,
+.quantity-input::-webkit-outer-spin-button {
+
+    opacity: 1;
+
+}
+
+
+
         .confirm-add-product {
 
             width: 100%;
@@ -1360,7 +1542,13 @@ setupFilters();
    إضافة المنتج للسلة
 ========================================================= */
 
-async function addProduct(productId) {
+async function addProduct(productId, quantity = 1) {
+
+    quantity = parseInt(quantity);
+
+if (isNaN(quantity) || quantity < 1) {
+    quantity = 1;
+}
 
     try {
 
@@ -1540,7 +1728,7 @@ async function addProduct(productId) {
         if (existingItem) {
 
             const newQuantity =
-                (existingItem.quantity || 1) + 1;
+    (existingItem.quantity || 0) + quantity;
 
 
             const {
@@ -1596,8 +1784,8 @@ async function addProduct(productId) {
                         product_id:
                             product.id,
 
-                        quantity:
-                            1,
+                      quantity:
+                            quantity,
 
                         category:
                             product.category,

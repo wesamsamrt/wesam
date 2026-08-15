@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>طلبات المندوب</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase.js"></script>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+
+        body {
+
+            font-family: "Cairo", sans-serif;
+
+            background: #f8f9fd;
+
+            color: #171827;
+
+            min-height: 100vh;
+
+            padding-bottom: 40px;
+
+        }
+
+
+        .page {
+
+            width: min(700px, calc(100% - 30px));
+
+            margin: auto;
+
+        }
+
+
+        /* =========================
+           الهيدر
+        ========================= */
+
+        .header {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 14px;
+
+            padding: 22px 0;
+
+        }
+
+
+        .back-button {
+
+            width: 46px;
+
+            height: 46px;
+
+            border: none;
+
+            border-radius: 15px;
+
+            background: white;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.07);
+
+            font-size: 22px;
+
+            cursor: pointer;
+
+        }
+
+
+        .header h1 {
+
+            font-size: 22px;
+
+            font-weight: 800;
+
+        }
+
+
+        .header p {
+
+            color: #858796;
+
+            font-size: 11px;
+
+        }
+
+
+        /* =========================
+           بطاقة المندوب
+        ========================= */
+
+        .driver-card {
+
+            background: white;
+
+            border-radius: 25px;
+
+            padding: 22px;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .driver-top {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 14px;
+
+        }
+
+
+        .driver-avatar {
+
+            width: 65px;
+
+            height: 65px;
+
+            border-radius: 20px;
+
+            background: #eeeaff;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 30px;
+
+            flex-shrink: 0;
+
+        }
+
+
+        .driver-info {
+
+            flex: 1;
+
+        }
+
+
+        .driver-info h2 {
+
+            font-size: 18px;
+
+            font-weight: 800;
+
+        }
+
+
+        .driver-info p {
+
+            margin-top: 3px;
+
+            color: #858796;
+
+            font-size: 12px;
+
+        }
+
+
+        /* =========================
+           الإحصائيات
+        ========================= */
+
+        .stats {
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 10px;
+
+            margin-top: 18px;
+
+        }
+
+
+        .stat {
+
+            background: #f8f9fd;
+
+            border-radius: 15px;
+
+            padding: 14px;
+
+            text-align: center;
+
+        }
+
+
+        .stat span {
+
+            display: block;
+
+            color: #858796;
+
+            font-size: 10px;
+
+        }
+
+
+        .stat strong {
+
+            display: block;
+
+            margin-top: 3px;
+
+            font-size: 20px;
+
+        }
+
+
+        /* =========================
+           عنوان الطلبات
+        ========================= */
+
+        .orders-title {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            margin: 20px 3px 12px;
+
+        }
+
+
+        .orders-title h2 {
+
+            font-size: 17px;
+
+            font-weight: 800;
+
+        }
+
+
+        .refresh-button {
+
+            border: none;
+
+            background: white;
+
+            border-radius: 12px;
+
+            padding: 8px 12px;
+
+            font-family: inherit;
+
+            font-size: 11px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            box-shadow:
+                0 5px 18px rgba(50,50,100,.05);
+
+        }
+
+
+        /* =========================
+           الطلب
+        ========================= */
+
+        .order-card {
+
+            background: white;
+
+            border-radius: 22px;
+
+            padding: 18px;
+
+            margin-bottom: 12px;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+        }
+
+
+        .order-header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: flex-start;
+
+            gap: 10px;
+
+            padding-bottom: 14px;
+
+            border-bottom: 1px solid #f0f0f5;
+
+        }
+
+
+        .order-number {
+
+            font-size: 15px;
+
+            font-weight: 800;
+
+        }
+
+
+        .order-date {
+
+            color: #858796;
+
+            font-size: 10px;
+
+            margin-top: 3px;
+
+        }
+
+
+        .status {
+
+            padding: 6px 10px;
+
+            border-radius: 10px;
+
+            background: #eeeaff;
+
+            color: #6557ed;
+
+            font-size: 10px;
+
+            font-weight: 800;
+
+            white-space: nowrap;
+
+        }
+
+
+        /* =========================
+           بيانات العميل
+        ========================= */
+
+        .customer-info {
+
+            display: grid;
+
+            gap: 9px;
+
+            margin-top: 14px;
+
+        }
+
+
+        .customer-row {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 9px;
+
+            font-size: 12px;
+
+        }
+
+
+        .customer-row .icon {
+
+            width: 32px;
+
+            height: 32px;
+
+            border-radius: 10px;
+
+            background: #f8f9fd;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            flex-shrink: 0;
+
+        }
+
+
+        .customer-row strong {
+
+            font-weight: 700;
+
+        }
+
+
+        /* =========================
+           الموقع
+        ========================= */
+
+        .location-button {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            width: 100%;
+
+            min-height: 48px;
+
+            margin-top: 14px;
+
+            border-radius: 14px;
+
+            background: #eeeaff;
+
+            color: #6557ed;
+
+            text-decoration: none;
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+        }
+
+
+        .no-location {
+
+            width: 100%;
+
+            margin-top: 14px;
+
+            padding: 12px;
+
+            border-radius: 14px;
+
+            background: #f8f9fd;
+
+            color: #999;
+
+            text-align: center;
+
+            font-size: 11px;
+
+        }
+
+
+        /* =========================
+           الإجمالي
+        ========================= */
+
+        .order-bottom {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            margin-top: 15px;
+
+            padding-top: 14px;
+
+            border-top: 1px solid #f0f0f5;
+
+        }
+
+
+        .order-total {
+
+            font-size: 16px;
+
+            font-weight: 800;
+
+        }
+
+
+        /* =========================
+           الحالات
+        ========================= */
+
+        .loading {
+
+            background: white;
+
+            border-radius: 22px;
+
+            padding: 60px 20px;
+
+            text-align: center;
+
+            color: #858796;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+        }
+
+
+        .loading-icon {
+
+            font-size: 45px;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .empty {
+
+            background: white;
+
+            border-radius: 22px;
+
+            padding: 50px 20px;
+
+            text-align: center;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+        }
+
+
+        .empty-icon {
+
+            font-size: 50px;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .empty h2 {
+
+            font-size: 17px;
+
+            font-weight: 800;
+
+        }
+
+
+        .empty p {
+
+            color: #858796;
+
+            font-size: 11px;
+
+            margin-top: 5px;
+
+        }
+
+
+        .error {
+
+            background: #fff0f3;
+
+            color: #e05265;
+
+            border-radius: 18px;
+
+            padding: 20px;
+
+            text-align: center;
+
+            font-size: 12px;
+
+        }
+
+
+        .back-profile {
+
+            width: 100%;
+
+            height: 50px;
+
+            border: none;
+
+            border-radius: 15px;
+
+            background: white;
+
+            box-shadow:
+                0 8px 25px rgba(50,50,100,.05);
+
+            font-family: inherit;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+            margin-top: 15px;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="page">
+
+
+    <!-- =========================
+         الهيدر
+    ========================= -->
+
+    <header class="header">
+
+        <button
+            class="back-button"
+            onclick="history.back()"
+        >
+            →
+        </button>
+
+        <div>
+
+            <h1>
+                🚚 لوحة المندوب
+            </h1>
+
+            <p>
+                طلباتك المسندة إليك
+            </p>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         المحتوى
+    ========================= -->
+
+    <main id="content">
+
+        <div class="loading">
+
+            <div class="loading-icon">
+                🚚
+            </div>
+
+            جاري تحميل بيانات المندوب...
+
+        </div>
+
+    </main>
+
+
+</div>
+
+
+<script>
+
+
+// =========================
+// حماية الصفحة
+// =========================
+
+async function loadDriverPage() {
+
+    const content =
+        document.getElementById("content");
+
+
+    try {
+
+        // =========================
+        // المستخدم الحالي
+        // =========================
+
+        const {
+            data: { user },
+            error: userError
+        } =
+            await supabaseClient.auth.getUser();
+
+
+        if (userError || !user) {
+
+            showError(
+                "يجب تسجيل الدخول أولاً"
+            );
+
+            return;
+        }
+
+
+        // =========================
+        // بيانات المندوب
+        // =========================
+
+        const metadata =
+            user.user_metadata || {};
+
+
+        const isDriver =
+            metadata.is_driver === true;
+
+
+        const driverName =
+            metadata.driver_name || "";
+
+
+        const driverNumber =
+            metadata.driver_number || "";
+
+
+        // =========================
+        // التحقق
+        // =========================
+
+        if (
+            !isDriver ||
+            !driverNumber
+        ) {
+
+            content.innerHTML = `
+
+                <div class="empty">
+
+                    <div class="empty-icon">
+                        🚫
+                    </div>
+
+                    <h2>
+                        أنت غير مسجل كمندوب
+                    </h2>
+
+                    <p>
+                        سجل كمندوب من صفحة الملف الشخصي أولاً
+                    </p>
+
+                </div>
+
+                <button
+                    class="back-profile"
+                    onclick="window.location.href='profile.html'"
+                >
+                    العودة إلى الملف الشخصي
+                </button>
+
+            `;
+
+            return;
+        }
+
+
+        // =========================
+        // عرض بطاقة المندوب
+        // =========================
+
+        content.innerHTML = `
+
+            <section class="driver-card">
+
+                <div class="driver-top">
+
+                    <div class="driver-avatar">
+                        🚚
+                    </div>
+
+                    <div class="driver-info">
+
+                        <h2>
+                            ${escapeHtml(driverName)}
+                        </h2>
+
+                        <p>
+                            رقم المندوب:
+                            ${escapeHtml(driverNumber)}
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stats">
+
+                    <div class="stat">
+
+                        <span>
+                            عدد الطلبات
+                        </span>
+
+                        <strong id="ordersCount">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="stat">
+
+                        <span>
+                            الطلبات الحالية
+                        </span>
+
+                        <strong id="activeOrdersCount">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <div class="orders-title">
+
+                <h2>
+                    📋 طلباتي
+                </h2>
+
+                <button
+                    class="refresh-button"
+                    onclick="loadDriverOrders()"
+                >
+                    🔄 تحديث
+                </button>
+
+            </div>
+
+
+            <div id="ordersList">
+
+                <div class="loading">
+
+                    جاري تحميل الطلبات...
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        // تحميل الطلبات
+
+        await loadDriverOrders();
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Driver Page Error:",
+            error
+        );
+
+        showError(
+            "حدث خطأ أثناء تحميل صفحة المندوب"
+        );
+
+    }
+
+}
+
+
+// =========================
+// تحميل الطلبات
+// =========================
+
+async function loadDriverOrders() {
+
+    const ordersList =
+        document.getElementById("ordersList");
+
+
+    if (!ordersList) return;
+
+
+    ordersList.innerHTML = `
+
+        <div class="loading">
+
+            <div class="loading-icon">
+                📋
+            </div>
+
+            جاري تحميل الطلبات...
+
+        </div>
+
+    `;
+
+
+    try {
+
+        // =========================
+        // المستخدم
+        // =========================
+
+        const {
+            data: { user }
+        } =
+            await supabaseClient.auth.getUser();
+
+
+        if (!user) {
+
+            window.location.href =
+                "login.html";
+
+            return;
+        }
+
+
+        const metadata =
+            user.user_metadata || {};
+
+
+        const driverNumber =
+            metadata.driver_number;
+
+
+        if (!driverNumber) {
+
+            showError(
+                "لم يتم العثور على رقم المندوب"
+            );
+
+            return;
+        }
+
+
+        // =========================
+        // جلب الطلبات
+        // =========================
+
+        const {
+            data: orders,
+            error
+        } =
+            await supabaseClient
+                .from("orders")
+                .select(`
+                    id,
+                    status,
+                    customer_name,
+                    customer_phone,
+                    customer_lat,
+                    customer_lng,
+                    total,
+                    created_at,
+                    driver_name,
+                    driver_number
+                `)
+                .eq(
+                    "driver_number",
+                    driverNumber
+                )
+                .order(
+                    "id",
+                    {
+                        ascending: false
+                    }
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Orders Error:",
+                error
+            );
+
+            ordersList.innerHTML = `
+
+                <div class="error">
+
+                    حدث خطأ أثناء تحميل الطلبات:
+
+                    <br><br>
+
+                    ${escapeHtml(error.message)}
+
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        const allOrders =
+            orders || [];
+
+
+        // =========================
+        // الإحصائيات
+        // =========================
+
+        const ordersCount =
+            document.getElementById(
+                "ordersCount"
+            );
+
+
+        const activeOrdersCount =
+            document.getElementById(
+                "activeOrdersCount"
+            );
+
+
+        if (ordersCount) {
+
+            ordersCount.textContent =
+                allOrders.length;
+
+        }
+
+
+        const activeOrders =
+            allOrders.filter(order => {
+
+                return (
+                    order.status !== "تم استلام طلبك" &&
+                    order.status !== "ملغي"
+                );
+
+            });
+
+
+        if (activeOrdersCount) {
+
+            activeOrdersCount.textContent =
+                activeOrders.length;
+
+        }
+
+
+        // =========================
+        // لا توجد طلبات
+        // =========================
+
+        if (!allOrders.length) {
+
+            ordersList.innerHTML = `
+
+                <div class="empty">
+
+                    <div class="empty-icon">
+                        📦
+                    </div>
+
+                    <h2>
+                        لا توجد طلبات
+                    </h2>
+
+                    <p>
+                        لا توجد طلبات مسندة إليك حالياً
+                    </p>
+
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        // =========================
+        // عرض الطلبات
+        // =========================
+
+        ordersList.innerHTML = "";
+
+
+        allOrders.forEach(order => {
+
+            renderDriverOrder(
+                order,
+                ordersList
+            );
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        ordersList.innerHTML = `
+
+            <div class="error">
+
+                حدث خطأ غير متوقع أثناء تحميل الطلبات
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+// =========================
+// عرض طلب
+// =========================
+
+function renderDriverOrder(
+    order,
+    container
+) {
+
+
+    const card =
+        document.createElement("div");
+
+
+    card.className =
+        "order-card";
+
+
+    const date =
+        order.created_at
+            ?
+            new Date(
+                order.created_at
+            ).toLocaleString(
+                "ar-SA",
+                {
+                    dateStyle: "medium",
+                    timeStyle: "short"
+                }
+            )
+            :
+            "";
+
+
+    const lat =
+        Number(order.customer_lat);
+
+
+    const lng =
+        Number(order.customer_lng);
+
+
+    const hasLocation =
+        Number.isFinite(lat) &&
+        Number.isFinite(lng);
+
+
+    const locationHTML =
+        hasLocation
+
+        ?
+
+        `
+
+            <a
+                class="location-button"
+                href="https://www.google.com/maps?q=${lat},${lng}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                🗺️ فتح موقع العميل
+            </a>
+
+        `
+
+        :
+
+        `
+
+            <div class="no-location">
+                📍 لم يتم تحديد موقع العميل
+            </div>
+
+        `;
+
+
+    card.innerHTML = `
+
+        <div class="order-header">
+
+            <div>
+
+                <div class="order-number">
+                    الطلب #${order.id}
+                </div>
+
+                <div class="order-date">
+                    ${escapeHtml(date)}
+                </div>
+
+            </div>
+
+
+            <div class="status">
+                ${escapeHtml(
+                    order.status || "جديد"
+                )}
+            </div>
+
+        </div>
+
+
+        <div class="customer-info">
+
+
+            <div class="customer-row">
+
+                <div class="icon">
+                    👤
+                </div>
+
+                <div>
+                    العميل:
+                    <strong>
+                        ${escapeHtml(
+                            order.customer_name ||
+                            "غير محدد"
+                        )}
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div class="customer-row">
+
+                <div class="icon">
+                    📱
+                </div>
+
+                <div>
+
+                    الجوال:
+
+                    <strong dir="ltr">
+                        ${escapeHtml(
+                            order.customer_phone ||
+                            "غير محدد"
+                        )}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="customer-row">
+
+                <div class="icon">
+                    🚚
+                </div>
+
+                <div>
+
+                    المندوب:
+
+                    <strong>
+                        ${escapeHtml(
+                            order.driver_name ||
+                            "غير محدد"
+                        )}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        ${locationHTML}
+
+
+        <div class="order-bottom">
+
+            <span>
+                إجمالي الطلب
+            </span>
+
+            <span class="order-total">
+
+                ${Number(
+                    order.total || 0
+                ).toFixed(2)}
+
+                ر.س
+
+            </span>
+
+        </div>
+
+    `;
+
+
+    container.appendChild(card);
+
+}
+
+
+// =========================
+// عرض خطأ
+// =========================
+
+function showError(message) {
+
+    const content =
+        document.getElementById("content");
+
+
+    content.innerHTML = `
+
+        <div class="error">
+
+            ${escapeHtml(message)}
+
+        </div>
+
+        <button
+            class="back-profile"
+            onclick="window.location.href='profile.html'"
+        >
+            العودة إلى الملف الشخصي
+        </button>
+
+    `;
+
+}
+
+
+// =========================
+// حماية النصوص
+// =========================
+
+function escapeHtml(value) {
+
+    return String(value)
+
+        .replace(/&/g, "&amp;")
+
+        .replace(/</g, "&lt;")
+
+        .replace(/>/g, "&gt;")
+
+        .replace(/"/g, "&quot;")
+
+        .replace(/'/g, "&#039;");
+
+}
+
+
+// =========================
+// تشغيل الصفحة
+// =========================
+
+loadDriverPage();
+
+
+</script>
+
+
+</body>
+
+</html>

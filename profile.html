@@ -670,7 +670,24 @@ async function loadProfile() {
                 </span>
 
             </button>
+<button
+    class="action-button"
+    onclick="openDriverRegistration()"
+>
+    <div class="right">
+        <div class="action-icon">
+            🚚
+        </div>
 
+        <span>
+            التسجيل كمندوب
+        </span>
+    </div>
+
+    <span class="arrow">
+        ←
+    </span>
+</button>
 
         </section>
 
@@ -739,11 +756,363 @@ function escapeHtml(value) {
 
 // تشغيل الصفحة
 
+
+
+
+// =========================
+// التسجيل كمندوب
+// =========================
+
+function openDriverRegistration() {
+
+    const modal =
+        document.getElementById("driverModal");
+
+    const input =
+        document.getElementById("driverCodeInput");
+
+    const message =
+        document.getElementById("driverMessage");
+
+    input.value = "";
+
+    message.textContent = "";
+
+    modal.style.display = "flex";
+
+    setTimeout(() => {
+        input.focus();
+    }, 100);
+
+}
+
+
+function closeDriverRegistration() {
+
+    document.getElementById("driverModal")
+        .style.display = "none";
+
+}
+
+
+// =========================
+// التحقق من رمز المندوب
+// =========================
+
+async function registerAsDriver() {
+
+    const input =
+        document.getElementById("driverCodeInput");
+
+    const message =
+        document.getElementById("driverMessage");
+
+    const button =
+        document.getElementById("driverRegisterButton");
+
+
+    const code =
+        input.value.trim();
+
+
+    if (!code) {
+
+        message.textContent =
+            "اكتب الرمز السري للمندوب";
+
+        message.style.color =
+            "#e05265";
+
+        return;
+    }
+
+
+    button.disabled = true;
+
+    button.textContent =
+        "جاري التحقق...";
+
+    message.textContent = "";
+
+
+    try {
+
+        // =========================
+        // المستخدم الحالي
+        // =========================
+
+        const {
+            data: { user },
+            error: userError
+        } =
+            await supabaseClient.auth.getUser();
+
+
+        if (userError || !user) {
+
+            message.textContent =
+                "يجب تسجيل الدخول أولاً";
+
+            message.style.color =
+                "#e05265";
+
+            return;
+        }
+
+
+        // =========================
+        // البحث عن المندوب
+        // =========================
+
+        const {
+            data: driver,
+            error: driverError
+        } =
+            await supabaseClient
+                .from("drivers")
+                .select(`
+                    id,
+                    driver_number,
+                    name
+                `)
+                .eq("driver_code", code)
+                .maybeSingle();
+
+
+        if (driverError) {
+
+            console.error(
+                "Driver Error:",
+                driverError
+            );
+
+            message.textContent =
+                "حدث خطأ أثناء التحقق من الرمز";
+
+            message.style.color =
+                "#e05265";
+
+            return;
+        }
+
+
+        // =========================
+        // الرمز غير صحيح
+        // =========================
+
+        if (!driver) {
+
+            message.textContent =
+                "الرمز السري غير صحيح";
+
+            message.style.color =
+                "#e05265";
+
+            return;
+        }
+
+
+        // =========================
+        // حفظ المندوب في بيانات المستخدم
+        // =========================
+
+        const {
+            error: updateError
+        } =
+            await supabaseClient.auth.updateUser({
+
+                data: {
+
+                    is_driver: true,
+
+                    driver_id: driver.id,
+
+                    driver_name: driver.name,
+
+                    driver_number:
+                        driver.driver_number
+
+                }
+
+            });
+
+
+        if (updateError) {
+
+            console.error(updateError);
+
+            message.textContent =
+                "حدث خطأ أثناء حفظ بيانات المندوب";
+
+            message.style.color =
+                "#e05265";
+
+            return;
+        }
+
+
+        // =========================
+        // نجاح
+        // =========================
+
+        message.textContent =
+            `تم التسجيل كمندوب ${driver.name} ✅`;
+
+        message.style.color =
+            "#2e9d69";
+
+
+        setTimeout(() => {
+
+            window.location.href =
+                "driver.html";
+
+        }, 700);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Driver Registration Error:",
+            error
+        );
+
+        message.textContent =
+            "حدث خطأ غير متوقع";
+
+        message.style.color =
+            "#e05265";
+
+    }
+
+    finally {
+
+        button.disabled = false;
+
+        button.textContent =
+            "تسجيل";
+
+    }
+
+}
+
 loadProfile();
 
 
 </script>
+<div
+    id="driverModal"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,.45);
+        z-index:9999;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+    "
+>
 
+    <div
+        style="
+            width:min(420px,100%);
+            background:white;
+            border-radius:25px;
+            padding:25px;
+            text-align:right;
+            box-shadow:0 20px 60px rgba(0,0,0,.2);
+        "
+    >
+
+        <h2 style="font-size:20px;font-weight:800;">
+            🚚 التسجيل كمندوب
+        </h2>
+
+        <p
+            style="
+                color:#858796;
+                font-size:12px;
+                margin-top:7px;
+            "
+        >
+            أدخل الرمز السري الخاص بك للتسجيل كمندوب
+        </p>
+
+        <input
+            id="driverCodeInput"
+            type="text"
+            placeholder="أدخل الرمز السري"
+            autocomplete="off"
+            style="
+                width:100%;
+                height:52px;
+                margin-top:18px;
+                border:1px solid #e5e5ef;
+                border-radius:15px;
+                padding:0 15px;
+                font-family:inherit;
+                font-size:14px;
+                outline:none;
+            "
+        >
+
+        <div
+            id="driverMessage"
+            style="
+                font-size:12px;
+                margin-top:10px;
+                min-height:20px;
+            "
+        ></div>
+
+        <div
+            style="
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:10px;
+                margin-top:15px;
+            "
+        >
+
+            <button
+                onclick="closeDriverRegistration()"
+                style="
+                    height:50px;
+                    border:none;
+                    border-radius:15px;
+                    background:#f3f3f7;
+                    font-family:inherit;
+                    font-weight:800;
+                    cursor:pointer;
+                "
+            >
+                إلغاء
+            </button>
+
+            <button
+                id="driverRegisterButton"
+                onclick="registerAsDriver()"
+                style="
+                    height:50px;
+                    border:none;
+                    border-radius:15px;
+                    background:#6557ed;
+                    color:white;
+                    font-family:inherit;
+                    font-weight:800;
+                    cursor:pointer;
+                "
+            >
+                تسجيل
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
 
 </body>
 

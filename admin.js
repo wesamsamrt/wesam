@@ -1425,16 +1425,19 @@ async function loadAdminOrders() {
 } = await supabaseClient
     .from("orders")
     .select(`
-        id,
-        status,
-        customer_name,
-        customer_phone,
-        total,
-        created_at,
-        user_id,
-        driver_name,
-        driver_number
-    `)
+    id,
+    status,
+    customer_name,
+    customer_phone,
+    customer_lat,
+    customer_lng,
+    customer_location,
+    total,
+    created_at,
+    user_id,
+    driver_name,
+    driver_number
+`)
     .order("id", {
         ascending: false
     });
@@ -1660,17 +1663,51 @@ async function renderAdminOrder(order) {
                     </p>
 
                     <p>
-              🚚 المندوب:
-                 <strong>
-                ${order.driver_name || "غير محدد"}
-                 </strong>
+    🚚 المندوب:
+    <strong>
+        ${order.driver_name || "غير محدد"}
+    </strong>
 
-                 ${
-                 order.driver_number
-                    ? ` • رقم المندوب: ${order.driver_number}`
-                   : ""
-                  }
-                </p>
+    ${
+        order.driver_number
+        ? ` • رقم المندوب: ${order.driver_number}`
+        : ""
+    }
+</p>
+
+<p style="margin-top:8px;">
+    📍 الموقع:
+
+    ${
+        order.customer_lat && order.customer_lng
+        ?
+        `
+        <a
+            href="https://www.google.com/maps?q=${order.customer_lat},${order.customer_lng}"
+            target="_blank"
+            style="
+                display:inline-block;
+                margin-top:5px;
+                padding:7px 12px;
+                background:#eeeaff;
+                color:#6557ed;
+                border-radius:10px;
+                text-decoration:none;
+                font-weight:800;
+                font-size:12px;
+            "
+        >
+            🗺️ فتح موقع العميل
+        </a>
+        `
+        :
+        `
+        <span style="color:#999;">
+            لم يتم تحديد الموقع
+        </span>
+        `
+    }
+</p>
 
                   </div>
 

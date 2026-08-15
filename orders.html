@@ -17,6 +17,18 @@
         rel="stylesheet"
     >
 
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+
+
     <style>
 
         * {
@@ -221,8 +233,7 @@
 </button>
 
 
-
-    <div
+<div
     style="
         background:white;
         border-radius:22px;
@@ -231,6 +242,40 @@
         box-shadow:0 8px 25px rgba(50,50,100,.05);
     "
 >
+
+    <!-- اسم العميل -->
+
+    <label
+        for="customerName"
+        style="
+            display:block;
+            font-size:14px;
+            font-weight:800;
+            margin-bottom:10px;
+        "
+    >
+        👤 اسم العميل
+    </label>
+
+    <input
+        id="customerName"
+        type="text"
+        placeholder="اكتب اسم العميل"
+        style="
+            width:100%;
+            height:50px;
+            border:1px solid #e5e5e5;
+            border-radius:14px;
+            padding:0 15px;
+            font-family:inherit;
+            font-size:14px;
+            outline:none;
+            margin-bottom:18px;
+        "
+    >
+
+
+    <!-- رقم المندوب -->
 
     <label
         for="driverNumber"
@@ -269,6 +314,55 @@
             font-weight:700;
         "
     ></p>
+
+
+    <!-- موقع العميل -->
+
+    <label
+        style="
+            display:block;
+            font-size:14px;
+            font-weight:800;
+            margin-top:20px;
+            margin-bottom:10px;
+        "
+    >
+        📍 موقع العميل
+    </label>
+
+    <button
+        type="button"
+        onclick="openLocationMap()"
+        style="
+            width:100%;
+            height:52px;
+            border:none;
+            border-radius:14px;
+            background:#eeeaff;
+            color:#6557ed;
+            font-family:inherit;
+            font-size:14px;
+            font-weight:800;
+            cursor:pointer;
+        "
+    >
+        📍 تحديد الموقع من الخريطة
+    </button>
+
+    <div
+        id="locationText"
+        style="
+            margin-top:10px;
+            padding:12px;
+            border-radius:12px;
+            background:#f7f7f7;
+            color:#777;
+            font-size:12px;
+            text-align:center;
+        "
+    >
+        لم يتم تحديد الموقع
+    </div>
 
 </div>
 
@@ -829,7 +923,11 @@ loadOrders();
 async function submitOrder() {
 
     try {
+const customerNameInput =
+    document.getElementById("customerName");
 
+const customerName =
+    customerNameInput.value.trim();
         // =========================
         // رقم المندوب
         // =========================
@@ -843,7 +941,33 @@ async function submitOrder() {
         const driverNumber =
             driverInput.value.trim();
 
+// =========================
+// التأكد من اسم العميل
+// =========================
 
+if (!customerName) {
+
+    alert("يجب كتابة اسم العميل أولاً");
+
+    customerNameInput.focus();
+
+    return;
+}
+
+
+// =========================
+// التأكد من الموقع
+// =========================
+
+if (
+    customerLat === null ||
+    customerLng === null
+) {
+
+    alert("يجب تحديد موقع العميل من الخريطة أولاً");
+
+    return;
+}
         // =========================
         // التأكد من إدخال الرقم
         // =========================
@@ -1029,24 +1153,43 @@ async function submitOrder() {
         // تقديم الطلب
         // =========================
 
-        const {
-            error: updateError
-        } = await supabaseClient
-            .from("orders")
-            .update({
+       const {
+    error: updateError
+} = await supabaseClient
+    .from("orders")
+    .update({
 
-                status: "مقدم",
+        status: "مقدم",
 
-                driver_number:
-                    driver.driver_number,
+        driver_number:
+            driver.driver_number,
 
-                driver_name:
-                    driver.name
+        driver_name:
+            driver.name,
 
-            })
-            .eq("id", order.id)
-            .eq("user_id", user.id);
+        customer_name:
+            customerName,
 
+        customer_location:
+            `${customerLat},${customerLng}`,
+
+        customer_lat:
+            customerLat,
+
+        customer_lng:
+            customerLng
+
+    })
+    .eq("id", order.id)
+    .eq("user_id", user.id);
+
+
+
+
+
+
+            
+            
 
         if (updateError) {
 
@@ -1617,6 +1760,309 @@ async function loadNotifications() {
 
 
 
+
+
+
+
+
+// =========================
+// موقع العميل
+// =========================
+
+let customerLat = null;
+let customerLng = null;
+let customerMap = null;
+let customerMarker = null;
+
+
+// =========================
+// فتح الخريطة
+// =========================
+
+function openLocationMap() {
+
+    const oldMap =
+        document.getElementById("locationMapModal");
+
+    if (oldMap) {
+        oldMap.remove();
+    }
+
+
+    const modal =
+        document.createElement("div");
+
+    modal.id = "locationMapModal";
+
+    modal.innerHTML = `
+
+        <div
+            style="
+                position:fixed;
+                inset:0;
+                background:rgba(0,0,0,.6);
+                z-index:999999;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                padding:15px;
+            "
+        >
+
+            <div
+                style="
+                    width:100%;
+                    max-width:600px;
+                    height:80vh;
+                    background:white;
+                    border-radius:22px;
+                    overflow:hidden;
+                    display:flex;
+                    flex-direction:column;
+                "
+            >
+
+                <div
+                    style="
+                        padding:15px;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        border-bottom:1px solid #eee;
+                    "
+                >
+
+                    <strong>
+                        📍 حدد موقع العميل
+                    </strong>
+
+                    <button
+                        onclick="closeLocationMap()"
+                        style="
+                            width:38px;
+                            height:38px;
+                            border:none;
+                            border-radius:50%;
+                            background:#f1f1f1;
+                            font-size:22px;
+                            cursor:pointer;
+                        "
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="customerMap"
+                    style="
+                        flex:1;
+                        min-height:300px;
+                    "
+                ></div>
+
+
+                <div
+                    style="
+                        padding:15px;
+                        border-top:1px solid #eee;
+                    "
+                >
+
+                    <button
+                        onclick="confirmCustomerLocation()"
+                        style="
+                            width:100%;
+                            height:52px;
+                            border:none;
+                            border-radius:14px;
+                            background:#6557ed;
+                            color:white;
+                            font-family:inherit;
+                            font-size:15px;
+                            font-weight:800;
+                            cursor:pointer;
+                        "
+                    >
+                        ✅ تأكيد الموقع
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+    document.body.appendChild(modal);
+
+    document.body.style.overflow = "hidden";
+
+
+    // إنشاء الخريطة
+
+    setTimeout(() => {
+
+        let startLat = 24.7136;
+        let startLng = 46.6753;
+
+
+        if (
+            customerLat !== null &&
+            customerLng !== null
+        ) {
+
+            startLat = customerLat;
+            startLng = customerLng;
+
+        }
+
+
+        customerMap =
+            L.map("customerMap")
+                .setView(
+                    [
+                        startLat,
+                        startLng
+                    ],
+                    13
+                );
+
+
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution:
+                    "&copy; OpenStreetMap contributors"
+            }
+        ).addTo(customerMap);
+
+
+        // إذا كان عنده موقع سابق
+
+        if (
+            customerLat !== null &&
+            customerLng !== null
+        ) {
+
+            customerMarker =
+                L.marker([
+                    customerLat,
+                    customerLng
+                ])
+                .addTo(customerMap);
+
+        }
+
+
+        // الضغط على الخريطة
+
+        customerMap.on(
+            "click",
+            function(e) {
+
+                customerLat =
+                    e.latlng.lat;
+
+                customerLng =
+                    e.latlng.lng;
+
+
+                if (customerMarker) {
+
+                    customerMarker.setLatLng([
+                        customerLat,
+                        customerLng
+                    ]);
+
+                } else {
+
+                    customerMarker =
+                        L.marker([
+                            customerLat,
+                            customerLng
+                        ])
+                        .addTo(customerMap);
+
+                }
+
+            }
+        );
+
+
+    }, 100);
+
+}
+
+
+// =========================
+// تأكيد الموقع
+// =========================
+
+function confirmCustomerLocation() {
+
+    if (
+        customerLat === null ||
+        customerLng === null
+    ) {
+
+        alert(
+            "اضغط على الخريطة وحدد موقع العميل أولاً"
+        );
+
+        return;
+    }
+
+
+    document.getElementById(
+        "locationText"
+    ).innerHTML = `
+
+        <span style="color:#2e9d69;font-weight:800;">
+            ✅ تم تحديد موقع العميل
+        </span>
+
+        <br>
+
+        <span style="font-size:11px;">
+            ${customerLat.toFixed(6)},
+            ${customerLng.toFixed(6)}
+        </span>
+
+    `;
+
+
+    closeLocationMap();
+
+}
+
+
+// =========================
+// إغلاق الخريطة
+// =========================
+
+function closeLocationMap() {
+
+    const modal =
+        document.getElementById(
+            "locationMapModal"
+        );
+
+
+    if (modal) {
+        modal.remove();
+    }
+
+
+    document.body.style.overflow = "";
+
+
+    customerMap = null;
+    customerMarker = null;
+
+}
 
 </script>
     
