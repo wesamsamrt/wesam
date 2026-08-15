@@ -192,6 +192,70 @@
         }
 
 
+        /* =========================
+           زر Google
+        ========================= */
+
+        .google-button {
+
+            width: 100%;
+
+            height: 52px;
+
+            border: 1px solid #e5e5e5;
+
+            border-radius: 15px;
+
+            background: white;
+
+            color: #333;
+
+            font-family: inherit;
+
+            font-size: 14px;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+            margin-top: 10px;
+
+            transition: .2s;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 10px;
+        }
+
+
+        .google-button:hover {
+
+            background: #f8f8f8;
+        }
+
+
+        .google-button:disabled {
+
+            opacity: .6;
+
+            cursor: not-allowed;
+        }
+
+
+        .google-icon {
+
+            font-size: 20px;
+
+            font-weight: 800;
+
+            font-family: Arial, sans-serif;
+        }
+
+
         .register {
 
             text-align: center;
@@ -318,6 +382,26 @@
     </button>
 
 
+    <!-- =========================
+         تسجيل الدخول باستخدام Google
+    ========================= -->
+
+    <button
+        type="button"
+        class="google-button"
+        id="googleButton"
+        onclick="loginWithGoogle()"
+    >
+
+        <span class="google-icon">
+            G
+        </span>
+
+        تسجيل الدخول باستخدام Google
+
+    </button>
+
+
     <!-- الرسالة -->
 
     <div
@@ -326,30 +410,29 @@
     ></div>
 
 
-
-
-
-
+    <!-- الدخول كضيف -->
 
     <button
-    type="button"
-    onclick="guestLogin()"
-    style="
-        width:100%;
-        height:52px;
-        border:none;
-        border-radius:15px;
-        background:#f0efff;
-        color:#6557ed;
-        font-family:inherit;
-        font-size:14px;
-        font-weight:800;
-        cursor:pointer;
-        margin-top:10px;
-    "
->
-    الدخول كضيف
-</button>
+        type="button"
+        onclick="guestLogin()"
+        style="
+            width:100%;
+            height:52px;
+            border:none;
+            border-radius:15px;
+            background:#f0efff;
+            color:#6557ed;
+            font-family:inherit;
+            font-size:14px;
+            font-weight:800;
+            cursor:pointer;
+            margin-top:10px;
+        "
+    >
+        الدخول كضيف
+    </button>
+
+
     <!-- التسجيل -->
 
     <div class="register">
@@ -390,7 +473,7 @@ function showMessage(text, type = "error") {
 
 
 /* =========================
-   تسجيل الدخول
+   تسجيل الدخول العادي
 ========================= */
 
 async function login() {
@@ -420,8 +503,6 @@ async function login() {
     message.style.display = "none";
 
 
-    /* التحقق من البيانات */
-
     if (!email || !password) {
 
         showMessage(
@@ -442,8 +523,6 @@ async function login() {
     }
 
 
-    /* تعطيل الزر */
-
     button.disabled = true;
 
     button.textContent =
@@ -451,9 +530,6 @@ async function login() {
 
 
     try {
-
-
-        /* تسجيل الدخول في Supabase */
 
         const { data, error } =
             await supabaseClient.auth.signInWithPassword({
@@ -464,8 +540,6 @@ async function login() {
 
             });
 
-
-        /* في حالة وجود خطأ */
 
         if (error) {
 
@@ -526,8 +600,6 @@ async function login() {
         }
 
 
-        /* التأكد من وجود المستخدم */
-
         if (!data || !data.user) {
 
             showMessage(
@@ -549,8 +621,6 @@ async function login() {
         );
 
 
-        /* نجاح */
-
         showMessage(
             "تم تسجيل الدخول بنجاح",
             "success"
@@ -561,16 +631,7 @@ async function login() {
             "تم تسجيل الدخول ✓";
 
 
-        /*
-         * ننتظر قليلًا حتى تظهر رسالة النجاح
-         */
-
         setTimeout(function() {
-
-            /*
-             * إذا كان المستخدم جاء من صفحة معينة
-             * نرجعه لها
-             */
 
             const redirect =
                 sessionStorage.getItem(
@@ -591,10 +652,6 @@ async function login() {
             }
 
             else {
-
-                /*
-                 * الصفحة الافتراضية
-                 */
 
                 window.location.href =
                     "index.html";
@@ -623,19 +680,103 @@ async function login() {
 
         button.textContent =
             "تسجيل الدخول";
+
     }
 
 }
 
-function guestLogin() {
 
-    window.location.href = "index.html";
+
+/* =========================
+   تسجيل الدخول باستخدام Google
+========================= */
+
+async function loginWithGoogle() {
+
+    const button =
+        document.getElementById("googleButton");
+
+
+    button.disabled = true;
+
+    button.innerHTML =
+        '<span class="google-icon">G</span> جاري التحويل إلى Google...';
+
+
+    try {
+
+        const { error } =
+            await supabaseClient.auth.signInWithOAuth({
+
+                provider: "google",
+
+                options: {
+
+                    redirectTo:
+                        window.location.origin +
+                        window.location.pathname
+
+                }
+
+            });
+
+
+        if (error) {
+
+            console.error(
+                "Google Login Error:",
+                error
+            );
+
+
+            showMessage(
+                "حدث خطأ في تسجيل الدخول باستخدام Google"
+            );
+
+
+            button.disabled = false;
+
+            button.innerHTML =
+                '<span class="google-icon">G</span> تسجيل الدخول باستخدام Google';
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Unexpected Google Login Error:",
+            error
+        );
+
+
+        showMessage(
+            "حدث خطأ غير متوقع"
+        );
+
+
+        button.disabled = false;
+
+        button.innerHTML =
+            '<span class="google-icon">G</span> تسجيل الدخول باستخدام Google';
+
+    }
 
 }
 
-</script>
 
 
+/* =========================
+   الدخول كضيف
+========================= */
+
+function guestLogin() {
+
+    window.location.href =
+        "index.html";
+
+}
 
 </script>
 
