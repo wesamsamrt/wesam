@@ -1,37 +1,67 @@
+/* =========================================================
+   RESET
+========================================================= */
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
 :root {
     --purple: #6557ed;
+    --purple-dark: #5142a8;
+
     --bg: #f8f9fd;
     --text: #171827;
     --muted: #858796;
+
     --white: #ffffff;
+    --border: #dddddd;
 }
+
+
+/* =========================================================
+   BODY
+========================================================= */
 
 body {
     font-family: "Cairo", sans-serif;
+
     background: var(--bg);
+
     color: var(--text);
+
     min-height: 100vh;
+
     padding-bottom: 40px;
 }
 
-/* =========================
+body.modal-open {
+    overflow: hidden;
+}
+
+
+/* =========================================================
    HEADER
-========================= */
+========================================================= */
 
 .header {
     width: min(1100px, calc(100% - 32px));
+
     margin: auto;
 
     padding: 22px 0;
 
     display: flex;
+
     align-items: center;
+
     gap: 15px;
 }
 
@@ -40,11 +70,13 @@ body {
     height: 46px;
 
     border: none;
+
     border-radius: 15px;
 
     background: white;
 
-    box-shadow: 0 8px 25px rgba(50, 50, 100, .07);
+    box-shadow:
+        0 8px 25px rgba(50, 50, 100, .07);
 
     font-size: 23px;
 
@@ -53,21 +85,24 @@ body {
 
 .header-title h1 {
     font-size: 22px;
+
     font-weight: 800;
 }
 
 .header-title p {
     font-size: 11px;
+
     color: var(--muted);
 }
 
 
-/* =========================
+/* =========================================================
    SEARCH
-========================= */
+========================================================= */
 
 .search {
     width: min(1100px, calc(100% - 32px));
+
     margin: 5px auto 25px;
 }
 
@@ -78,9 +113,11 @@ body {
 
     border-radius: 19px;
 
-    box-shadow: 0 8px 25px rgba(50, 50, 100, .06);
+    box-shadow:
+        0 8px 25px rgba(50, 50, 100, .06);
 
     display: flex;
+
     align-items: center;
 
     padding: 0 18px;
@@ -90,31 +127,36 @@ body {
 
 .search-box span {
     font-size: 23px;
+
     color: var(--purple);
 }
 
 .search-box input {
     border: none;
+
     outline: none;
 
     width: 100%;
 
     font-family: inherit;
+
     font-size: 13px;
 
     background: transparent;
 }
 
 
-/* =========================
+/* =========================================================
    FILTERS
-========================= */
+========================================================= */
 
 .filters {
     width: min(1100px, calc(100% - 32px));
+
     margin: auto auto 25px;
 
     display: flex;
+
     gap: 10px;
 
     overflow-x: auto;
@@ -140,32 +182,39 @@ body {
     color: var(--muted);
 
     font-family: inherit;
+
     font-size: 11px;
+
     font-weight: 600;
 
     cursor: pointer;
 
-    box-shadow: 0 6px 18px rgba(50, 50, 100, .04);
+    box-shadow:
+        0 6px 18px rgba(50, 50, 100, .04);
 }
 
 .filter.active {
     background: var(--purple);
+
     color: white;
 }
 
 
-/* =========================
+/* =========================================================
    CONTENT
-========================= */
+========================================================= */
 
 .content {
     width: min(1100px, calc(100% - 32px));
+
     margin: auto;
 }
 
 .section-title {
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
     margin-bottom: 15px;
@@ -173,18 +222,20 @@ body {
 
 .section-title h2 {
     font-size: 20px;
+
     font-weight: 800;
 }
 
 .section-title span {
     color: var(--muted);
+
     font-size: 11px;
 }
 
 
-/* =========================
+/* =========================================================
    PRODUCTS
-========================= */
+========================================================= */
 
 .products {
     display: grid;
@@ -201,7 +252,8 @@ body {
 
     padding: 15px;
 
-    box-shadow: 0 8px 25px rgba(50, 50, 100, .05);
+    box-shadow:
+        0 8px 25px rgba(50, 50, 100, .05);
 
     cursor: pointer;
 
@@ -220,7 +272,9 @@ body {
     background: #f0f1f7;
 
     display: flex;
+
     align-items: center;
+
     justify-content: center;
 
     font-size: 65px;
@@ -228,10 +282,21 @@ body {
     margin-bottom: 13px;
 }
 
+.product-image img {
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: contain;
+
+    border-radius: 19px;
+}
+
 .product-type {
     color: var(--purple);
 
     font-size: 10px;
+
     font-weight: 700;
 
     margin-bottom: 4px;
@@ -239,6 +304,7 @@ body {
 
 .product-card h3 {
     font-size: 15px;
+
     font-weight: 800;
 
     margin-bottom: 4px;
@@ -254,12 +320,15 @@ body {
 
 .product-bottom {
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 }
 
 .price {
     font-size: 14px;
+
     font-weight: 800;
 }
 
@@ -268,6 +337,7 @@ body {
     height: 38px;
 
     border: none;
+
     border-radius: 13px;
 
     background: var(--purple);
@@ -277,16 +347,18 @@ body {
     font-size: 22px;
 
     display: flex;
+
     align-items: center;
+
     justify-content: center;
 
     cursor: pointer;
 }
 
 
-/* =========================
+/* =========================================================
    LOADING / MESSAGES
-========================= */
+========================================================= */
 
 .loading,
 .message {
@@ -308,133 +380,36 @@ body {
 }
 
 
-/* =========================
-   MOBILE
-========================= */
-
-@media (max-width: 700px) {
-
-    .products {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .product-image {
-        height: 140px;
-        font-size: 52px;
-    }
-
-    .product-card {
-        padding: 12px;
-        border-radius: 21px;
-    }
-
-}
-
-
-@media (max-width: 380px) {
-
-    .product-image {
-        height: 125px;
-    }
-
-    .product-card h3 {
-        font-size: 13px;
-    }
-
-}
-
-
-
-/* =========================
+/* =========================================================
    PRODUCT MODAL
-========================= */
+========================================================= */
 
 .product-modal {
     position: fixed;
+
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+
+    z-index: 99999;
 
     display: none;
+
     align-items: center;
+
     justify-content: center;
 
     padding: 20px;
-
-    z-index: 9999;
 }
 
 .product-modal.show {
     display: flex;
 }
 
-.product-modal-content {
-    background: white;
 
-    width: 100%;
-    max-width: 500px;
-
-    max-height: 90vh;
-
-    overflow-y: auto;
-
-    border-radius: 24px;
-
-    padding: 20px;
-
-    position: relative;
-
-    box-shadow: 0 20px 60px rgba(0,0,0,.25);
-}
-
-.product-modal-close {
-    position: absolute;
-
-    top: 12px;
-    left: 12px;
-
-    width: 38px;
-    height: 38px;
-
-    border: none;
-    border-radius: 50%;
-
-    background: #f1f1f1;
-
-    font-size: 25px;
-
-    cursor: pointer;
-}
-
-body.modal-open {
-    overflow: hidden;
-}
-
-
-/* =========================
-   PRODUCT MODAL
-========================= */
-
-body.modal-open {
-    overflow: hidden;
-}
-
-
-.product-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 20px;
-}
-
+/* الخلفية */
 
 .product-modal-overlay {
     position: absolute;
+
     inset: 0;
 
     background: rgba(0, 0, 0, 0.55);
@@ -443,11 +418,16 @@ body.modal-open {
 }
 
 
+/* =========================================================
+   MODAL BOX
+========================================================= */
+
 .product-modal-box {
     position: relative;
+
     z-index: 2;
 
-    width: min(720px, 100%);
+    width: min(850px, 100%);
 
     max-height: 90vh;
 
@@ -457,46 +437,48 @@ body.modal-open {
 
     border-radius: 28px;
 
-    padding: 30px;
-
-    display: grid;
-
-    grid-template-columns: 240px 1fr;
-
-    gap: 30px;
+    padding: 35px;
 
     box-shadow:
         0 25px 80px rgba(0, 0, 0, 0.25);
 
-    animation: modalIn 0.2s ease;
+    animation: modalIn .2s ease;
 }
 
+
+/* =========================================================
+   MODAL ANIMATION
+========================================================= */
 
 @keyframes modalIn {
 
     from {
         opacity: 0;
-        transform: scale(0.95);
+
+        transform: scale(.95);
     }
 
     to {
         opacity: 1;
+
         transform: scale(1);
     }
-
 }
 
 
-/* زر الإغلاق */
+/* =========================================================
+   CLOSE BUTTON
+========================================================= */
 
 .product-modal-close {
-
     position: absolute;
 
-    top: 16px;
-    left: 16px;
+    top: 18px;
+
+    left: 18px;
 
     width: 45px;
+
     height: 45px;
 
     border: none;
@@ -510,23 +492,27 @@ body.modal-open {
     cursor: pointer;
 
     z-index: 5;
-}
 
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
 
 .product-modal-close:hover {
-
     background: #e5e5e5;
-
 }
 
 
-/* صورة المنتج */
+/* =========================================================
+   MODAL IMAGE
+========================================================= */
 
 .modal-product-image {
-
     width: 100%;
 
-    height: 280px;
+    height: 220px;
 
     border-radius: 22px;
 
@@ -539,11 +525,11 @@ body.modal-open {
     justify-content: center;
 
     overflow: hidden;
+
+    margin-bottom: 25px;
 }
 
-
 .modal-product-image img {
-
     width: 100%;
 
     height: 100%;
@@ -551,75 +537,114 @@ body.modal-open {
     object-fit: contain;
 }
 
-
 .modal-no-image {
-
     font-size: 80px;
 }
 
 
-/* المعلومات */
+/* =========================================================
+   MODAL INFORMATION
+========================================================= */
 
 .modal-product-info {
+    width: 100%;
 
     display: flex;
 
     flex-direction: column;
-
-    justify-content: center;
-
 }
 
-
 .modal-product-type {
-
     font-size: 14px;
 
-    color: #5142a8;
+    color: var(--purple-dark);
 
     font-weight: 700;
 
     margin-bottom: 5px;
+
+    text-align: center;
 }
 
-
 .modal-product-info h2 {
-
-    margin: 0 0 25px;
+    margin: 0 0 30px;
 
     font-size: 28px;
 
+    text-align: center;
 }
 
 
-/* العناوين */
+/* =========================================================
+   OPTIONS
+========================================================= */
+
+/*
+   الماركة والموديل:
+   جنب بعض
+
+   اللون:
+   تحتهم ويأخذ العرض كامل
+*/
+
+.product-options {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 22px;
+
+    width: 100%;
+}
+
+
+/* كل خيار */
+
+.product-option {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    min-width: 0;
+}
+
+
+/* اللون يأخذ السطر كامل */
+
+.product-option.color-option {
+    grid-column: 1 / -1;
+}
+
+
+/* =========================================================
+   OPTION LABEL
+========================================================= */
 
 .modal-product-info label {
-
     font-size: 15px;
 
     font-weight: 700;
 
-    margin-bottom: 8px;
-
+    margin: 0;
 }
 
 
-/* القوائم */
+/* =========================================================
+   SELECT
+========================================================= */
 
 .product-select {
-
     width: 100%;
 
-    height: 50px;
+    height: 55px;
 
     padding: 0 15px;
 
-    margin-bottom: 18px;
+    border: 1px solid var(--border);
 
-    border: 1px solid #ddd;
-
-    border-radius: 12px;
+    border-radius: 14px;
 
     background: white;
 
@@ -630,20 +655,71 @@ body.modal-open {
     outline: none;
 
     cursor: pointer;
-}
 
+    color: var(--text);
+}
 
 .product-select:focus {
+    border-color: var(--purple-dark);
+}
 
-    border-color: #5142a8;
+.product-select:disabled {
+    background: #f5f5f5;
 
+    color: #b5b5b5;
+
+    cursor: not-allowed;
 }
 
 
-/* السعر */
+/* =========================================================
+   SELECTED PRODUCT
+========================================================= */
+
+.modal-selected-product {
+    grid-column: 1 / -1;
+
+    width: 100%;
+
+    background: #f7f7f9;
+
+    border-radius: 18px;
+
+    padding: 20px;
+
+    text-align: center;
+
+    margin-top: 2px;
+}
+
+.modal-selected-product h3 {
+    margin-bottom: 8px;
+
+    font-size: 18px;
+}
+
+.modal-selected-product p {
+    margin: 5px 0;
+
+    color: #666;
+
+    font-size: 14px;
+}
+
+.modal-selected-product strong {
+    display: block;
+
+    margin-top: 8px;
+
+    font-size: 24px;
+}
+
+
+/* =========================================================
+   PRICE
+========================================================= */
 
 .modal-price {
-
     display: flex;
 
     justify-content: space-between;
@@ -655,27 +731,25 @@ body.modal-open {
     font-size: 16px;
 }
 
-
 .modal-price strong {
-
     font-size: 22px;
-
 }
 
 
-/* زر السلة */
+/* =========================================================
+   ADD TO CART
+========================================================= */
 
 .modal-add-button {
-
     width: 100%;
 
-    height: 52px;
+    height: 55px;
 
     border: none;
 
-    border-radius: 14px;
+    border-radius: 15px;
 
-    background: #5142a8;
+    background: var(--purple-dark);
 
     color: white;
 
@@ -687,57 +761,155 @@ body.modal-open {
 
     cursor: pointer;
 
-}
+    margin-top: 5px;
 
+    transition: .2s;
+}
 
 .modal-add-button:hover {
+    opacity: .9;
 
-    opacity: 0.9;
+    transform: translateY(-1px);
+}
 
+.modal-add-button:disabled {
+    background: #cccccc;
+
+    cursor: not-allowed;
+
+    transform: none;
 }
 
 
-/* الجوال */
+/* =========================================================
+   MOBILE PRODUCTS
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .products {
+        grid-template-columns: repeat(2, 1fr);
+
+        gap: 12px;
+    }
+
+    .product-image {
+        height: 140px;
+
+        font-size: 52px;
+    }
+
+    .product-card {
+        padding: 12px;
+
+        border-radius: 21px;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE PRODUCTS
+========================================================= */
+
+@media (max-width: 380px) {
+
+    .product-image {
+        height: 125px;
+    }
+
+    .product-card h3 {
+        font-size: 13px;
+    }
+}
+
+
+/* =========================================================
+   MOBILE MODAL
+========================================================= */
 
 @media (max-width: 650px) {
 
     .product-modal {
-
         padding: 12px;
 
         align-items: flex-end;
-
     }
 
 
     .product-modal-box {
-
         width: 100%;
 
-        grid-template-columns: 1fr;
-
-        gap: 20px;
-
-        padding: 20px;
+        padding: 25px 20px;
 
         border-radius: 25px 25px 0 0;
 
         max-height: 92vh;
-
     }
 
 
     .modal-product-image {
-
-        height: 190px;
-
+        height: 170px;
     }
 
 
     .modal-product-info h2 {
-
         font-size: 23px;
 
+        margin-bottom: 25px;
     }
 
+
+    /*
+       في الجوال:
+       الماركة
+       الموديل
+       اللون
+
+       يرجعون تحت بعض
+       عشان المساحة الصغيرة
+    */
+
+    .product-options {
+        grid-template-columns: 1fr;
+
+        gap: 18px;
+    }
+
+
+    .product-option.color-option {
+        grid-column: auto;
+    }
+
+
+    .modal-selected-product {
+        grid-column: auto;
+    }
+}
+
+
+/* =========================================================
+   VERY SMALL SCREENS
+========================================================= */
+
+@media (max-width: 380px) {
+
+    .product-modal-box {
+        padding: 22px 15px;
+    }
+
+    .product-select {
+        height: 50px;
+
+        font-size: 14px;
+    }
+
+    .modal-product-info label {
+        font-size: 14px;
+    }
+
+    .modal-add-button {
+        height: 52px;
+
+        font-size: 15px;
+    }
 }
