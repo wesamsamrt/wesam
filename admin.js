@@ -33,12 +33,61 @@ function showLogin() {
 
 
 /* =========================
-   تسجيل الدخول
+   التحقق هل المستخدم أدمن
+========================= */
+
+async function isAdmin() {
+
+    const {
+        data: {
+            session
+        }
+    } = await supabaseClient.auth.getSession();
+
+
+    if (!session || !session.user) {
+
+        return false;
+
+    }
+
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("admins")
+        .select("id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+
+    if (error) {
+
+        console.error(
+            "Admin Check Error:",
+            error
+        );
+
+        return false;
+
+    }
+
+
+    return !!data;
+
+}
+
+
+/* =========================
+   تسجيل الدخول للإدارة
 ========================= */
 
 async function login() {
 
-    const password = adminCode.value.trim();
+    const password =
+        adminCode.value.trim();
+
 
     if (!password) {
 
@@ -49,64 +98,130 @@ async function login() {
             "#e05265";
 
         return;
+
     }
 
 
     loginButton.disabled = true;
 
     loginButton.textContent =
-        "جاري الدخول...";
+        "جاري التحقق...";
 
-
-    /*
-       مهم:
-       الإيميل هنا نضعه أنت محليًا
-       ولا ترسله لي.
-    */
 
     const email =
         "procurement@wesamsa.com";
 
 
-    const { data, error } =
-        await supabaseClient.auth.signInWithPassword({
+    try {
 
-            email: email,
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.auth.signInWithPassword({
 
-            password: password
+                email: email,
 
-        });
+                password: password
+
+            });
 
 
-    if (error) {
+        if (error) {
 
-        console.error(error);
+            console.error(error);
+
+            loginMessage.textContent =
+                "رمز الدخول غير صحيح";
+
+            loginMessage.style.color =
+                "#e05265";
+
+            loginButton.disabled =
+                false;
+
+            loginButton.textContent =
+                "دخول";
+
+            return;
+
+        }
+
+
+        /* =========================
+           التحقق من صلاحية الأدمن
+        ========================= */
+
+        const admin =
+            await isAdmin();
+
+
+        if (!admin) {
+
+            await supabaseClient.auth.signOut();
+
+
+            loginMessage.textContent =
+                "هذا الحساب ليس لديه صلاحية دخول لوحة الإدارة";
+
+            loginMessage.style.color =
+                "#e05265";
+
+            loginButton.disabled =
+                false;
+
+            loginButton.textContent =
+                "دخول";
+
+            return;
+
+        }
+
+
+        /* =========================
+           نجاح
+        ========================= */
 
         loginMessage.textContent =
-            "رمز الدخول غير صحيح";
+            "تم الدخول بنجاح ✓";
 
         loginMessage.style.color =
-            "#e05265";
+            "#2e9d69";
 
-        loginButton.disabled = false;
+
+        showAdmin();
+
+
+        loginButton.disabled =
+            false;
 
         loginButton.textContent =
             "دخول";
 
-        return;
     }
 
+    catch (error) {
 
-    loginMessage.textContent =
-        "";
+        console.error(
+            "Admin Login Error:",
+            error
+        );
 
-    showAdmin();
+
+        loginMessage.textContent =
+            "حدث خطأ أثناء تسجيل الدخول";
+
+        loginMessage.style.color =
+            "#e05265";
 
 
-    loginButton.disabled = false;
+        loginButton.disabled =
+            false;
 
-    loginButton.textContent =
-        "دخول";
+        loginButton.textContent =
+            "دخول";
+
+    }
 
 }
 
@@ -167,6 +282,16 @@ logoutButton.addEventListener(
 /* =========================
    التحقق عند فتح الصفحة
 ========================= */
+/* =========================
+   حساب الإدارة المسموح
+========================= */
+
+const ADMIN_EMAIL = "zzzzxxccvvbbnnmm12345a@wesamsa.com";
+
+
+/* =========================
+   التحقق من حساب الإدارة
+========================= */
 
 async function checkSession() {
 
@@ -177,20 +302,73 @@ async function checkSession() {
     } = await supabaseClient.auth.getSession();
 
 
-    if (session) {
+    /* لا يوجد تسجيل دخول */
 
-        showAdmin();
-
-    } else {
+    if (!session || !session.user) {
 
         showLogin();
 
+        return;
+
     }
+
+
+    /* إيميل المستخدم */
+
+    const userEmail =
+        (session.user.email || "")
+            .trim()
+            .toLowerCase();
+
+
+    /* =========================
+       التحقق من أنه الأدمن
+    ========================= */
+
+    if (userEmail !== ADMIN_EMAIL.toLowerCase()) {
+
+        console.log(
+            "محاولة دخول غير مصرح بها:",
+            userEmail
+        );
+
+
+        /* تسجيل خروج الحساب */
+
+        await supabaseClient.auth.signOut();
+
+
+        showLogin();
+
+
+        loginMessage.textContent =
+            "هذا الحساب ليس لديه صلاحية دخول لوحة الإدارة";
+
+        loginMessage.style.color =
+            "#e05265";
+
+
+        return;
+
+    }
+
+
+    /* =========================
+       الحساب صحيح
+    ========================= */
+
+    showAdmin();
 
 }
 
 
 checkSession();
+
+
+
+/* =========================================================
+   إدارة المنتجات
+========================================================= */
 
 const productsButton =
     document.getElementById("productsButton");
@@ -402,10 +580,8 @@ adminProductSearch.addEventListener(
 
 
 
-
-
 /* =========================
-   إضافة منتج
+   إضافة / تعديل منتج
 ========================= */
 
 const addProductButton =
@@ -424,8 +600,6 @@ const productFormMessage =
     document.getElementById("productFormMessage");
 
 
-/* فتح النموذج */
-
 addProductButton.addEventListener("click", function () {
 
     productFormCard.style.display = "block";
@@ -439,8 +613,6 @@ addProductButton.addEventListener("click", function () {
 });
 
 
-/* إغلاق النموذج */
-
 cancelProductButton.addEventListener("click", function () {
 
     productFormCard.style.display = "none";
@@ -449,8 +621,6 @@ cancelProductButton.addEventListener("click", function () {
 
 });
 
-
-/* مسح النموذج */
 
 function clearProductForm() {
 
@@ -472,6 +642,7 @@ saveProductButton.addEventListener(
     "click",
     saveNewProduct
 );
+
 
 async function saveNewProduct() {
 
@@ -533,10 +704,6 @@ async function saveNewProduct() {
     let result;
 
 
-    /* =========================
-       تعديل
-    ========================= */
-
     if (editingProductId) {
 
         result =
@@ -565,13 +732,7 @@ async function saveNewProduct() {
                 .select()
                 .single();
 
-
     }
-
-
-    /* =========================
-       إضافة
-    ========================= */
 
     else {
 
@@ -635,9 +796,7 @@ async function saveNewProduct() {
 
     editingProductId = null;
 
-
     clearProductForm();
-
 
     await loadAdminProducts();
 
@@ -649,12 +808,11 @@ async function saveNewProduct() {
 
 }
 
-/* =========================
-   تعديل المنتج
-========================= */
 
 let editingProductId = null;
 
+
+/* تعديل المنتج */
 
 async function editProduct(id) {
 
@@ -674,8 +832,6 @@ async function editProduct(id) {
 
     editingProductId = id;
 
-
-    /* تعبئة النموذج */
 
     document.getElementById("productCategory").value =
         product.category || "";
@@ -702,8 +858,6 @@ async function editProduct(id) {
         product.price ?? 0;
 
 
-    /* إظهار النموذج */
-
     productFormCard.style.display = "block";
 
 
@@ -725,10 +879,7 @@ async function editProduct(id) {
 }
 
 
-
-/* =========================
-   حذف المنتج
-========================= */
+/* حذف المنتج */
 
 async function deleteProduct(id) {
 
@@ -737,18 +888,23 @@ async function deleteProduct(id) {
             item => item.id === id
         );
 
+
     if (!product) {
+
         alert("لم يتم العثور على المنتج");
+
         return;
     }
 
 
-    const confirmed = confirm(
-        `هل أنت متأكد من حذف المنتج؟\n\n${product.model || "هذا المنتج"}`
-    );
+    const confirmed =
+        confirm(
+            `هل أنت متأكد من حذف المنتج؟\n\n${product.model || "هذا المنتج"}`
+        );
 
 
     if (!confirmed) {
+
         return;
     }
 
@@ -784,11 +940,9 @@ async function deleteProduct(id) {
 
 
 
-
-
-/* =========================
+/* =========================================================
    إدارة التصنيفات
-========================= */
+========================================================= */
 
 const categoriesButton =
     document.getElementById("categoriesButton");
@@ -963,7 +1117,7 @@ function renderAdminCategories() {
 }
 
 
-/* فتح نموذج الإضافة */
+/* إضافة تصنيف */
 
 addCategoryButton.addEventListener(
     "click",
@@ -1054,7 +1208,9 @@ async function saveCategory() {
                 })
                 .eq("id", editingCategoryId);
 
-    } else {
+    }
+
+    else {
 
         result =
             await supabaseClient
@@ -1200,9 +1356,10 @@ async function deleteCategory(id) {
 
 
 
-/* =========================
+
+/* =========================================================
    إدارة الطلبات
-========================= */
+========================================================= */
 
 const ordersButton =
     document.getElementById("ordersButton");
@@ -1237,7 +1394,7 @@ ordersButton.addEventListener(
 );
 
 
-/* الرجوع للوحة الرئيسية */
+/* الرجوع */
 
 backFromOrders.addEventListener(
     "click",
@@ -1252,6 +1409,7 @@ backFromOrders.addEventListener(
 
 
 /* تحميل الطلبات */
+
 async function loadAdminOrders() {
 
     adminOrders.innerHTML = `
@@ -1259,6 +1417,7 @@ async function loadAdminOrders() {
             جاري تحميل الطلبات...
         </div>
     `;
+
 
     const {
         data: orders,
@@ -1269,6 +1428,7 @@ async function loadAdminOrders() {
         .order("id", {
             ascending: false
         });
+
 
     if (error) {
 
@@ -1284,7 +1444,12 @@ async function loadAdminOrders() {
         return;
     }
 
-    console.log("الطلبات التي وصلت للإدارة:", orders);
+
+    console.log(
+        "الطلبات التي وصلت للإدارة:",
+        orders
+    );
+
 
     if (!orders || orders.length === 0) {
 
@@ -1297,7 +1462,9 @@ async function loadAdminOrders() {
         return;
     }
 
+
     adminOrders.innerHTML = "";
+
 
     for (const order of orders) {
 
@@ -1307,11 +1474,15 @@ async function loadAdminOrders() {
 
 }
 
+
 /* عرض طلب واحد */
 
 async function renderAdminOrder(order) {
 
-    const { data: items, error } =
+    const {
+        data: items,
+        error
+    } =
         await supabaseClient
             .from("order_items")
             .select("*")
@@ -1343,7 +1514,7 @@ async function renderAdminOrder(order) {
                 dateStyle: "medium",
                 timeStyle: "short"
             });
- 
+
 
     let productsHTML = "";
 
@@ -1410,40 +1581,42 @@ async function renderAdminOrder(order) {
     });
 
 
-
     /* =========================
-   إحصائيات الأنواع
-========================= */
+       إحصائيات الأنواع
+    ========================= */
 
-const typeTotals = {};
-
-(items || []).forEach(item => {
-
-    const type =
-        item.type?.trim() || "بدون نوع";
-
-    const quantity =
-        Number(item.quantity || 1);
-
-    typeTotals[type] =
-        (typeTotals[type] || 0) + quantity;
-
-});
+    const typeTotals = {};
 
 
-let typeStatsHTML = "";
+    (items || []).forEach(item => {
 
-Object.entries(typeTotals).forEach(
-    ([type, quantity]) => {
+        const type =
+            item.type?.trim() || "بدون نوع";
 
-        typeStatsHTML += `
-            <span class="type-stat">
-                ${type}: ${quantity} قطعة
-            </span>
-        `;
+        const quantity =
+            Number(item.quantity || 1);
 
-    }
-);
+
+        typeTotals[type] =
+            (typeTotals[type] || 0) + quantity;
+
+    });
+
+
+    let typeStatsHTML = "";
+
+
+    Object.entries(typeTotals).forEach(
+        ([type, quantity]) => {
+
+            typeStatsHTML += `
+                <span class="type-stat">
+                    ${type}: ${quantity} قطعة
+                </span>
+            `;
+
+        }
+    );
 
 
     card.innerHTML = `
@@ -1467,71 +1640,76 @@ Object.entries(typeTotals).forEach(
             </div>
 
 
-           <div class="admin-order-date">
+            <div class="admin-order-date">
 
-    ${date}
+                ${date}
 
-    <button
-        class="print-order-button"
-        onclick="printOrder(${order.id})"
-    >
-        🖨️ طباعة الطلب
-    </button>
+                <button
+                    class="print-order-button"
+                    onclick="printOrder(${order.id})"
+                >
+                    🖨️ طباعة الطلب
+                </button>
 
-</div>
+            </div>
 
         </div>
 
 
-       <div class="admin-order-status">
+        <div class="admin-order-status">
 
-    <span>
-        الحالة:
-    </span>
+            <span>
+                الحالة:
+            </span>
 
-    <select
-        class="order-status-select"
-        onchange="updateOrderStatus(${order.id}, this.value)"
-    >
 
-        <option
-            value="جديد"
-            ${order.status === "جديد" ? "selected" : ""}
-        >
-            جديد
-        </option>
+            <select
+                class="order-status-select"
+                onchange="updateOrderStatus(${order.id}, this.value)"
+            >
 
-        <option
-            value="قيد التجهيز"
-            ${order.status === "قيد التجهيز" ? "selected" : ""}
-        >
-            قيد التجهيز
-        </option>
+                <option
+                    value="جديد"
+                    ${order.status === "جديد" ? "selected" : ""}
+                >
+                    جديد
+                </option>
 
-        <option
-            value="تم شحن الطلب"
-            ${order.status === "تم شحن الطلب" ? "selected" : ""}
-        >
-            تم شحن الطلب
-        </option>
 
-        <option
-            value="تم استلام طلبك"
-            ${order.status === "تم استلام طلبك" ? "selected" : ""}
-        >
-            تم استلام طلبك
-        </option>
+                <option
+                    value="قيد التجهيز"
+                    ${order.status === "قيد التجهيز" ? "selected" : ""}
+                >
+                    قيد التجهيز
+                </option>
 
-        <option
-            value="ملغي"
-            ${order.status === "ملغي" ? "selected" : ""}
-        >
-            ملغي
-        </option>
 
-    </select>
+                <option
+                    value="تم شحن الطلب"
+                    ${order.status === "تم شحن الطلب" ? "selected" : ""}
+                >
+                    تم شحن الطلب
+                </option>
 
-</div>
+
+                <option
+                    value="تم استلام طلبك"
+                    ${order.status === "تم استلام طلبك" ? "selected" : ""}
+                >
+                    تم استلام طلبك
+                </option>
+
+
+                <option
+                    value="ملغي"
+                    ${order.status === "ملغي" ? "selected" : ""}
+                >
+                    ملغي
+                </option>
+
+            </select>
+
+        </div>
 
 
         <div class="admin-order-items">
@@ -1559,14 +1737,23 @@ Object.entries(typeTotals).forEach(
     adminOrders.appendChild(card);
 
 }
+
+
 /* =========================
    تغيير حالة الطلب
 ========================= */
-async function updateOrderStatus(orderId, newStatus) {
+
+async function updateOrderStatus(
+    orderId,
+    newStatus
+) {
 
     /* جلب صاحب الطلب */
 
-    const { data: order, error: orderError } =
+    const {
+        data: order,
+        error: orderError
+    } =
         await supabaseClient
             .from("orders")
             .select("id, user_id, status")
@@ -1578,15 +1765,19 @@ async function updateOrderStatus(orderId, newStatus) {
 
         console.error(orderError);
 
-        alert("لم يتم العثور على الطلب");
+        alert(
+            "لم يتم العثور على الطلب"
+        );
 
         return;
     }
 
 
-    /* تحديث حالة الطلب */
+    /* تحديث الحالة */
 
-    const { error: updateError } =
+    const {
+        error: updateError
+    } =
         await supabaseClient
             .from("orders")
             .update({
@@ -1612,7 +1803,9 @@ async function updateOrderStatus(orderId, newStatus) {
 
     if (order.user_id) {
 
-        const { error: notificationError } =
+        const {
+            error: notificationError
+        } =
             await supabaseClient
                 .from("notifications")
                 .insert({
@@ -1621,7 +1814,8 @@ async function updateOrderStatus(orderId, newStatus) {
 
                     order_id: order.id,
 
-                    title: "تحديث حالة الطلب",
+                    title:
+                        "تحديث حالة الطلب",
 
                     message:
                         `تم تحديث حالة طلبك #${order.id} إلى "${newStatus}"`
@@ -1646,23 +1840,25 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 
 
-    alert("تم تحديث حالة الطلب وإرسال الإشعار ✅");
+    alert(
+        "تم تحديث حالة الطلب وإرسال الإشعار ✅"
+    );
 
 }
 
-/* =========================
+
+/* =========================================================
    طباعة الطلب
-========================= */
+========================================================= */
 
 async function printOrder(orderId) {
 
     try {
 
-        /* =========================
-           جلب الطلب
-        ========================= */
-
-        const { data: order, error: orderError } =
+        const {
+            data: order,
+            error: orderError
+        } =
             await supabaseClient
                 .from("orders")
                 .select("*")
@@ -1674,17 +1870,18 @@ async function printOrder(orderId) {
 
             console.error(orderError);
 
-            alert("لم يتم العثور على الطلب");
+            alert(
+                "لم يتم العثور على الطلب"
+            );
 
             return;
         }
 
 
-        /* =========================
-           جلب منتجات الطلب
-        ========================= */
-
-        const { data: items, error: itemsError } =
+        const {
+            data: items,
+            error: itemsError
+        } =
             await supabaseClient
                 .from("order_items")
                 .select("*")
@@ -1698,7 +1895,9 @@ async function printOrder(orderId) {
 
             console.error(itemsError);
 
-            alert("حدث خطأ أثناء تحميل منتجات الطلب");
+            alert(
+                "حدث خطأ أثناء تحميل منتجات الطلب"
+            );
 
             return;
         }
@@ -1706,109 +1905,121 @@ async function printOrder(orderId) {
 
         const date =
             new Date(order.created_at)
-                .toLocaleString("ar-SA", {
-                    dateStyle: "medium",
-                    timeStyle: "short"
-                });
+                .toLocaleString(
+                    "ar-SA",
+                    {
+                        dateStyle: "medium",
+                        timeStyle: "short"
+                    }
+                );
 
-
-        /* =========================
-           بناء صفوف الجدول
-        ========================= */
 
         let rowsHTML = "";
+
+
         const typeTotals = {};
 
-(items || []).forEach(item => {
 
-    const type = item.type?.trim() || "بدون نوع";
+        (items || []).forEach(item => {
 
-    const quantity = Number(item.quantity || 1);
+            const type =
+                item.type?.trim() ||
+                "بدون نوع";
 
-    typeTotals[type] =
-        (typeTotals[type] || 0) + quantity;
-
-});
-
-let typeStatsHTML = "";
-
-Object.entries(typeTotals).forEach(([type, quantity]) => {
-
-    typeStatsHTML += `
-        <span class="type-stat">
-            ${type}: ${quantity} قطعة
-        </span>
-    `;
-
-});
-
-
-        (items || []).forEach((item, index) => {
 
             const quantity =
                 Number(item.quantity || 1);
 
-            const price =
-                Number(item.price || 0);
 
-            const total =
-                quantity * price;
-
-
-            rowsHTML += `
-
-                <tr>
-
-                    <td>
-                        ${index + 1}
-                    </td>
-
-                    <td>
-                        ${item.category || "-"}
-                    </td>
-
-                    <td>
-                        ${item.product_type || "-"}
-                    </td>
-
-                    <td>
-                        ${item.type || "-"}
-                    </td>
-
-                    <td>
-                        ${item.company || "-"}
-                    </td>
-
-                    <td>
-                        ${item.model || "-"}
-                    </td>
-
-                    <td>
-                        ${item.color || "-"}
-                    </td>
-
-                    <td>
-                        ${quantity}
-                    </td>
-
-                    <td>
-                        ${price.toFixed(2)} ر.س
-                    </td>
-
-                    <td>
-                        ${total.toFixed(2)} ر.س
-                    </td>
-
-                </tr>
-
-            `;
+            typeTotals[type] =
+                (typeTotals[type] || 0) +
+                quantity;
 
         });
 
 
-        /* =========================
-           فتح صفحة الطباعة
-        ========================= */
+        let typeStatsHTML = "";
+
+
+        Object.entries(typeTotals).forEach(
+            ([type, quantity]) => {
+
+                typeStatsHTML += `
+                    <span class="type-stat">
+                        ${type}: ${quantity} قطعة
+                    </span>
+                `;
+
+            }
+        );
+
+
+        (items || []).forEach(
+            (item, index) => {
+
+                const quantity =
+                    Number(item.quantity || 1);
+
+
+                const price =
+                    Number(item.price || 0);
+
+
+                const total =
+                    quantity * price;
+
+
+                rowsHTML += `
+
+                    <tr>
+
+                        <td>
+                            ${index + 1}
+                        </td>
+
+                        <td>
+                            ${item.category || "-"}
+                        </td>
+
+                        <td>
+                            ${item.product_type || "-"}
+                        </td>
+
+                        <td>
+                            ${item.type || "-"}
+                        </td>
+
+                        <td>
+                            ${item.company || "-"}
+                        </td>
+
+                        <td>
+                            ${item.model || "-"}
+                        </td>
+
+                        <td>
+                            ${item.color || "-"}
+                        </td>
+
+                        <td>
+                            ${quantity}
+                        </td>
+
+                        <td>
+                            ${price.toFixed(2)} ر.س
+                        </td>
+
+                        <td>
+                            ${total.toFixed(2)} ر.س
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        );
+
 
         const printWindow =
             window.open(
@@ -1882,10 +2093,6 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
         }
 
 
-        /* =========================
-           العنوان
-        ========================= */
-
         .header {
 
             display: flex;
@@ -1929,10 +2136,6 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
 
         }
 
-
-        /* =========================
-           معلومات العميل
-        ========================= */
 
         .customer-info {
 
@@ -1986,10 +2189,6 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
         }
 
 
-        /* =========================
-           الجدول
-        ========================= */
-
         table {
 
             width: 100%;
@@ -2035,10 +2234,6 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
         }
 
 
-        /* =========================
-           الإجمالي
-        ========================= */
-
         .total-section {
 
             margin-top: 20px;
@@ -2069,9 +2264,31 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
         }
 
 
-        /* =========================
-           الطباعة
-        ========================= */
+        .type-stats {
+
+            margin-top: 12px;
+
+            display: flex;
+
+            gap: 8px;
+
+            flex-wrap: wrap;
+
+            justify-content: flex-end;
+
+        }
+
+
+        .type-stat {
+
+            border: 1px solid #111;
+
+            padding: 5px 9px;
+
+            font-size: 11px;
+
+        }
+
 
         .footer {
 
@@ -2138,10 +2355,6 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
 <div class="print-page">
 
 
-    <!-- =========================
-         رأس الطلب
-    ========================= -->
-
     <div class="header">
 
         <div>
@@ -2151,7 +2364,10 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
             </h1>
 
             <p>
-                رقم الطلب: <strong>#${order.id}</strong>
+                رقم الطلب:
+                <strong>
+                    #${order.id}
+                </strong>
             </p>
 
         </div>
@@ -2171,10 +2387,6 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
 
     </div>
 
-
-    <!-- =========================
-         معلومات العميل
-    ========================= -->
 
     <div class="customer-info">
 
@@ -2234,19 +2446,13 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
     </div>
 
 
-    <!-- =========================
-         جدول المنتجات
-    ========================= -->
-
     <table>
 
         <thead>
 
             <tr>
 
-                <th>
-                    #
-                </th>
+                <th>#</th>
 
                 <th>
                     التصنيف
@@ -2298,40 +2504,36 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
     </table>
 
 
-    <!-- =========================
-         الإجمالي
-    ========================= -->
-
     <div class="total-section">
 
-    <div>
+        <div>
 
-        <div class="total-box">
+            <div class="total-box">
 
-            <span>
-                إجمالي الطلب
-            </span>
+                <span>
+                    إجمالي الطلب
+                </span>
 
-            <span>
-                ${Number(order.total || 0).toFixed(2)} ر.س
-            </span>
+                <span>
+                    ${Number(order.total || 0).toFixed(2)} ر.س
+                </span>
 
-        </div>
+            </div>
 
 
-        <div class="type-stats">
+            <div class="type-stats">
 
-            <strong>
-                إحصائيات الأنواع:
-            </strong>
+                <strong>
+                    إحصائيات الأنواع:
+                </strong>
 
-            ${typeStatsHTML}
+                ${typeStatsHTML}
+
+            </div>
 
         </div>
 
     </div>
-
-</div>
 
 
     <div class="footer">
@@ -2365,7 +2567,9 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
         printWindow.document.close();
 
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(error);
 
@@ -2376,6 +2580,3 @@ Object.entries(typeTotals).forEach(([type, quantity]) => {
     }
 
 }
-
-
-
