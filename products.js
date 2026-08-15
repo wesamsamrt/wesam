@@ -53,47 +53,81 @@ async function loadProducts() {
 
     allProducts = data || [];
 
-    /*
-        هنا التجميع الحقيقي
-
-        كل المنتجات التي لها نفس product_type
-        تصبح بطاقة واحدة
-    */
-
-    groupedProducts = groupProducts(allProducts);
+    groupProducts();
 
     renderProducts(groupedProducts);
 }
 
 
 /* =========================
-   تجميع المنتجات
+   تجميع المنتجات حسب TYPE
 ========================= */
 
-function groupProducts(products) {
+function groupProducts() {
 
-    const groups = new Map();
+    const groups = {};
 
-    products.forEach(product => {
+    allProducts.forEach(product => {
 
-        const productType =
-            (product.product_type || "منتج")
+        const type =
+            (product.type || "منتج")
                 .trim();
 
-        if (!groups.has(productType)) {
+        if (!groups[type]) {
 
-            groups.set(productType, {
-                product_type: productType,
-                products: []
-            });
+            groups[type] = {
+                type: type,
+                products: [],
+                models: [],
+                colors: [],
+                image: product.image || null,
+                price: product.price ?? 0
+            };
+        }
+
+        groups[type].products.push(product);
+
+
+        /* الموديلات */
+
+        if (
+            product.model &&
+            !groups[type].models.includes(product.model)
+        ) {
+
+            groups[type].models.push(product.model);
 
         }
 
-        groups.get(productType).products.push(product);
+
+        /* الألوان */
+
+        if (
+            product.color &&
+            !groups[type].colors.includes(product.color)
+        ) {
+
+            groups[type].colors.push(product.color);
+
+        }
+
+
+        /* أول صورة */
+
+        if (
+            !groups[type].image &&
+            product.image
+        ) {
+
+            groups[type].image = product.image;
+
+        }
 
     });
 
-    return Array.from(groups.values());
+
+    groupedProducts =
+        Object.values(groups);
 }
 
 
@@ -101,7 +135,7 @@ function groupProducts(products) {
    عرض البطاقات المجمعة
 ========================= */
 
-function renderProducts(groups) {
+function renderProducts(products) {
 
     const container =
         document.getElementById("products");
@@ -110,7 +144,8 @@ function renderProducts(groups) {
 
     container.innerHTML = "";
 
-    if (!groups || groups.length === 0) {
+
+    if (products.length === 0) {
 
         container.innerHTML = `
             <div class="message">
@@ -122,10 +157,7 @@ function renderProducts(groups) {
     }
 
 
-    groups.forEach(group => {
-
-        const firstProduct =
-            group.products[0];
+    products.forEach(group => {
 
         const card =
             document.createElement("div");
@@ -133,29 +165,17 @@ function renderProducts(groups) {
         card.className = "product-card";
 
 
-        /*
-            عند الضغط على البطاقة
-            نفتح النافذة
-        */
-
-        card.addEventListener("click", () => {
-
-            openProductModal(group);
-
-        });
-
-
         card.innerHTML = `
 
             <div class="product-image">
 
                 ${
-                    firstProduct.image
+                    group.image
 
                     ? `
                         <img
-                            src="${firstProduct.image}"
-                            alt="${group.product_type}"
+                            src="${group.image}"
+                            alt="${group.type}"
                         >
                     `
 
@@ -166,40 +186,25 @@ function renderProducts(groups) {
 
 
             <div class="product-type">
-
-                ${group.product_type}
-
+                ${group.type}
             </div>
 
 
             <h3>
-
-                ${group.product_type}
-
+                ${group.type}
             </h3>
 
 
             <p>
-
-                ${
-                    group.products.length
-                }
-
-                خيار متوفر
-
+                ${group.models.length}
+                موديل متوفر
             </p>
 
 
             <div class="product-bottom">
 
                 <span class="price">
-
-                    ${
-                        firstProduct.price ?? 0
-                    }
-
-                    ر.س
-
+                    من ${group.price} ر.س
                 </span>
 
 
@@ -215,20 +220,39 @@ function renderProducts(groups) {
         `;
 
 
-        /*
-            زر + يفتح نفس النافذة
-            بدل الإضافة المباشرة
-        */
+        /* الضغط على البطاقة */
+
+        card.addEventListener("click", function(e) {
+
+            /*
+                إذا ضغط على زر +
+                لا نفتح النافذة
+            */
+
+            if (
+                e.target.closest(".add-button")
+            ) {
+
+                return;
+
+            }
+
+
+            openProductModal(group);
+
+        });
+
+
+        /* زر الإضافة */
 
         const addButton =
             card.querySelector(".add-button");
 
-
         addButton.addEventListener(
             "click",
-            function(event) {
+            function(e) {
 
-                event.stopPropagation();
+                e.stopPropagation();
 
                 openProductModal(group);
 
@@ -249,21 +273,17 @@ function renderProducts(groups) {
 
 function openProductModal(group) {
 
-    closeProductModal();
+    /* حذف أي نافذة قديمة */
 
+    const oldModal =
+        document.getElementById("productModal");
 
-    const products =
-        group.products || [];
+    if (oldModal) {
 
+        oldModal.remove();
 
-    if (products.length === 0) return;
+    }
 
-
-    /*
-        إنشاء النافذة
-        تلقائياً حتى ما يصير
-        null.innerHTML
-    */
 
     const modal =
         document.createElement("div");
@@ -275,125 +295,125 @@ function openProductModal(group) {
 
     modal.innerHTML = `
 
-        <div class="product-modal-overlay"></div>
-
-
         <div class="product-modal-box">
 
 
             <button
-                class="product-modal-close"
+                class="modal-close"
                 type="button"
             >
                 ×
             </button>
 
 
-            <div class="modal-product-image">
+            <div class="modal-image">
 
                 ${
-                    products[0].image
+                    group.image
 
                     ? `
                         <img
-                            id="modalProductImage"
-                            src="${products[0].image}"
-                            alt="${group.product_type}"
+                            src="${group.image}"
+                            alt="${group.type}"
                         >
                     `
 
-                    : `
-                        <div class="modal-no-image">
-                            📱
-                        </div>
-                    `
+                    : "📱"
                 }
 
             </div>
 
 
-            <div class="modal-product-info">
+            <h2>
+                ${group.type}
+            </h2>
 
 
-                <div class="modal-product-type">
-
-                    ${group.product_type}
-
-                </div>
+            <p class="modal-subtitle">
+                اختر الموديل واللون
+            </p>
 
 
-                <h2>
-
-                    ${group.product_type}
-
-                </h2>
-
-
-                <!-- الموديل -->
+            <div class="option-section">
 
                 <label>
-
                     الموديل
-
                 </label>
 
 
-                <select
-                    id="modalModel"
-                    class="product-select"
-                >
+                <select id="modalModel">
+
+                    <option value="">
+                        اختر الموديل
+                    </option>
+
+                    ${
+                        group.models
+                            .map(model => `
+                                <option value="${escapeHtml(model)}">
+                                    ${escapeHtml(model)}
+                                </option>
+                            `)
+                            .join("")
+                    }
 
                 </select>
-
-
-                <!-- اللون -->
-
-                <label>
-
-                    اللون
-
-                </label>
-
-
-                <select
-                    id="modalColor"
-                    class="product-select"
-                >
-
-                </select>
-
-
-                <!-- السعر -->
-
-                <div class="modal-price">
-
-                    <span>
-
-                        السعر
-
-                    </span>
-
-                    <strong
-                        id="modalPrice"
-                    >
-                        0 ر.س
-                    </strong>
-
-                </div>
-
-
-                <button
-                    id="modalAddButton"
-                    class="modal-add-button"
-                    type="button"
-                >
-
-                    + إضافة للسلة
-
-                </button>
-
 
             </div>
+
+
+            <div class="option-section">
+
+                <label>
+                    اللون
+                </label>
+
+
+                <select id="modalColor">
+
+                    <option value="">
+                        اختر اللون
+                    </option>
+
+                    ${
+                        group.colors.length
+
+                        ? group.colors
+                            .map(color => `
+                                <option value="${escapeHtml(color)}">
+                                    ${escapeHtml(color)}
+                                </option>
+                            `)
+                            .join("")
+
+                        : `
+                            <option value="">
+                                لا توجد ألوان محددة
+                            </option>
+                        `
+                    }
+
+                </select>
+
+            </div>
+
+
+            <div
+                id="modalPrice"
+                class="modal-price"
+            >
+                ${group.price} ر.س
+            </div>
+
+
+            <button
+                id="modalAddButton"
+                class="modal-add-button"
+                type="button"
+            >
+                إضافة إلى السلة
+            </button>
+
 
         </div>
 
@@ -403,269 +423,105 @@ function openProductModal(group) {
     document.body.appendChild(modal);
 
 
-    const modelSelect =
-        document.getElementById("modalModel");
+    /* إغلاق */
 
-    const colorSelect =
-        document.getElementById("modalColor");
+    modal
+        .querySelector(".modal-close")
+        .addEventListener(
+            "click",
+            function() {
 
+                modal.remove();
 
-    /*
-        إنشاء قائمة الموديلات
-    */
-
-    const models = [];
-
-
-    products.forEach(product => {
-
-        const company =
-            (product.company || "")
-                .trim();
-
-        const model =
-            (product.model || "")
-                .trim();
+            }
+        );
 
 
-        const key =
-            company + "|||" + model;
+    /* الضغط خارج البطاقة */
 
+    modal.addEventListener(
+        "click",
+        function(e) {
 
-        if (
-            !models.some(
-                item => item.key === key
-            )
-        ) {
+            if (e.target === modal) {
 
-            models.push({
-                key: key,
-                company: company,
-                model: model
-            });
-
-        }
-
-    });
-
-
-    models.forEach(item => {
-
-        const option =
-            document.createElement("option");
-
-        option.value = item.key;
-
-        option.textContent =
-            item.company
-                ? `${item.company} — ${item.model}`
-                : item.model;
-
-
-        modelSelect.appendChild(option);
-
-    });
-
-
-    /*
-        تحديث الألوان
-        حسب الموديل
-    */
-
-    function updateColors() {
-
-        colorSelect.innerHTML = "";
-
-
-        const selectedModel =
-            modelSelect.value;
-
-
-        const selectedProducts =
-            products.filter(product => {
-
-                const key =
-                    `${(product.company || "").trim()}|||${(product.model || "").trim()}`;
-
-                return key === selectedModel;
-
-            });
-
-
-        const colors = [];
-
-
-        selectedProducts.forEach(product => {
-
-            const color =
-                (product.color || "بدون لون")
-                    .trim();
-
-
-            if (!colors.includes(color)) {
-
-                colors.push(color);
+                modal.remove();
 
             }
 
-        });
-
-
-        colors.forEach(color => {
-
-            const option =
-                document.createElement("option");
-
-            option.value = color;
-
-            option.textContent = color;
-
-            colorSelect.appendChild(option);
-
-        });
-
-
-        updateSelectedProduct();
-
-    }
-
-
-    /*
-        معرفة المنتج المحدد
-        وتحديث السعر والصورة
-    */
-
-    function updateSelectedProduct() {
-
-        const selectedModel =
-            modelSelect.value;
-
-        const selectedColor =
-            colorSelect.value;
-
-
-        const selectedProduct =
-            products.find(product => {
-
-                const key =
-                    `${(product.company || "").trim()}|||${(product.model || "").trim()}`;
-
-                const color =
-                    (product.color || "بدون لون")
-                        .trim();
-
-                return (
-                    key === selectedModel &&
-                    color === selectedColor
-                );
-
-            });
-
-
-        if (!selectedProduct) return;
-
-
-        const price =
-            Number(selectedProduct.price) || 0;
-
-
-        const priceElement =
-            document.getElementById("modalPrice");
-
-
-        if (priceElement) {
-
-            priceElement.textContent =
-                `${price} ر.س`;
-
         }
-
-
-        const imageElement =
-            document.getElementById(
-                "modalProductImage"
-            );
-
-
-        if (
-            imageElement &&
-            selectedProduct.image
-        ) {
-
-            imageElement.src =
-                selectedProduct.image;
-
-        }
-
-
-        /*
-            نخزن المنتج المختار
-            على زر الإضافة
-        */
-
-        const addButton =
-            document.getElementById(
-                "modalAddButton"
-            );
-
-
-        if (addButton) {
-
-            addButton.dataset.productId =
-                selectedProduct.id;
-
-        }
-
-    }
-
-
-    /*
-        أول تحميل
-    */
-
-    updateColors();
-
-
-    /*
-        إذا تغير الموديل
-    */
-
-    modelSelect.addEventListener(
-        "change",
-        updateColors
     );
 
 
-    /*
-        إذا تغير اللون
-    */
+    /* زر إضافة للسلة */
 
-    colorSelect.addEventListener(
-        "change",
-        updateSelectedProduct
-    );
-
-
-    /*
-        زر إضافة للسلة
-    */
-
-    document
-        .getElementById("modalAddButton")
+    modal
+        .querySelector("#modalAddButton")
         .addEventListener(
             "click",
             async function() {
 
-                const productId =
-                    Number(
-                        this.dataset.productId
-                    );
+                const model =
+                    document.getElementById(
+                        "modalModel"
+                    ).value;
+
+                const color =
+                    document.getElementById(
+                        "modalColor"
+                    ).value;
 
 
-                if (!productId) {
+                if (!model) {
+
+                    alert("اختر الموديل أولاً");
+
+                    return;
+
+                }
+
+
+                /*
+                    نبحث عن المنتج الحقيقي
+                    الذي يطابق الموديل واللون
+                */
+
+                let selectedProduct =
+                    group.products.find(product => {
+
+                        const modelMatch =
+                            product.model === model;
+
+                        const colorMatch =
+                            !color ||
+                            product.color === color;
+
+                        return modelMatch &&
+                               colorMatch;
+
+                    });
+
+
+                /*
+                    إذا اللون غير موجود
+                    نبحث بالموديل فقط
+                */
+
+                if (!selectedProduct) {
+
+                    selectedProduct =
+                        group.products.find(
+                            product =>
+                                product.model === model
+                        );
+
+                }
+
+
+                if (!selectedProduct) {
 
                     alert(
-                        "اختر الموديل واللون أولاً"
+                        "هذا الموديل غير متوفر"
                     );
 
                     return;
@@ -674,76 +530,30 @@ function openProductModal(group) {
 
 
                 await addProduct(
-                    productId
+                    selectedProduct.id
                 );
 
-                closeProductModal();
+
+                modal.remove();
 
             }
         );
-
-
-    /*
-        زر الإغلاق
-    */
-
-    document
-        .querySelector(
-            ".product-modal-close"
-        )
-        .addEventListener(
-            "click",
-            closeProductModal
-        );
-
-
-    /*
-        الضغط خارج البطاقة
-    */
-
-    document
-        .querySelector(
-            ".product-modal-overlay"
-        )
-        .addEventListener(
-            "click",
-            closeProductModal
-        );
-
-
-    /*
-        منع تحريك الصفحة خلف النافذة
-    */
-
-    document.body.classList.add(
-        "modal-open"
-    );
 
 }
 
 
 /* =========================
-   إغلاق النافذة
+   حماية HTML
 ========================= */
 
-function closeProductModal() {
+function escapeHtml(value) {
 
-    const modal =
-        document.getElementById(
-            "productModal"
-        );
-
-
-    if (modal) {
-
-        modal.remove();
-
-    }
-
-
-    document.body.classList.remove(
-        "modal-open"
-    );
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
 
@@ -755,10 +565,7 @@ function closeProductModal() {
 function searchProducts() {
 
     const input =
-        document.getElementById(
-            "searchInput"
-        );
-
+        document.getElementById("searchInput");
 
     if (!input) return;
 
@@ -771,34 +578,23 @@ function searchProducts() {
 
     if (!search) {
 
-        renderProducts(
-            groupedProducts
-        );
+        renderProducts(groupedProducts);
 
         return;
 
     }
 
 
-    /*
-        البحث داخل جميع المنتجات
-        ثم نعيد تجميع النتائج
-    */
-
-    const filteredProducts =
-        allProducts.filter(product => {
+    const filtered =
+        groupedProducts.filter(group => {
 
             const text = `
 
-                ${product.model || ""}
+                ${group.type}
 
-                ${product.company || ""}
+                ${group.models.join(" ")}
 
-                ${product.type || ""}
-
-                ${product.color || ""}
-
-                ${product.product_type || ""}
+                ${group.colors.join(" ")}
 
             `.toLowerCase();
 
@@ -808,15 +604,7 @@ function searchProducts() {
         });
 
 
-    const filteredGroups =
-        groupProducts(
-            filteredProducts
-        );
-
-
-    renderProducts(
-        filteredGroups
-    );
+    renderProducts(filtered);
 
 }
 
@@ -828,9 +616,7 @@ function searchProducts() {
 function setupFilters() {
 
     const filters =
-        document.querySelectorAll(
-            ".filter"
-        );
+        document.querySelectorAll(".filter");
 
 
     filters.forEach(button => {
@@ -858,9 +644,7 @@ function setupFilters() {
                         .trim();
 
 
-                if (
-                    selected === "الكل"
-                ) {
+                if (selected === "الكل") {
 
                     renderProducts(
                         groupedProducts
@@ -871,36 +655,23 @@ function setupFilters() {
                 }
 
 
-                /*
-                    نبحث عن المجموعات التي
-                    تحتوي على هذا النوع
-                */
-
                 const filtered =
                     groupedProducts.filter(
-                        group => {
+                        group =>
 
-                            return group.products.some(
-                                product =>
-                                    (
-                                        product.type ||
-                                        ""
-                                    )
-                                    .trim()
-                                    .toLowerCase()
-                                    ===
-                                    selected
-                                        .trim()
-                                        .toLowerCase()
-                            );
+                            group.type
+                                .trim()
+                                .toLowerCase()
 
-                        }
+                            ===
+
+                            selected
+                                .trim()
+                                .toLowerCase()
                     );
 
 
-                renderProducts(
-                    filtered
-                );
+                renderProducts(filtered);
 
             }
         );
@@ -911,7 +682,7 @@ function setupFilters() {
 
 
 /* =========================
-   إضافة المنتج للسلة
+   إضافة للسلة
 ========================= */
 
 async function addProduct(productId) {
@@ -922,13 +693,10 @@ async function addProduct(productId) {
             data: { user },
             error: userError
         } =
-            await supabaseClient.auth.getUser();
+        await supabaseClient.auth.getUser();
 
 
-        if (
-            userError ||
-            !user
-        ) {
+        if (userError || !user) {
 
             alert(
                 "يجب تسجيل الدخول أولاً"
@@ -942,15 +710,9 @@ async function addProduct(productId) {
         }
 
 
-        /*
-            نبحث في كل المنتجات
-        */
-
         const product =
             allProducts.find(
-                item =>
-                    Number(item.id) ===
-                    Number(productId)
+                item => item.id === productId
             );
 
 
@@ -965,37 +727,27 @@ async function addProduct(productId) {
         }
 
 
-        /*
-            البحث عن الطلب المفتوح
-        */
+        /* البحث عن الطلب المفتوح */
 
         let {
             data: orders,
             error: ordersError
         } =
-            await supabaseClient
-                .from("orders")
-                .select("*")
-                .eq(
-                    "user_id",
-                    user.id
-                )
-                .eq(
-                    "status",
-                    "جديد"
-                )
-                .order(
-                    "id",
-                    {
-                        ascending: false
-                    }
-                )
-                .limit(1);
+        await supabaseClient
+            .from("orders")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("status", "جديد")
+            .order("id", {
+                ascending: false
+            })
+            .limit(1);
 
 
         if (ordersError) {
 
             console.error(
+                "خطأ البحث عن الطلب:",
                 ordersError
             );
 
@@ -1011,9 +763,7 @@ async function addProduct(productId) {
         let order;
 
 
-        /*
-            إنشاء طلب جديد
-        */
+        /* إنشاء طلب */
 
         if (
             !orders ||
@@ -1024,36 +774,34 @@ async function addProduct(productId) {
                 data: newOrder,
                 error: createError
             } =
-                await supabaseClient
-                    .from("orders")
-                    .insert({
+            await supabaseClient
+                .from("orders")
+                .insert({
 
-                        user_id:
-                            user.id,
+                    user_id: user.id,
 
-                        customer_name:
-                            user.user_metadata?.name ||
-                            user.email ||
-                            "عميل",
+                    customer_name:
+                        user.user_metadata?.name ||
+                        user.email ||
+                        "عميل",
 
-                        customer_phone:
-                            user.user_metadata?.phone ||
-                            "",
+                    customer_phone:
+                        user.user_metadata?.phone ||
+                        "",
 
-                        status:
-                            "جديد",
+                    status: "جديد",
 
-                        total:
-                            0
+                    total: 0
 
-                    })
-                    .select()
-                    .single();
+                })
+                .select()
+                .single();
 
 
             if (createError) {
 
                 console.error(
+                    "خطأ إنشاء الطلب:",
                     createError
                 );
 
@@ -1066,43 +814,33 @@ async function addProduct(productId) {
             }
 
 
-            order =
-                newOrder;
+            order = newOrder;
 
         } else {
 
-            order =
-                orders[0];
+            order = orders[0];
 
         }
 
 
-        /*
-            هل المنتج المحدد
-            موجود بالسلة؟
-        */
+        /* البحث عن المنتج */
 
         const {
             data: existingItem,
             error: itemError
         } =
-            await supabaseClient
-                .from("order_items")
-                .select("*")
-                .eq(
-                    "order_id",
-                    order.id
-                )
-                .eq(
-                    "product_id",
-                    product.id
-                )
-                .maybeSingle();
+        await supabaseClient
+            .from("order_items")
+            .select("*")
+            .eq("order_id", order.id)
+            .eq("product_id", product.id)
+            .maybeSingle();
 
 
         if (itemError) {
 
             console.error(
+                "خطأ البحث عن المنتج:",
                 itemError
             );
 
@@ -1115,39 +853,34 @@ async function addProduct(productId) {
         }
 
 
-        /*
-            موجود → زيادة الكمية
-        */
+        /* زيادة الكمية */
 
         if (existingItem) {
 
             const newQuantity =
-                (
-                    existingItem.quantity ||
-                    1
-                ) + 1;
+                (existingItem.quantity || 1) + 1;
 
 
             const {
                 error: updateError
             } =
-                await supabaseClient
-                    .from("order_items")
-                    .update({
+            await supabaseClient
+                .from("order_items")
+                .update({
 
-                        quantity:
-                            newQuantity
+                    quantity: newQuantity
 
-                    })
-                    .eq(
-                        "id",
-                        existingItem.id
-                    );
+                })
+                .eq(
+                    "id",
+                    existingItem.id
+                );
 
 
             if (updateError) {
 
                 console.error(
+                    "خطأ تحديث الكمية:",
                     updateError
                 );
 
@@ -1162,58 +895,54 @@ async function addProduct(productId) {
         }
 
 
-        /*
-            غير موجود → إضافة
-        */
+        /* إضافة المنتج */
 
         else {
 
             const {
                 error: insertError
             } =
-                await supabaseClient
-                    .from("order_items")
-                    .insert({
+            await supabaseClient
+                .from("order_items")
+                .insert({
 
-                        order_id:
-                            order.id,
+                    order_id: order.id,
 
-                        product_id:
-                            product.id,
+                    product_id: product.id,
 
-                        quantity:
-                            1,
+                    quantity: 1,
 
-                        category:
-                            product.category,
+                    category:
+                        product.category,
 
-                        product_type:
-                            product.product_type,
+                    product_type:
+                        product.product_type,
 
-                        type:
-                            product.type,
+                    type:
+                        product.type,
 
-                        company:
-                            product.company,
+                    company:
+                        product.company,
 
-                        model:
-                            product.model,
+                    model:
+                        product.model,
 
-                        color:
-                            product.color,
+                    color:
+                        product.color,
 
-                        price:
-                            product.price,
+                    price:
+                        product.price,
 
-                        image:
-                            product.image
+                    image:
+                        product.image
 
-                    });
+                });
 
 
             if (insertError) {
 
                 console.error(
+                    "خطأ إضافة المنتج:",
                     insertError
                 );
 
@@ -1228,23 +957,21 @@ async function addProduct(productId) {
         }
 
 
-        /*
-            إعادة حساب الإجمالي
-        */
+        /* حساب الإجمالي */
 
         const {
             data: items,
             error: totalError
         } =
-            await supabaseClient
-                .from("order_items")
-                .select(
-                    "quantity, price"
-                )
-                .eq(
-                    "order_id",
-                    order.id
-                );
+        await supabaseClient
+            .from("order_items")
+            .select(
+                "quantity, price"
+            )
+            .eq(
+                "order_id",
+                order.id
+            );
 
 
         if (
@@ -1257,23 +984,24 @@ async function addProduct(productId) {
                     (
                         sum,
                         item
-                    ) => {
+                    ) =>
 
-                        return (
-                            sum +
-                            (
-                                Number(
-                                    item.price
-                                ) || 0
-                            ) *
-                            (
-                                Number(
-                                    item.quantity
-                                ) || 1
-                            )
-                        );
+                        sum +
 
-                    },
+                        (
+                            Number(
+                                item.price
+                            ) || 0
+                        )
+
+                        *
+
+                        (
+                            Number(
+                                item.quantity
+                            ) || 1
+                        ),
+
                     0
                 );
 
@@ -1282,8 +1010,7 @@ async function addProduct(productId) {
                 .from("orders")
                 .update({
 
-                    total:
-                        total
+                    total: total
 
                 })
                 .eq(
@@ -1299,12 +1026,6 @@ async function addProduct(productId) {
             (
                 product.model ||
                 "المنتج"
-            ) +
-            (
-                product.color
-                    ? " - " +
-                      product.color
-                    : ""
             ) +
             " إلى السلة"
         );
