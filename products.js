@@ -83,6 +83,17 @@ function renderProducts(products) {
             document.createElement("div");
 
         card.className = "product-card";
+        card.addEventListener("click", function(event) {
+
+    // إذا ضغط على زر +
+    // لا نفتح بطاقة التفاصيل
+    if (event.target.closest(".add-button")) {
+        return;
+    }
+
+    openProductModal(product.id);
+
+});
 
 card.innerHTML = `
 
@@ -530,3 +541,139 @@ async function addProduct(productId) {
         alert("حدث خطأ غير متوقع");
     }
 }
+
+
+/* =========================
+   نافذة تفاصيل المنتج
+========================= */
+
+function openProductModal(productId) {
+
+    const modal = document.getElementById("productModal");
+    const body = document.getElementById("productModalBody");
+
+    if (!modal || !body) {
+
+        console.error("نافذة المنتج غير موجودة في HTML");
+
+        return;
+    }
+
+    const product = allProducts.find(
+        item => item.id === productId
+    );
+
+    if (!product) {
+
+        console.error("المنتج غير موجود:", productId);
+
+        return;
+    }
+
+    body.innerHTML = `
+
+        <div class="modal-product-image">
+
+            ${
+                product.image
+                ? `<img
+                    src="${product.image}"
+                    alt="${product.model || ""}"
+                >`
+                : `<div class="no-image">📱</div>`
+            }
+
+        </div>
+
+
+        <div class="modal-product-info">
+
+            <div class="modal-product-type">
+                ${product.type || ""}
+            </div>
+
+            <h2>
+                ${product.model || "بدون موديل"}
+            </h2>
+
+            <p class="modal-company">
+                ${product.company || ""}
+            </p>
+
+
+            ${
+                product.color
+                ? `
+                    <div class="modal-option">
+
+                        <h3>اللون</h3>
+
+                        <button class="option-button active">
+                            ${product.color}
+                        </button>
+
+                    </div>
+                `
+                : ""
+            }
+
+
+            <div class="modal-price">
+
+                ${product.price ?? 0} ر.س
+
+            </div>
+
+
+            <button
+                class="modal-add-button"
+                onclick="addProduct(${product.id}); closeProductModal();"
+            >
+
+                + إضافة للسلة
+
+            </button>
+
+        </div>
+
+    `;
+
+    modal.classList.add("show");
+
+    document.body.classList.add("modal-open");
+}
+
+
+/* =========================
+   إغلاق النافذة
+========================= */
+
+function closeProductModal() {
+
+    const modal =
+        document.getElementById("productModal");
+
+    if (!modal) return;
+
+    modal.classList.remove("show");
+
+    document.body.classList.remove("modal-open");
+}
+
+
+/* الضغط خارج البطاقة للإغلاق */
+
+document.addEventListener("click", function(event) {
+
+    const modal =
+        document.getElementById("productModal");
+
+    if (!modal) return;
+
+    if (event.target === modal) {
+
+        closeProductModal();
+
+    }
+
+});

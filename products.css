@@ -343,3 +343,69 @@ body {
     }
 
 }
+
+
+
+/* =========================
+   PRODUCT MODAL
+========================= */
+
+.product-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    z-index: 9999;
+}
+
+.product-modal.show {
+    display: flex;
+}
+
+.product-modal-content {
+    background: white;
+
+    width: 100%;
+    max-width: 500px;
+
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    border-radius: 24px;
+
+    padding: 20px;
+
+    position: relative;
+
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+
+.product-modal-close {
+    position: absolute;
+
+    top: 12px;
+    left: 12px;
+
+    width: 38px;
+    height: 38px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #f1f1f1;
+
+    font-size: 25px;
+
+    cursor: pointer;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
