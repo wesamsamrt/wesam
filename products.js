@@ -1,4 +1,10 @@
 let allProducts = [];
+let groupedProducts = [];
+
+
+/* =========================
+   تحميل المنتجات
+========================= */
 
 async function loadProducts() {
 
@@ -14,24 +20,23 @@ async function loadProducts() {
 
     const params = new URLSearchParams(window.location.search);
 
-const category = params.get("category");
-const productType = params.get("type");
+    const category = params.get("category");
+    const productType = params.get("type");
 
-let query = supabaseClient
-    .from("products")
-    .select("*");
+    let query = supabaseClient
+        .from("products")
+        .select("*");
 
-if (category) {
-    query = query.eq("category", category);
-}
+    if (category) {
+        query = query.eq("category", category);
+    }
 
-if (productType) {
-    query = query.eq("product_type", productType);
-}
+    if (productType) {
+        query = query.eq("product_type", productType);
+    }
 
-const { data, error } = await query
-    .order("id", { ascending: true });
-
+    const { data, error } = await query
+        .order("id", { ascending: true });
 
     if (error) {
 
@@ -46,26 +51,66 @@ const { data, error } = await query
         return;
     }
 
-
     allProducts = data || [];
 
-    renderProducts(allProducts);
+    /*
+        هنا التجميع الحقيقي
+
+        كل المنتجات التي لها نفس product_type
+        تصبح بطاقة واحدة
+    */
+
+    groupedProducts = groupProducts(allProducts);
+
+    renderProducts(groupedProducts);
 }
 
 
 /* =========================
-   عرض المنتجات
+   تجميع المنتجات
 ========================= */
 
-function renderProducts(products) {
+function groupProducts(products) {
+
+    const groups = new Map();
+
+    products.forEach(product => {
+
+        const productType =
+            (product.product_type || "منتج")
+                .trim();
+
+        if (!groups.has(productType)) {
+
+            groups.set(productType, {
+                product_type: productType,
+                products: []
+            });
+
+        }
+
+        groups.get(productType).products.push(product);
+
+    });
+
+    return Array.from(groups.values());
+}
+
+
+/* =========================
+   عرض البطاقات المجمعة
+========================= */
+
+function renderProducts(groups) {
 
     const container =
         document.getElementById("products");
 
+    if (!container) return;
+
     container.innerHTML = "";
 
-
-    if (products.length === 0) {
+    if (!groups || groups.length === 0) {
 
         container.innerHTML = `
             <div class="message">
@@ -77,65 +122,628 @@ function renderProducts(products) {
     }
 
 
-    products.forEach(product => {
+    groups.forEach(group => {
+
+        const firstProduct =
+            group.products[0];
 
         const card =
             document.createElement("div");
 
         card.className = "product-card";
-        card.addEventListener("click", function(event) {
 
-    // إذا ضغط على زر +
-    // لا نفتح بطاقة التفاصيل
-    if (event.target.closest(".add-button")) {
-        return;
-    }
 
-    openProductModal(product.id);
+        /*
+            عند الضغط على البطاقة
+            نفتح النافذة
+        */
 
-});
+        card.addEventListener("click", () => {
 
-card.innerHTML = `
+            openProductModal(group);
 
-    <div class="product-image">
-        ${product.image
-            ? `<img src="${product.image}" alt="${product.model || ""}">`
-            : "📱"
-        }
-    </div>
+        });
 
-    <div class="product-type">
-        ${product.type || ""}
-    </div>
 
-    <h3>
-        ${product.model || "بدون موديل"}
-    </h3>
+        card.innerHTML = `
 
-    <p>
-        ${product.company || ""}
-        ${product.color ? " • " + product.color : ""}
-    </p>
+            <div class="product-image">
+
+                ${
+                    firstProduct.image
+
+                    ? `
+                        <img
+                            src="${firstProduct.image}"
+                            alt="${group.product_type}"
+                        >
+                    `
+
+                    : "📱"
+                }
+
+            </div>
+
+
+            <div class="product-type">
+
+                ${group.product_type}
+
+            </div>
+
+
+            <h3>
+
+                ${group.product_type}
+
+            </h3>
+
+
+            <p>
+
+                ${
+                    group.products.length
+                }
+
+                خيار متوفر
+
+            </p>
+
 
             <div class="product-bottom">
 
                 <span class="price">
-                    ${product.price ?? 0} ر.س
+
+                    ${
+                        firstProduct.price ?? 0
+                    }
+
+                    ر.س
+
                 </span>
 
+
                 <button
-    class="add-button"
-    onclick="addProduct(${product.id})"
->
-    +
-</button>
+                    class="add-button"
+                    type="button"
+                >
+                    +
+                </button>
+
             </div>
+
         `;
+
+
+        /*
+            زر + يفتح نفس النافذة
+            بدل الإضافة المباشرة
+        */
+
+        const addButton =
+            card.querySelector(".add-button");
+
+
+        addButton.addEventListener(
+            "click",
+            function(event) {
+
+                event.stopPropagation();
+
+                openProductModal(group);
+
+            }
+        );
 
 
         container.appendChild(card);
 
     });
+
+}
+
+
+/* =========================
+   نافذة المنتج
+========================= */
+
+function openProductModal(group) {
+
+    closeProductModal();
+
+
+    const products =
+        group.products || [];
+
+
+    if (products.length === 0) return;
+
+
+    /*
+        إنشاء النافذة
+        تلقائياً حتى ما يصير
+        null.innerHTML
+    */
+
+    const modal =
+        document.createElement("div");
+
+    modal.id = "productModal";
+
+    modal.className = "product-modal";
+
+
+    modal.innerHTML = `
+
+        <div class="product-modal-overlay"></div>
+
+
+        <div class="product-modal-box">
+
+
+            <button
+                class="product-modal-close"
+                type="button"
+            >
+                ×
+            </button>
+
+
+            <div class="modal-product-image">
+
+                ${
+                    products[0].image
+
+                    ? `
+                        <img
+                            id="modalProductImage"
+                            src="${products[0].image}"
+                            alt="${group.product_type}"
+                        >
+                    `
+
+                    : `
+                        <div class="modal-no-image">
+                            📱
+                        </div>
+                    `
+                }
+
+            </div>
+
+
+            <div class="modal-product-info">
+
+
+                <div class="modal-product-type">
+
+                    ${group.product_type}
+
+                </div>
+
+
+                <h2>
+
+                    ${group.product_type}
+
+                </h2>
+
+
+                <!-- الموديل -->
+
+                <label>
+
+                    الموديل
+
+                </label>
+
+
+                <select
+                    id="modalModel"
+                    class="product-select"
+                >
+
+                </select>
+
+
+                <!-- اللون -->
+
+                <label>
+
+                    اللون
+
+                </label>
+
+
+                <select
+                    id="modalColor"
+                    class="product-select"
+                >
+
+                </select>
+
+
+                <!-- السعر -->
+
+                <div class="modal-price">
+
+                    <span>
+
+                        السعر
+
+                    </span>
+
+                    <strong
+                        id="modalPrice"
+                    >
+                        0 ر.س
+                    </strong>
+
+                </div>
+
+
+                <button
+                    id="modalAddButton"
+                    class="modal-add-button"
+                    type="button"
+                >
+
+                    + إضافة للسلة
+
+                </button>
+
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    document.body.appendChild(modal);
+
+
+    const modelSelect =
+        document.getElementById("modalModel");
+
+    const colorSelect =
+        document.getElementById("modalColor");
+
+
+    /*
+        إنشاء قائمة الموديلات
+    */
+
+    const models = [];
+
+
+    products.forEach(product => {
+
+        const company =
+            (product.company || "")
+                .trim();
+
+        const model =
+            (product.model || "")
+                .trim();
+
+
+        const key =
+            company + "|||" + model;
+
+
+        if (
+            !models.some(
+                item => item.key === key
+            )
+        ) {
+
+            models.push({
+                key: key,
+                company: company,
+                model: model
+            });
+
+        }
+
+    });
+
+
+    models.forEach(item => {
+
+        const option =
+            document.createElement("option");
+
+        option.value = item.key;
+
+        option.textContent =
+            item.company
+                ? `${item.company} — ${item.model}`
+                : item.model;
+
+
+        modelSelect.appendChild(option);
+
+    });
+
+
+    /*
+        تحديث الألوان
+        حسب الموديل
+    */
+
+    function updateColors() {
+
+        colorSelect.innerHTML = "";
+
+
+        const selectedModel =
+            modelSelect.value;
+
+
+        const selectedProducts =
+            products.filter(product => {
+
+                const key =
+                    `${(product.company || "").trim()}|||${(product.model || "").trim()}`;
+
+                return key === selectedModel;
+
+            });
+
+
+        const colors = [];
+
+
+        selectedProducts.forEach(product => {
+
+            const color =
+                (product.color || "بدون لون")
+                    .trim();
+
+
+            if (!colors.includes(color)) {
+
+                colors.push(color);
+
+            }
+
+        });
+
+
+        colors.forEach(color => {
+
+            const option =
+                document.createElement("option");
+
+            option.value = color;
+
+            option.textContent = color;
+
+            colorSelect.appendChild(option);
+
+        });
+
+
+        updateSelectedProduct();
+
+    }
+
+
+    /*
+        معرفة المنتج المحدد
+        وتحديث السعر والصورة
+    */
+
+    function updateSelectedProduct() {
+
+        const selectedModel =
+            modelSelect.value;
+
+        const selectedColor =
+            colorSelect.value;
+
+
+        const selectedProduct =
+            products.find(product => {
+
+                const key =
+                    `${(product.company || "").trim()}|||${(product.model || "").trim()}`;
+
+                const color =
+                    (product.color || "بدون لون")
+                        .trim();
+
+                return (
+                    key === selectedModel &&
+                    color === selectedColor
+                );
+
+            });
+
+
+        if (!selectedProduct) return;
+
+
+        const price =
+            Number(selectedProduct.price) || 0;
+
+
+        const priceElement =
+            document.getElementById("modalPrice");
+
+
+        if (priceElement) {
+
+            priceElement.textContent =
+                `${price} ر.س`;
+
+        }
+
+
+        const imageElement =
+            document.getElementById(
+                "modalProductImage"
+            );
+
+
+        if (
+            imageElement &&
+            selectedProduct.image
+        ) {
+
+            imageElement.src =
+                selectedProduct.image;
+
+        }
+
+
+        /*
+            نخزن المنتج المختار
+            على زر الإضافة
+        */
+
+        const addButton =
+            document.getElementById(
+                "modalAddButton"
+            );
+
+
+        if (addButton) {
+
+            addButton.dataset.productId =
+                selectedProduct.id;
+
+        }
+
+    }
+
+
+    /*
+        أول تحميل
+    */
+
+    updateColors();
+
+
+    /*
+        إذا تغير الموديل
+    */
+
+    modelSelect.addEventListener(
+        "change",
+        updateColors
+    );
+
+
+    /*
+        إذا تغير اللون
+    */
+
+    colorSelect.addEventListener(
+        "change",
+        updateSelectedProduct
+    );
+
+
+    /*
+        زر إضافة للسلة
+    */
+
+    document
+        .getElementById("modalAddButton")
+        .addEventListener(
+            "click",
+            async function() {
+
+                const productId =
+                    Number(
+                        this.dataset.productId
+                    );
+
+
+                if (!productId) {
+
+                    alert(
+                        "اختر الموديل واللون أولاً"
+                    );
+
+                    return;
+
+                }
+
+
+                await addProduct(
+                    productId
+                );
+
+                closeProductModal();
+
+            }
+        );
+
+
+    /*
+        زر الإغلاق
+    */
+
+    document
+        .querySelector(
+            ".product-modal-close"
+        )
+        .addEventListener(
+            "click",
+            closeProductModal
+        );
+
+
+    /*
+        الضغط خارج البطاقة
+    */
+
+    document
+        .querySelector(
+            ".product-modal-overlay"
+        )
+        .addEventListener(
+            "click",
+            closeProductModal
+        );
+
+
+    /*
+        منع تحريك الصفحة خلف النافذة
+    */
+
+    document.body.classList.add(
+        "modal-open"
+    );
+
+}
+
+
+/* =========================
+   إغلاق النافذة
+========================= */
+
+function closeProductModal() {
+
+    const modal =
+        document.getElementById(
+            "productModal"
+        );
+
+
+    if (modal) {
+
+        modal.remove();
+
+    }
+
+
+    document.body.classList.remove(
+        "modal-open"
+    );
 
 }
 
@@ -147,7 +755,10 @@ card.innerHTML = `
 function searchProducts() {
 
     const input =
-        document.getElementById("searchInput");
+        document.getElementById(
+            "searchInput"
+        );
+
 
     if (!input) return;
 
@@ -158,15 +769,36 @@ function searchProducts() {
             .trim();
 
 
-    const filtered =
+    if (!search) {
+
+        renderProducts(
+            groupedProducts
+        );
+
+        return;
+
+    }
+
+
+    /*
+        البحث داخل جميع المنتجات
+        ثم نعيد تجميع النتائج
+    */
+
+    const filteredProducts =
         allProducts.filter(product => {
 
             const text = `
 
                 ${product.model || ""}
+
                 ${product.company || ""}
+
                 ${product.type || ""}
+
                 ${product.color || ""}
+
+                ${product.product_type || ""}
 
             `.toLowerCase();
 
@@ -176,7 +808,16 @@ function searchProducts() {
         });
 
 
-    renderProducts(filtered);
+    const filteredGroups =
+        groupProducts(
+            filteredProducts
+        );
+
+
+    renderProducts(
+        filteredGroups
+    );
+
 }
 
 
@@ -187,7 +828,9 @@ function searchProducts() {
 function setupFilters() {
 
     const filters =
-        document.querySelectorAll(".filter");
+        document.querySelectorAll(
+            ".filter"
+        );
 
 
     filters.forEach(button => {
@@ -198,41 +841,66 @@ function setupFilters() {
 
                 filters.forEach(item => {
 
-                    item.classList.remove("active");
+                    item.classList.remove(
+                        "active"
+                    );
 
                 });
 
 
-                button.classList.add("active");
+                button.classList.add(
+                    "active"
+                );
 
 
                 const selected =
-                    button.textContent.trim();
+                    button.textContent
+                        .trim();
 
 
-                if (selected === "الكل") {
+                if (
+                    selected === "الكل"
+                ) {
 
-                    renderProducts(allProducts);
+                    renderProducts(
+                        groupedProducts
+                    );
 
                     return;
+
                 }
 
 
+                /*
+                    نبحث عن المجموعات التي
+                    تحتوي على هذا النوع
+                */
+
                 const filtered =
-                    allProducts.filter(product =>
+                    groupedProducts.filter(
+                        group => {
 
-                        (product.type || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        selected
-                            .trim()
-                            .toLowerCase()
+                            return group.products.some(
+                                product =>
+                                    (
+                                        product.type ||
+                                        ""
+                                    )
+                                    .trim()
+                                    .toLowerCase()
+                                    ===
+                                    selected
+                                        .trim()
+                                        .toLowerCase()
+                            );
 
+                        }
                     );
 
 
-                renderProducts(filtered);
+                renderProducts(
+                    filtered
+                );
 
             }
         );
@@ -243,274 +911,369 @@ function setupFilters() {
 
 
 /* =========================
-   التشغيل
+   إضافة المنتج للسلة
 ========================= */
-
-loadProducts();
-
-setupFilters();
-
-
 
 async function addProduct(productId) {
 
     try {
 
-        // =========================
-        // التأكد من تسجيل الدخول
-        // =========================
-
         const {
             data: { user },
             error: userError
-        } = await supabaseClient.auth.getUser();
+        } =
+            await supabaseClient.auth.getUser();
 
-        if (userError || !user) {
 
-            alert("يجب تسجيل الدخول أولاً");
+        if (
+            userError ||
+            !user
+        ) {
 
-            window.location.href = "login.html";
+            alert(
+                "يجب تسجيل الدخول أولاً"
+            );
+
+            window.location.href =
+                "login.html";
 
             return;
+
         }
 
 
-        // =========================
-        // البحث عن المنتج
-        // =========================
+        /*
+            نبحث في كل المنتجات
+        */
 
         const product =
             allProducts.find(
-                item => item.id === productId
+                item =>
+                    Number(item.id) ===
+                    Number(productId)
             );
+
 
         if (!product) {
 
-            alert("المنتج غير موجود");
+            alert(
+                "المنتج غير موجود"
+            );
 
             return;
+
         }
 
 
-        // =========================
-        // البحث عن طلب مفتوح للمستخدم
-        // =========================
+        /*
+            البحث عن الطلب المفتوح
+        */
 
-        let { data: orders, error: ordersError } =
+        let {
+            data: orders,
+            error: ordersError
+        } =
             await supabaseClient
                 .from("orders")
                 .select("*")
-                .eq("user_id", user.id)
-                .eq("status", "جديد")
-                .order("id", {
-                    ascending: false
-                })
+                .eq(
+                    "user_id",
+                    user.id
+                )
+                .eq(
+                    "status",
+                    "جديد"
+                )
+                .order(
+                    "id",
+                    {
+                        ascending: false
+                    }
+                )
                 .limit(1);
+
 
         if (ordersError) {
 
             console.error(
-                "خطأ البحث عن الطلب:",
                 ordersError
             );
 
-            alert("حدث خطأ أثناء البحث عن الطلب");
+            alert(
+                "حدث خطأ أثناء البحث عن الطلب"
+            );
 
             return;
+
         }
 
 
-        // =========================
-        // إذا ما عنده طلب مفتوح
-        // نسوي طلب جديد
-        // =========================
-
         let order;
 
-        if (!orders || orders.length === 0) {
+
+        /*
+            إنشاء طلب جديد
+        */
+
+        if (
+            !orders ||
+            orders.length === 0
+        ) {
 
             const {
                 data: newOrder,
                 error: createError
-            } = await supabaseClient
-                .from("orders")
-                .insert({
+            } =
+                await supabaseClient
+                    .from("orders")
+                    .insert({
 
-                    user_id: user.id,
+                        user_id:
+                            user.id,
 
-                    customer_name:
-                        user.user_metadata?.name ||
-                        user.email ||
-                        "عميل",
+                        customer_name:
+                            user.user_metadata?.name ||
+                            user.email ||
+                            "عميل",
 
-                    customer_phone:
-                        user.user_metadata?.phone ||
-                        "",
+                        customer_phone:
+                            user.user_metadata?.phone ||
+                            "",
 
-                    status: "جديد",
+                        status:
+                            "جديد",
 
-                    total: 0
-                })
-                .select()
-                .single();
+                        total:
+                            0
+
+                    })
+                    .select()
+                    .single();
 
 
             if (createError) {
 
                 console.error(
-                    "خطأ إنشاء الطلب:",
                     createError
                 );
 
-                alert("حدث خطأ أثناء إنشاء الطلب");
+                alert(
+                    "حدث خطأ أثناء إنشاء الطلب"
+                );
 
                 return;
+
             }
 
-            order = newOrder;
+
+            order =
+                newOrder;
 
         } else {
 
-            order = orders[0];
+            order =
+                orders[0];
 
         }
 
 
-        // =========================
-        // هل المنتج موجود بالسلة؟
-        // =========================
+        /*
+            هل المنتج المحدد
+            موجود بالسلة؟
+        */
 
         const {
             data: existingItem,
             error: itemError
-        } = await supabaseClient
-            .from("order_items")
-            .select("*")
-            .eq("order_id", order.id)
-            .eq("product_id", product.id)
-            .maybeSingle();
+        } =
+            await supabaseClient
+                .from("order_items")
+                .select("*")
+                .eq(
+                    "order_id",
+                    order.id
+                )
+                .eq(
+                    "product_id",
+                    product.id
+                )
+                .maybeSingle();
 
 
         if (itemError) {
 
             console.error(
-                "خطأ البحث عن المنتج في السلة:",
                 itemError
             );
 
-            alert("حدث خطأ أثناء البحث عن المنتج");
+            alert(
+                "حدث خطأ أثناء البحث عن المنتج"
+            );
 
             return;
+
         }
 
 
-        // =========================
-        // إذا المنتج موجود
-        // نزيد الكمية
-        // =========================
+        /*
+            موجود → زيادة الكمية
+        */
 
         if (existingItem) {
 
             const newQuantity =
-                (existingItem.quantity || 1) + 1;
+                (
+                    existingItem.quantity ||
+                    1
+                ) + 1;
 
 
             const {
                 error: updateError
-            } = await supabaseClient
-                .from("order_items")
-                .update({
-                    quantity: newQuantity
-                })
-                .eq("id", existingItem.id);
+            } =
+                await supabaseClient
+                    .from("order_items")
+                    .update({
+
+                        quantity:
+                            newQuantity
+
+                    })
+                    .eq(
+                        "id",
+                        existingItem.id
+                    );
 
 
             if (updateError) {
 
                 console.error(
-                    "خطأ تحديث الكمية:",
                     updateError
                 );
 
-                alert("حدث خطأ أثناء تحديث الكمية");
+                alert(
+                    "حدث خطأ أثناء تحديث الكمية"
+                );
 
                 return;
+
             }
 
         }
 
-        // =========================
-        // إذا المنتج غير موجود
-        // نضيفه
-        // =========================
+
+        /*
+            غير موجود → إضافة
+        */
 
         else {
 
             const {
                 error: insertError
-            } = await supabaseClient
-                .from("order_items")
-                .insert({
+            } =
+                await supabaseClient
+                    .from("order_items")
+                    .insert({
 
-                    order_id: order.id,
+                        order_id:
+                            order.id,
 
-                    product_id: product.id,
+                        product_id:
+                            product.id,
 
-                    quantity: 1,
+                        quantity:
+                            1,
 
-                    category: product.category,
+                        category:
+                            product.category,
 
-                    product_type: product.product_type,
+                        product_type:
+                            product.product_type,
 
-                    type: product.type,
+                        type:
+                            product.type,
 
-                    company: product.company,
+                        company:
+                            product.company,
 
-                    model: product.model,
+                        model:
+                            product.model,
 
-                    color: product.color,
+                        color:
+                            product.color,
 
-                    price: product.price,
+                        price:
+                            product.price,
 
-                    image: product.image
-                });
+                        image:
+                            product.image
+
+                    });
 
 
             if (insertError) {
 
                 console.error(
-                    "خطأ إضافة المنتج:",
                     insertError
                 );
 
-                alert("حدث خطأ أثناء إضافة المنتج");
+                alert(
+                    "حدث خطأ أثناء إضافة المنتج"
+                );
 
                 return;
+
             }
+
         }
 
 
-        // =========================
-        // حساب إجمالي الطلب
-        // =========================
+        /*
+            إعادة حساب الإجمالي
+        */
 
         const {
             data: items,
             error: totalError
-        } = await supabaseClient
-            .from("order_items")
-            .select("quantity, price")
-            .eq("order_id", order.id);
+        } =
+            await supabaseClient
+                .from("order_items")
+                .select(
+                    "quantity, price"
+                )
+                .eq(
+                    "order_id",
+                    order.id
+                );
 
 
-        if (!totalError && items) {
+        if (
+            !totalError &&
+            items
+        ) {
 
             const total =
                 items.reduce(
-                    (sum, item) =>
-                        sum +
-                        ((Number(item.price) || 0) *
-                        (Number(item.quantity) || 1)),
+                    (
+                        sum,
+                        item
+                    ) => {
+
+                        return (
+                            sum +
+                            (
+                                Number(
+                                    item.price
+                                ) || 0
+                            ) *
+                            (
+                                Number(
+                                    item.quantity
+                                ) || 1
+                            )
+                        );
+
+                    },
                     0
                 );
 
@@ -518,15 +1281,31 @@ async function addProduct(productId) {
             await supabaseClient
                 .from("orders")
                 .update({
-                    total: total
+
+                    total:
+                        total
+
                 })
-                .eq("id", order.id);
+                .eq(
+                    "id",
+                    order.id
+                );
+
         }
 
 
         alert(
             "تمت إضافة " +
-            (product.model || "المنتج") +
+            (
+                product.model ||
+                "المنتج"
+            ) +
+            (
+                product.color
+                    ? " - " +
+                      product.color
+                    : ""
+            ) +
             " إلى السلة"
         );
 
@@ -538,142 +1317,19 @@ async function addProduct(productId) {
             error
         );
 
-        alert("حدث خطأ غير متوقع");
+        alert(
+            "حدث خطأ غير متوقع"
+        );
+
     }
+
 }
 
 
 /* =========================
-   نافذة تفاصيل المنتج
+   التشغيل
 ========================= */
 
-function openProductModal(productId) {
+loadProducts();
 
-    const modal = document.getElementById("productModal");
-    const body = document.getElementById("productModalBody");
-
-    if (!modal || !body) {
-
-        console.error("نافذة المنتج غير موجودة في HTML");
-
-        return;
-    }
-
-    const product = allProducts.find(
-        item => item.id === productId
-    );
-
-    if (!product) {
-
-        console.error("المنتج غير موجود:", productId);
-
-        return;
-    }
-
-    body.innerHTML = `
-
-        <div class="modal-product-image">
-
-            ${
-                product.image
-                ? `<img
-                    src="${product.image}"
-                    alt="${product.model || ""}"
-                >`
-                : `<div class="no-image">📱</div>`
-            }
-
-        </div>
-
-
-        <div class="modal-product-info">
-
-            <div class="modal-product-type">
-                ${product.type || ""}
-            </div>
-
-            <h2>
-                ${product.model || "بدون موديل"}
-            </h2>
-
-            <p class="modal-company">
-                ${product.company || ""}
-            </p>
-
-
-            ${
-                product.color
-                ? `
-                    <div class="modal-option">
-
-                        <h3>اللون</h3>
-
-                        <button class="option-button active">
-                            ${product.color}
-                        </button>
-
-                    </div>
-                `
-                : ""
-            }
-
-
-            <div class="modal-price">
-
-                ${product.price ?? 0} ر.س
-
-            </div>
-
-
-            <button
-                class="modal-add-button"
-                onclick="addProduct(${product.id}); closeProductModal();"
-            >
-
-                + إضافة للسلة
-
-            </button>
-
-        </div>
-
-    `;
-
-    modal.classList.add("show");
-
-    document.body.classList.add("modal-open");
-}
-
-
-/* =========================
-   إغلاق النافذة
-========================= */
-
-function closeProductModal() {
-
-    const modal =
-        document.getElementById("productModal");
-
-    if (!modal) return;
-
-    modal.classList.remove("show");
-
-    document.body.classList.remove("modal-open");
-}
-
-
-/* الضغط خارج البطاقة للإغلاق */
-
-document.addEventListener("click", function(event) {
-
-    const modal =
-        document.getElementById("productModal");
-
-    if (!modal) return;
-
-    if (event.target === modal) {
-
-        closeProductModal();
-
-    }
-
-});
+setupFilters();
