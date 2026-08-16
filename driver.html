@@ -1067,31 +1067,19 @@ function showLogin(errorMessage = "") {
 /* =========================================================
    تسجيل الدخول كمندوب
 ========================================================= */
-
 async function loginDriver() {
 
     const input =
-        document.getElementById(
-            "driverSecretCode"
-        );
-
+        document.getElementById("driverSecretCode");
 
     const button =
-        document.getElementById(
-            "driverLoginButton"
-        );
-
+        document.getElementById("driverLoginButton");
 
     const message =
-        document.getElementById(
-            "driverLoginMessage"
-        );
-
+        document.getElementById("driverLoginMessage");
 
     const secretCode =
-        input.value
-            .trim();
-
+        input.value.trim();
 
     if (!secretCode) {
 
@@ -1102,132 +1090,126 @@ async function loginDriver() {
             "#e05265";
 
         return;
-
     }
-
 
     button.disabled = true;
 
     button.textContent =
         "جاري التحقق...";
 
-
     message.textContent = "";
-
 
     try {
 
-        /*
-         * البحث عن المندوب باستخدام
-         * الرمز السري فقط
-         */
+        console.log(
+            "Driver secret:",
+            secretCode
+        );
 
         const {
-            data: driver,
+            data,
             error
         } =
-            await supabaseClient
-                .from("drivers")
-                .select("*")
-                .eq("secret_code", secretCode)
-                .maybeSingle();
+            await supabaseClient.rpc(
+                "verify_driver_secret",
+                {
+                    p_secret_code: secretCode
+                }
+            );
 
+        console.log(
+            "Driver result:",
+            data
+        );
+
+        console.log(
+            "Driver error:",
+            error
+        );
 
         if (error) {
 
             console.error(
-                "Driver Verification Error:",
+                "Driver verification error:",
                 error
             );
-
 
             message.textContent =
                 "حدث خطأ أثناء التحقق من الرمز";
 
-
             message.style.color =
                 "#e05265";
-
 
             button.disabled = false;
 
             button.textContent =
                 "تسجيل";
 
-
             return;
-
         }
 
-
-        if (!driver) {
+        if (!data || data.length === 0) {
 
             message.textContent =
                 "الرمز السري غير صحيح";
 
-
             message.style.color =
                 "#e05265";
-
 
             button.disabled = false;
 
             button.textContent =
                 "تسجيل";
 
-
             return;
-
         }
 
+        const driver = data[0];
 
-        /*
-         * حفظ رقم المندوب
-         */
+        console.log(
+            "تم تسجيل المندوب:",
+            driver
+        );
 
+        // حفظ المندوب
         localStorage.setItem(
             "driver_id",
             String(driver.id)
         );
 
-
-        /*
-         * حفظ رقم المندوب أيضاً
-         */
-
         localStorage.setItem(
             "driver_number",
-            driver.driver_number
+            String(driver.driver_number)
         );
 
+        localStorage.setItem(
+            "driver_name",
+            driver.name
+        );
 
         currentDriver = driver;
 
-
+        // عرض صفحة المندوب
         await showDriverPage();
 
-    }
+    } catch (error) {
 
-    catch (error) {
-
-        console.error(error);
-
+        console.error(
+            "Unexpected driver error:",
+            error
+        );
 
         message.textContent =
-            "حدث خطأ أثناء التحقق من الرمز";
-
+            "حدث خطأ غير متوقع";
 
         message.style.color =
             "#e05265";
-
 
         button.disabled = false;
 
         button.textContent =
             "تسجيل";
-
     }
-
 }
 
 
