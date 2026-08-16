@@ -59,20 +59,23 @@ async function loadProducts() {
 /* =========================================================
    تجميع المنتجات حسب TYPE
 ========================================================= */
-
-function groupProductsByType(products) {
+function groupProductsByCode(products) {
 
     const groups = {};
 
     products.forEach(product => {
 
-        const type = (product.type || "منتج").trim();
+        const code =
+            (product.product_code || "").trim();
 
-        if (!groups[type]) {
-            groups[type] = [];
+        const groupKey =
+            code || `product_${product.id}`;
+
+        if (!groups[groupKey]) {
+            groups[groupKey] = [];
         }
 
-        groups[type].push(product);
+        groups[groupKey].push(product);
     });
 
     return groups;
@@ -109,20 +112,27 @@ function renderProducts(products) {
        تصبح بطاقة واحدة
     */
 
-    const groups = groupProductsByType(products);
+    const groups = groupProductsByCode(products);
 
+Object.keys(groups).forEach(groupKey => {
 
-    Object.keys(groups).forEach(type => {
+    const variants = groups[groupKey];
 
-        const variants = groups[type];
+    const firstProduct = variants[0];
+
+    const productCode =
+        (firstProduct.product_code || "").trim();
+
+    const type =
+        (firstProduct.type || "منتج").trim();
 
         const card = document.createElement("div");
 
         card.className = "product-card";
 
 
-        // أول منتج نستخدم صورته وسعره للبطاقة
-        const firstProduct = variants[0];
+        
+      
 
 
         // عدد الموديلات المختلفة
@@ -154,13 +164,27 @@ function renderProducts(products) {
 
 
             <div class="product-type">
-                ${type}
-            </div>
+    ${type}
+</div>
 
+<h3>
+    ${type}
+</h3>
 
-            <h3>
-                ${type}
-            </h3>
+${
+    productCode
+    ?
+    `<div style="
+        margin-top:6px;
+        font-size:14px;
+        font-weight:bold;
+        color:#4935b5;
+    ">
+        كود المنتج: ${escapeHtml(productCode)}
+    </div>`
+    :
+    ""
+}
 
 
             <p>
@@ -246,13 +270,33 @@ function searchProducts() {
             .toLowerCase()
             .trim();
 
+if (!search) {
 
-    if (!search) {
+    const container =
+        document.getElementById("products");
 
+    if (!container) return;
+
+
+    // الصفحة الرئيسية index.html
+    if (
+        window.location.pathname.endsWith("index.html") ||
+        window.location.pathname === "/"
+    ) {
+
+        // إخفاء المنتجات
+        container.innerHTML = "";
+
+    } else {
+
+        // صفحة المنتجات
+        // إظهار جميع المنتجات
         renderProducts(allProducts);
 
-        return;
     }
+
+    return;
+}
 
 
     const filtered =
@@ -268,6 +312,8 @@ function searchProducts() {
 
                 ${product.color || ""}
 
+                ${product.product_code || ""}
+
             `.toLowerCase();
 
 
@@ -278,7 +324,6 @@ function searchProducts() {
 
     renderProducts(filtered);
 }
-
 
 /* =========================================================
    الفلاتر
@@ -423,8 +468,18 @@ function openProductModal(variants) {
 
 
                     <div class="modal-type">
-                        ${variants[0].type || ""}
-                    </div>
+    ${variants[0].type || ""}
+</div>
+
+<div style="
+    text-align:center;
+    margin-bottom:10px;
+    font-size:14px;
+    font-weight:bold;
+    color:#4935b5;
+">
+    كود المنتج: ${escapeHtml(variants[0].product_code || "")}
+</div>
 
 
                     <h2>
@@ -894,97 +949,131 @@ quantityInput.addEventListener("input", function () {
     );
 
 
-    /* =====================================================
-       اختيار اللون
-    ===================================================== */
+   /* =====================================================
+   اختيار اللون
+===================================================== */
 
-    colorSelect.addEventListener(
-        "change",
-        function() {
+colorSelect.addEventListener(
+    "change",
+    function() {
 
-            const company =
-                companySelect.value.trim();
+        const company =
+            companySelect.value.trim();
 
-            const model =
-                modelSelect.value.trim();
+        const model =
+            modelSelect.value.trim();
 
-            const color =
-                this.value.trim();
-
-
-            if (!company || !model || !color) {
-
-                selectedProduct = null;
-
-                addButton.disabled = true;
-
-                priceBox.textContent =
-                    "اختر اللون";
-
-                return;
-            }
+        const color =
+            this.value.trim();
 
 
-            /*
-               العثور على المنتج الحقيقي
-            */
+        if (!company || !model || !color) {
 
-            selectedProduct =
-                variants.find(product => {
+            selectedProduct = null;
 
-                    return (
+            addButton.disabled = true;
 
-                        (product.company || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        company
-                            .toLowerCase()
+            priceBox.textContent =
+                "اختر اللون";
 
-                        &&
-
-                        (product.model || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        model
-                            .toLowerCase()
-
-                        &&
-
-                        (product.color || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        color
-                            .toLowerCase()
-
-                    );
-
-                });
+            return;
+        }
 
 
-            if (!selectedProduct) {
+        /*
+           البحث داخل منتجات نفس الشركة والموديل
+        */
 
-                priceBox.textContent =
-                    "المنتج غير موجود";
+        const modelProducts =
+            variants.filter(product => {
 
-                addButton.disabled = true;
+                const productCompany =
+                    String(product.company || "")
+                        .trim()
+                        .toLowerCase();
 
-                return;
-            }
+                const productModel =
+                    String(product.model || "")
+                        .trim()
+                        .toLowerCase();
+
+                const productColor =
+                    String(product.color || "")
+                        .trim()
+                        .toLowerCase();
 
 
-            showSelectedProductPrice(
-                selectedProduct,
-                priceBox
+                return (
+                    productCompany ===
+                    company.toLowerCase()
+
+                    &&
+
+                    productModel ===
+                    model.toLowerCase()
+
+                    &&
+
+                    productColor ===
+                    color.toLowerCase()
+                );
+
+            });
+
+
+        /*
+           أخذ أول منتج مطابق
+        */
+
+        selectedProduct =
+            modelProducts.length > 0
+                ? modelProducts[0]
+                : null;
+
+
+        /*
+           إذا لم نجد المنتج
+        */
+
+        if (!selectedProduct) {
+
+            console.log(
+                "لم يتم العثور على المنتج:",
+                {
+                    company,
+                    model,
+                    color,
+                    variants
+                }
             );
 
+            priceBox.textContent =
+                "المنتج غير موجود";
 
-            addButton.disabled = false;
+            addButton.disabled = true;
 
+            return;
         }
-    );
+
+
+        /*
+           عرض السعر
+        */
+
+        showSelectedProductPrice(
+            selectedProduct,
+            priceBox
+        );
+
+
+        /*
+           تفعيل زر الإضافة
+        */
+
+        addButton.disabled = false;
+
+    }
+);
 
 
     /* =====================================================
@@ -1008,9 +1097,8 @@ quantityInput.addEventListener("input", function () {
         */
 const quantity =
     parseInt(quantityInput.value) || 1;
-
 await addProduct(
-    selectedProduct.id,
+    selectedProduct,
     quantity
 );
 
@@ -1541,14 +1629,13 @@ setupFilters();
 /* =========================================================
    إضافة المنتج للسلة
 ========================================================= */
-
-async function addProduct(productId, quantity = 1) {
+async function addProduct(product, quantity = 1) {
 
     quantity = parseInt(quantity);
 
-if (isNaN(quantity) || quantity < 1) {
-    quantity = 1;
-}
+    if (isNaN(quantity) || quantity < 1) {
+        quantity = 1;
+    }
 
     try {
 
@@ -1566,25 +1653,22 @@ if (isNaN(quantity) || quantity < 1) {
 
             alert("يجب تسجيل الدخول أولاً");
 
-            window.location.href =
-                "login.html";
+            window.location.href = "login.html";
 
             return;
         }
 
 
         /* =========================
-           البحث عن المنتج
+           التأكد من وجود المنتج
         ========================= */
 
-        const product =
-            allProducts.find(
-                item =>
-                    item.id === productId
+        if (!product || !product.id) {
+
+            console.error(
+                "المنتج غير صالح:",
+                product
             );
-
-
-        if (!product) {
 
             alert("المنتج غير موجود");
 
@@ -1592,23 +1676,28 @@ if (isNaN(quantity) || quantity < 1) {
         }
 
 
+        console.log(
+            "✅ المنتج الذي سيتم إضافته:",
+            product
+        );
+
+
         /* =========================
            البحث عن طلب مفتوح
         ========================= */
 
-        let {
+        const {
             data: orders,
             error: ordersError
-        } =
-            await supabaseClient
-                .from("orders")
-                .select("*")
-                .eq("user_id", user.id)
-                .eq("status", "جديد")
-                .order("id", {
-                    ascending: false
-                })
-                .limit(1);
+        } = await supabaseClient
+            .from("orders")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("status", "جديد")
+            .order("id", {
+                ascending: false
+            })
+            .limit(1);
 
 
         if (ordersError) {
@@ -1627,43 +1716,39 @@ if (isNaN(quantity) || quantity < 1) {
 
 
         /* =========================
-           إنشاء طلب جديد
+           الحصول على الطلب
         ========================= */
 
         let order;
 
 
-        if (
-            !orders ||
-            orders.length === 0
-        ) {
+        if (!orders || orders.length === 0) {
 
             const {
                 data: newOrder,
                 error: createError
-            } =
-                await supabaseClient
-                    .from("orders")
-                    .insert({
+            } = await supabaseClient
+                .from("orders")
+                .insert({
 
-                        user_id: user.id,
+                    user_id: user.id,
 
-                        customer_name:
-                            user.user_metadata?.name ||
-                            user.email ||
-                            "عميل",
+                    customer_name:
+                        user.user_metadata?.name ||
+                        user.email ||
+                        "عميل",
 
-                        customer_phone:
-                            user.user_metadata?.phone ||
-                            "",
+                    customer_phone:
+                        user.user_metadata?.phone ||
+                        "",
 
-                        status: "جديد",
+                    status: "جديد",
 
-                        total: 0
+                    total: 0
 
-                    })
-                    .select()
-                    .single();
+                })
+                .select()
+                .single();
 
 
             if (createError) {
@@ -1691,19 +1776,18 @@ if (isNaN(quantity) || quantity < 1) {
 
 
         /* =========================
-           البحث عن المنتج بالسلة
+           البحث عن المنتج داخل السلة
         ========================= */
 
         const {
             data: existingItem,
             error: itemError
-        } =
-            await supabaseClient
-                .from("order_items")
-                .select("*")
-                .eq("order_id", order.id)
-                .eq("product_id", product.id)
-                .maybeSingle();
+        } = await supabaseClient
+            .from("order_items")
+            .select("*")
+            .eq("order_id", order.id)
+            .eq("product_id", product.id)
+            .maybeSingle();
 
 
         if (itemError) {
@@ -1722,30 +1806,30 @@ if (isNaN(quantity) || quantity < 1) {
 
 
         /* =========================
-           المنتج موجود
+           المنتج موجود بالسلة
         ========================= */
 
         if (existingItem) {
 
             const newQuantity =
-    (existingItem.quantity || 0) + quantity;
+                (Number(existingItem.quantity) || 0)
+                +
+                quantity;
 
 
             const {
                 error: updateError
-            } =
-                await supabaseClient
-                    .from("order_items")
-                    .update({
+            } = await supabaseClient
+                .from("order_items")
+                .update({
 
-                        quantity:
-                            newQuantity
+                    quantity: newQuantity
 
-                    })
-                    .eq(
-                        "id",
-                        existingItem.id
-                    );
+                })
+                .eq(
+                    "id",
+                    existingItem.id
+                );
 
 
             if (updateError) {
@@ -1766,52 +1850,51 @@ if (isNaN(quantity) || quantity < 1) {
 
 
         /* =========================
-           المنتج غير موجود
+           المنتج غير موجود بالسلة
         ========================= */
 
         else {
 
             const {
                 error: insertError
-            } =
-                await supabaseClient
-                    .from("order_items")
-                    .insert({
+            } = await supabaseClient
+                .from("order_items")
+                .insert({
 
-                        order_id:
-                            order.id,
+                    order_id:
+                        order.id,
 
-                        product_id:
-                            product.id,
+                    product_id:
+                        product.id,
 
-                      quantity:
-                            quantity,
+                    quantity:
+                        quantity,
 
-                        category:
-                            product.category,
+                    category:
+                        product.category,
 
-                        product_type:
-                            product.product_type,
+                    product_type:
+                        product.product_type,
 
-                        type:
-                            product.type,
+                    type:
+                        product.type,
 
-                        company:
-                            product.company,
+                    company:
+                        product.company,
 
-                        model:
-                            product.model,
+                    model:
+                        product.model,
 
-                        color:
-                            product.color,
+                    color:
+                        product.color,
 
-                        price:
-                            product.price,
+                    price:
+                        product.price,
 
-                        image:
-                            product.image
+                    image:
+                        product.image
 
-                    });
+                });
 
 
             if (insertError) {
@@ -1832,47 +1915,34 @@ if (isNaN(quantity) || quantity < 1) {
 
 
         /* =========================
-           حساب الإجمالي
+           إعادة حساب الإجمالي
         ========================= */
 
         const {
             data: items,
             error: totalError
-        } =
-            await supabaseClient
-                .from("order_items")
-                .select(
-                    "quantity, price"
-                )
-                .eq(
-                    "order_id",
-                    order.id
-                );
+        } = await supabaseClient
+            .from("order_items")
+            .select("quantity, price")
+            .eq(
+                "order_id",
+                order.id
+            );
 
 
-        if (
-            !totalError &&
-            items
-        ) {
+        if (!totalError && items) {
 
             const total =
                 items.reduce(
-                    (
-                        sum,
-                        item
-                    ) => {
+                    (sum, item) => {
 
                         return (
                             sum +
                             (
-                                Number(
-                                    item.price
-                                ) || 0
+                                Number(item.price) || 0
                             ) *
                             (
-                                Number(
-                                    item.quantity
-                                ) || 1
+                                Number(item.quantity) || 1
                             )
                         );
 
@@ -1881,7 +1951,9 @@ if (isNaN(quantity) || quantity < 1) {
                 );
 
 
-            await supabaseClient
+            const {
+                error: updateTotalError
+            } = await supabaseClient
                 .from("orders")
                 .update({
 
@@ -1892,6 +1964,17 @@ if (isNaN(quantity) || quantity < 1) {
                     "id",
                     order.id
                 );
+
+
+            if (updateTotalError) {
+
+                console.error(
+                    "خطأ تحديث الإجمالي:",
+                    updateTotalError
+                );
+
+            }
+
         }
 
 

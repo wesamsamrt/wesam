@@ -1550,6 +1550,9 @@
 
     <script src="supabase.js"></script>
 
+
+    <script src="products.js"></script>
+
 </head>
 
 
@@ -1720,7 +1723,14 @@
             >
 
         </div>
-
+        
+<div
+    id="searchResults"
+    style="
+        margin-top:10px;
+        display:none;
+    "
+></div>
     </div>
 
 
@@ -2790,22 +2800,296 @@
            SEARCH
         ===================================================== */
 
-        function searchProducts(value) {
+      async function searchProducts(value) {
 
-            if (!value.trim()) {
+    const search = value.trim();
 
-                return;
+    const resultsContainer =
+        document.getElementById("searchResults");
 
-            }
+    if (!resultsContainer) return;
+
+    /*
+       إذا البحث فاضي
+    */
+
+    if (!search) {
+
+    resultsContainer.style.display = "none";
+    resultsContainer.innerHTML = "";
+
+    // إخفاء المنتجات في الصفحة الرئيسية
+    const productsContainer =
+        document.getElementById("products");
+
+    if (productsContainer) {
+        productsContainer.style.display = "none";
+    }
+
+    return;
+}
 
 
-            console.log(
-                "البحث عن:",
-                value
-            );
+    /*
+       البحث في المنتجات
+    */
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("products")
+        .select("*")
+        .or(
+            `product_code.ilike.%${search}%,model.ilike.%${search}%,company.ilike.%${search}%,type.ilike.%${search}%,color.ilike.%${search}%`
+        );
+
+
+    if (error) {
+
+        console.error(
+            "خطأ البحث:",
+            error
+        );
+
+        resultsContainer.style.display = "block";
+
+        resultsContainer.innerHTML = `
+            <div style="
+                background:white;
+                padding:20px;
+                border-radius:18px;
+                text-align:center;
+                color:#777;
+            ">
+                حدث خطأ أثناء البحث
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /*
+       لا توجد نتائج
+    */
+
+    if (!data || data.length === 0) {
+
+        resultsContainer.style.display = "block";
+
+        resultsContainer.innerHTML = `
+            <div style="
+                background:white;
+                padding:20px;
+                border-radius:18px;
+                text-align:center;
+                color:#777;
+                box-shadow:0 10px 30px rgba(52,48,110,.07);
+            ">
+                لا توجد نتائج
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /*
+       تجميع النتائج حسب product_code
+    */
+
+    const groups = {};
+
+    data.forEach(product => {
+
+        const code =
+            (product.product_code || "").trim();
+
+        const groupKey =
+            code || `product_${product.id}`;
+
+        if (!groups[groupKey]) {
+
+            groups[groupKey] = [];
 
         }
 
+        groups[groupKey].push(product);
+
+    });
+
+
+    /*
+       إظهار النتائج
+    */
+
+    resultsContainer.style.display = "block";
+
+    resultsContainer.innerHTML = "";
+
+
+    Object.keys(groups).forEach(groupKey => {
+
+        const variants =
+            groups[groupKey];
+
+        const firstProduct =
+            variants[0];
+
+        const code =
+            (firstProduct.product_code || "").trim();
+
+        const type =
+            (firstProduct.type || "منتج").trim();
+
+
+        const models = [
+            ...new Set(
+                variants
+                    .map(p =>
+                        (p.model || "").trim()
+                    )
+                    .filter(Boolean)
+            )
+        ];
+
+
+        const card =
+            document.createElement("div");
+
+
+        card.style.cssText = `
+            background:white;
+            border-radius:20px;
+            padding:15px;
+            margin-bottom:10px;
+            box-shadow:0 10px 30px rgba(52,48,110,.07);
+            cursor:pointer;
+            transition:.2s;
+        `;
+
+
+        card.innerHTML = `
+
+            <div style="
+                display:flex;
+                align-items:center;
+                gap:12px;
+            ">
+
+                <div style="
+                    width:55px;
+                    height:55px;
+                    border-radius:15px;
+                    background:#f0ecff;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    overflow:hidden;
+                    flex-shrink:0;
+                ">
+
+                    ${
+                        firstProduct.image
+                        ?
+                        `<img
+                            src="${escapeHtml(
+                                firstProduct.image
+                            )}"
+                            style="
+                                width:100%;
+                                height:100%;
+                                object-fit:cover;
+                            "
+                        >`
+                        :
+                        "📱"
+                    }
+
+                </div>
+
+
+                <div style="
+                    flex:1;
+                ">
+
+                    <div style="
+                        font-size:16px;
+                        font-weight:800;
+                    ">
+                        ${escapeHtml(type)}
+                    </div>
+
+
+                    ${
+                        code
+                        ?
+                        `
+                        <div style="
+                            font-size:13px;
+                            color:#6557ed;
+                            font-weight:700;
+                            margin-top:3px;
+                        ">
+                            كود المنتج: ${escapeHtml(code)}
+                        </div>
+                        `
+                        :
+                        ""
+                    }
+
+
+                    <div style="
+                        font-size:11px;
+                        color:#858796;
+                        margin-top:3px;
+                    ">
+                        ${models.length}
+                        موديل متوفر
+                    </div>
+
+                </div>
+
+
+                <div style="
+                    width:38px;
+                    height:38px;
+                    border-radius:50%;
+                    background:#6557ed;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:20px;
+                ">
+                    ←
+                </div>
+
+            </div>
+
+        `;
+
+
+        /*
+           الضغط على البطاقة
+        */
+
+        card.addEventListener(
+    "click",
+    function() {
+
+        openProductModal(variants);
+
+    }
+);
+
+
+        resultsContainer.appendChild(card);
+
+    });
+
+}
 
 
         /* =====================================================
