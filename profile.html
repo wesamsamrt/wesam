@@ -871,13 +871,13 @@ async function registerAsDriver() {
             await supabaseClient
                 .from("drivers")
                 .select(`
-                    id,
-                    driver_number,
-                    name
-                `)
-                .eq("driver_code", code)
-                .maybeSingle();
-
+       id,
+       driver_number,
+       name,
+       secret_code
+     `)
+   .eq("secret_code", code)
+   .maybeSingle();
 
         if (driverError) {
 
