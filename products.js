@@ -53,6 +53,7 @@ async function loadProducts() {
     allProducts = data || [];
 
     renderProducts(allProducts);
+    setupFilters();
 }
 
 
@@ -332,55 +333,126 @@ function searchProducts() {
 /* =========================================================
    الفلاتر
 ========================================================= */
+/* =========================================================
+   إنشاء فلاتر الأنواع حسب التصنيف
+========================================================= */
 
 function setupFilters() {
 
     const filters =
         document.querySelectorAll(".filter");
 
+    if (!filters.length) return;
 
-    filters.forEach(button => {
+    /*
+       نأخذ الحاوية التي تحتوي أزرار الفلاتر
+    */
+
+    const filterContainer =
+        filters[0].parentElement;
+
+    if (!filterContainer) return;
+
+
+    /*
+       استخراج الأنواع الموجودة فعليًا
+       من المنتجات المحملة
+    */
+
+    const types = [
+        ...new Set(
+            allProducts
+                .map(product =>
+                    String(product.type || "").trim()
+                )
+                .filter(Boolean)
+        )
+    ];
+
+
+    /*
+       نخلي "الكل" موجود دائمًا
+    */
+
+    filterContainer.innerHTML = "";
+
+
+    const allButton =
+        document.createElement("button");
+
+    allButton.type = "button";
+
+    allButton.className =
+        "filter active";
+
+    allButton.textContent =
+        "الكل";
+
+
+    allButton.addEventListener(
+        "click",
+        function () {
+
+            filterContainer
+                .querySelectorAll(".filter")
+                .forEach(item => {
+                    item.classList.remove("active");
+                });
+
+            this.classList.add("active");
+
+            renderProducts(allProducts);
+        }
+    );
+
+
+    filterContainer.appendChild(allButton);
+
+
+    /*
+       إنشاء زر لكل TYPE موجود
+    */
+
+    types.forEach(type => {
+
+        const button =
+            document.createElement("button");
+
+        button.type = "button";
+
+        button.className =
+            "filter";
+
+        button.textContent =
+            type;
+
 
         button.addEventListener(
             "click",
-            function() {
+            function () {
 
-                filters.forEach(item => {
+                filterContainer
+                    .querySelectorAll(".filter")
+                    .forEach(item => {
+                        item.classList.remove("active");
+                    });
 
-                    item.classList.remove("active");
-
-                });
-
-
-                button.classList.add("active");
-
-
-                const selected =
-                    button.textContent.trim();
-
-
-                if (selected === "الكل") {
-
-                    renderProducts(allProducts);
-
-                    return;
-                }
+                this.classList.add("active");
 
 
                 /*
-                   الفلتر يعتمد على TYPE
-                   وليس product_type
+                   فلترة المنتجات حسب TYPE
                 */
 
                 const filtered =
                     allProducts.filter(product => {
 
                         return (
-                            (product.type || "")
+                            String(product.type || "")
                                 .trim()
                                 .toLowerCase()
                             ===
-                            selected
+                            type
                                 .trim()
                                 .toLowerCase()
                         );
@@ -393,10 +465,12 @@ function setupFilters() {
             }
         );
 
+
+        filterContainer.appendChild(button);
+
     });
 
 }
-
 
 /* =========================================================
    فتح نافذة اختيار المنتج
