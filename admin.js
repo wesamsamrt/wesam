@@ -390,7 +390,17 @@ const adminProductSearch =
 
 
 let adminProductsData = [];
+let selectedProductImage = null;
 
+const productImage =
+    document.getElementById("productImage");
+
+productImage.addEventListener("change", function () {
+
+    selectedProductImage =
+        this.files[0] || null;
+
+});
 
 /* فتح إدارة المنتجات */
 
@@ -633,6 +643,167 @@ function clearProductForm() {
     document.getElementById("productQuantity").value = "";
     document.getElementById("productPrice").value = "";
 
+
+    selectedProductImage = null;
+
+document.getElementById("productImage").value = "";
+
+document.getElementById("productImagePreview").innerHTML = "";
+}
+
+/* =========================================================
+   رفع صورة المنتج
+========================================================= */
+async function uploadProductImage(productId, file) {
+
+    if (!productId) {
+        console.error("لا يوجد productId");
+        return null;
+    }
+
+    if (!file) {
+        console.error("لم يتم اختيار صورة");
+        return null;
+    }
+
+    try {
+
+        /* =========================
+           اسم فريد للصورة
+        ========================= */
+
+        const fileExt =
+            file.name.split(".").pop();
+
+        const fileName =
+            `${crypto.randomUUID()}.${fileExt}`;
+
+        const filePath =
+            `products/${fileName}`;
+
+
+        /* =========================
+           رفع الصورة إلى Storage
+        ========================= */
+
+        const {
+            error: uploadError
+        } = await supabaseClient
+            .storage
+            .from("product-images")
+            .upload(
+                filePath,
+                file,
+                {
+                    upsert: false,
+                    contentType: file.type
+                }
+            );
+
+
+        if (uploadError) {
+
+            console.error(
+                "Image Upload Error:",
+                uploadError
+            );
+
+            alert(
+                "حدث خطأ أثناء رفع الصورة:\n" +
+                uploadError.message
+            );
+
+            return null;
+        }
+
+
+        /* =========================
+           الحصول على رابط الصورة
+        ========================= */
+
+        const {
+            data: publicData
+        } =
+            supabaseClient
+                .storage
+                .from("product-images")
+                .getPublicUrl(filePath);
+
+
+        const imageUrl =
+            publicData?.publicUrl;
+
+
+        if (!imageUrl) {
+
+            console.error(
+                "لم يتم الحصول على رابط الصورة"
+            );
+
+            return null;
+        }
+
+
+        console.log(
+            "رابط الصورة:",
+            imageUrl
+        );
+
+
+        /* =========================
+           حفظ الرابط في نفس المنتج
+        ========================= */
+
+        const {
+            error: updateError
+        } =
+            await supabaseClient
+                .from("products")
+                .update({
+                    image: imageUrl
+                })
+                .eq("id", productId);
+
+
+        if (updateError) {
+
+            console.error(
+                "Product Image Update Error:",
+                updateError
+            );
+
+            alert(
+                "تم رفع الصورة، لكن لم يتم حفظها داخل المنتج:\n" +
+                updateError.message
+            );
+
+            return null;
+        }
+
+
+        console.log(
+            "تم حفظ الصورة داخل المنتج ✅"
+        );
+
+
+        return imageUrl;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Upload Product Image Error:",
+            error
+        );
+
+        alert(
+            "حدث خطأ أثناء رفع الصورة"
+        );
+
+        return null;
+    }
+
 }
 
 
@@ -674,6 +845,9 @@ async function saveNewProduct() {
             document.getElementById("productPrice").value
         );
 
+    const imageFile =
+        document.getElementById("productImage").files[0];
+
 
     if (
         !category ||
@@ -700,6 +874,37 @@ async function saveNewProduct() {
             ? "جاري تعديل المنتج..."
             : "جاري الحفظ...";
 
+
+
+            let imageUrl = null;
+
+try {
+
+    if (imageFile) {
+
+        imageUrl =
+            await uploadProductImage(imageFile);
+
+    }
+
+}
+catch (error) {
+
+    productFormMessage.textContent =
+        "حدث خطأ أثناء رفع صورة المنتج";
+
+    productFormMessage.style.color =
+        "#e05265";
+
+    saveProductButton.disabled = false;
+
+    saveProductButton.textContent =
+        editingProductId
+            ? "حفظ التعديل"
+            : "حفظ المنتج";
+
+    return;
+}
 
     let result;
 
@@ -741,23 +946,25 @@ async function saveNewProduct() {
                 .from("products")
                 .insert({
 
-                    category: category,
+                      category: category,
 
                     product_type: productType,
 
-                    type: type,
+                      type: type,
 
-                    company: company,
+                 company: company,
 
-                    model: model,
+              model: model,
 
-                    color: color,
+                  color: color,
 
-                    quantity: quantity || 0,
+                 quantity: quantity || 0,
 
-                    price: price || 0
+                  price: price || 0,
 
-                })
+                 image: imageUrl
+
+                    })
                 .select()
                 .single();
 
@@ -783,7 +990,18 @@ async function saveNewProduct() {
 
         return;
     }
+/* =========================
+   رفع صورة المنتج
+========================= */
 
+if (selectedProductImage) {
+
+    await uploadProductImage(
+        result.data.id,
+        selectedProductImage
+    );
+
+}
 
     productFormMessage.textContent =
         editingProductId
