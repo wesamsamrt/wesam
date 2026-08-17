@@ -1827,7 +1827,10 @@ async function addProduct(product, quantity = 1) {
                 .from("order_items")
                 .update({
 
-                    quantity: newQuantity
+                    quantity: newQuantity,
+
+                    product_code:
+                        product.product_code
 
                 })
                 .eq(
@@ -1873,6 +1876,9 @@ async function addProduct(product, quantity = 1) {
 
                     quantity:
                         quantity,
+
+                    product_code:
+                        product.product_code,
 
                     category:
                         product.category,

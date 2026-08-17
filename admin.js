@@ -1610,38 +1610,39 @@ async function renderAdminOrder(order) {
        إحصائيات الأنواع
     ========================= */
 
-    const typeTotals = {};
+    /* =========================
+   إحصائيات المنتجات حسب الكود
+========================= */
+
+const typeCodes = {};
+
+(items || []).forEach(item => {
+
+    const code =
+        item.product_code?.trim() || "بدون كود";
+
+    const quantity =
+        Number(item.quantity || 1);
+
+    typeCodes[code] =
+        (typeCodes[code] || 0) + quantity;
+
+});
 
 
-    (items || []).forEach(item => {
+let typeStatsHTML = "";
 
-        const type =
-            item.type?.trim() || "بدون نوع";
+Object.entries(typeCodes).forEach(
+    ([code, quantity]) => {
 
-        const quantity =
-            Number(item.quantity || 1);
+        typeStatsHTML += `
+            <span class="type-stat">
+                ${code}: ${quantity} قطعة
+            </span>
+        `;
 
-
-        typeTotals[type] =
-            (typeTotals[type] || 0) + quantity;
-
-    });
-
-
-    let typeStatsHTML = "";
-
-
-    Object.entries(typeTotals).forEach(
-        ([type, quantity]) => {
-
-            typeStatsHTML += `
-                <span class="type-stat">
-                    ${type}: ${quantity} قطعة
-                </span>
-            `;
-
-        }
-    );
+    }
+);
 
 
     card.innerHTML = `
@@ -2025,41 +2026,36 @@ async function printOrder(orderId) {
         let rowsHTML = "";
 
 
-        const typeTotals = {};
+        const typeCodes = {};
+
+(items || []).forEach(item => {
+
+    const code =
+        item.product_code?.trim() ||
+        "بدون كود";
+
+    const quantity =
+        Number(item.quantity || 1);
+
+    typeCodes[code] =
+        (typeCodes[code] || 0) + quantity;
+
+});
 
 
-        (items || []).forEach(item => {
+let typeStatsHTML = "";
 
-            const type =
-                item.type?.trim() ||
-                "بدون نوع";
+Object.entries(typeCodes).forEach(
+    ([code, quantity]) => {
 
+        typeStatsHTML += `
+            <span class="type-stat">
+                ${code}: ${quantity} قطعة
+            </span>
+        `;
 
-            const quantity =
-                Number(item.quantity || 1);
-
-
-            typeTotals[type] =
-                (typeTotals[type] || 0) +
-                quantity;
-
-        });
-
-
-        let typeStatsHTML = "";
-
-
-        Object.entries(typeTotals).forEach(
-            ([type, quantity]) => {
-
-                typeStatsHTML += `
-                    <span class="type-stat">
-                        ${type}: ${quantity} قطعة
-                    </span>
-                `;
-
-            }
-        );
+    }
+);
 
 
         (items || []).forEach(
@@ -2083,6 +2079,10 @@ async function printOrder(orderId) {
 
                         <td>
                             ${index + 1}
+                        </td>
+
+                        <td>
+                             ${item.product_code || "-"}
                         </td>
 
                         <td>
@@ -2574,6 +2574,9 @@ async function printOrder(orderId) {
             <tr>
 
                 <th>#</th>
+                <th>
+                     رقم المنتج
+                </th>
 
                 <th>
                     التصنيف
