@@ -257,7 +257,6 @@ ${
 /* =========================================================
    البحث
 ========================================================= */
-
 function searchProducts() {
 
     const input =
@@ -270,34 +269,39 @@ function searchProducts() {
             .toLowerCase()
             .trim();
 
-if (!search) {
-
     const container =
         document.getElementById("products");
 
     if (!container) return;
 
 
-    // الصفحة الرئيسية index.html
-    if (
-        window.location.pathname.endsWith("index.html") ||
-        window.location.pathname === "/"
-    ) {
+    /*
+       إذا البحث فارغ
+    */
 
-        // إخفاء المنتجات
-        container.innerHTML = "";
+    if (!search) {
 
-    } else {
+        // الصفحة الرئيسية
+        if (
+            window.location.pathname.endsWith("index.html") ||
+            window.location.pathname === "/"
+        ) {
 
-        // صفحة المنتجات
-        // إظهار جميع المنتجات
-        renderProducts(allProducts);
+            container.innerHTML = "";
 
+        } else {
+
+            renderProducts(allProducts);
+
+        }
+
+        return;
     }
 
-    return;
-}
 
+    /*
+       البحث
+    */
 
     const filtered =
         allProducts.filter(product => {
@@ -323,8 +327,8 @@ if (!search) {
 
 
     renderProducts(filtered);
-}
 
+}
 /* =========================================================
    الفلاتر
 ========================================================= */

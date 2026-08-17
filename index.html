@@ -2799,40 +2799,74 @@
         /* =====================================================
            SEARCH
         ===================================================== */
+let searchRequestId = 0;
 
-      async function searchProducts(value) {
+async function searchProducts(value) {
+
+    const requestId = ++searchRequestId;
 
     const search = value.trim();
 
     const resultsContainer =
         document.getElementById("searchResults");
 
+    const categoriesSection =
+        document.getElementById("categoriesSection");
+
+    const hero =
+        document.querySelector(".hero");
+
+    const ordersSection =
+        document.querySelector(".orders-card")?.closest(".section");
+
     if (!resultsContainer) return;
 
-    /*
+
+    /* =========================================
        إذا البحث فاضي
-    */
+    ========================================= */
 
-    if (!search) {
+    if (search.length < 1) {
 
-    resultsContainer.style.display = "none";
-    resultsContainer.innerHTML = "";
+        resultsContainer.style.display = "none";
+        resultsContainer.innerHTML = "";
 
-    // إخفاء المنتجات في الصفحة الرئيسية
-    const productsContainer =
-        document.getElementById("products");
+        if (hero) {
+            hero.style.display = "";
+        }
 
-    if (productsContainer) {
-        productsContainer.style.display = "none";
+        if (categoriesSection) {
+            categoriesSection.style.display = "";
+        }
+
+        if (ordersSection) {
+            ordersSection.style.display = "";
+        }
+
+        return;
     }
 
-    return;
-}
+
+    /* =========================================
+       أثناء البحث نخفي الصفحة الرئيسية
+    ========================================= */
+
+    if (hero) {
+        hero.style.display = "none";
+    }
+
+    if (categoriesSection) {
+        categoriesSection.style.display = "none";
+    }
+
+    if (ordersSection) {
+        ordersSection.style.display = "none";
+    }
 
 
-    /*
+    /* =========================================
        البحث في المنتجات
-    */
+    ========================================= */
 
     const {
         data,
@@ -2843,6 +2877,17 @@
         .or(
             `product_code.ilike.%${search}%,model.ilike.%${search}%,company.ilike.%${search}%,type.ilike.%${search}%,color.ilike.%${search}%`
         );
+
+
+    /*
+       مهم جداً:
+       إذا المستخدم كتب/حذف بسرعة،
+       نتجاهل نتيجة البحث القديم.
+    */
+
+    if (requestId !== searchRequestId) {
+        return;
+    }
 
 
     if (error) {
@@ -2870,9 +2915,9 @@
     }
 
 
-    /*
+    /* =========================================
        لا توجد نتائج
-    */
+    ========================================= */
 
     if (!data || data.length === 0) {
 
@@ -2895,9 +2940,9 @@
     }
 
 
-    /*
+    /* =========================================
        تجميع النتائج حسب product_code
-    */
+    ========================================= */
 
     const groups = {};
 
@@ -2910,9 +2955,7 @@
             code || `product_${product.id}`;
 
         if (!groups[groupKey]) {
-
             groups[groupKey] = [];
-
         }
 
         groups[groupKey].push(product);
@@ -2920,9 +2963,9 @@
     });
 
 
-    /*
+    /* =========================================
        إظهار النتائج
-    */
+    ========================================= */
 
     resultsContainer.style.display = "block";
 
@@ -2994,9 +3037,7 @@
                         firstProduct.image
                         ?
                         `<img
-                            src="${escapeHtml(
-                                firstProduct.image
-                            )}"
+                            src="${escapeHtml(firstProduct.image)}"
                             style="
                                 width:100%;
                                 height:100%;
@@ -3071,18 +3112,14 @@
         `;
 
 
-        /*
-           الضغط على البطاقة
-        */
-
         card.addEventListener(
-    "click",
-    function() {
+            "click",
+            function() {
 
-        openProductModal(variants);
+                openProductModal(variants);
 
-    }
-);
+            }
+        );
 
 
         resultsContainer.appendChild(card);
@@ -3090,8 +3127,7 @@
     });
 
 }
-
-
+     
         /* =====================================================
            HERO BUTTON
         ===================================================== */
