@@ -1359,15 +1359,14 @@ function openProductModal(variants) {
 
         try {
 
-    await Promise.all(
-    selectedItems.map(item =>
-        addProduct(
+    for (const item of selectedItems) {
+
+        await addProduct(
             item.product,
-            item.quantity,
-            true
-        )
-    )
-);
+            item.quantity
+        );
+
+    }
 
     
 
