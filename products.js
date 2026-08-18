@@ -703,6 +703,8 @@ function openProductModal(variants) {
     font-size: 16px !important;
     font-weight: bold;
     outline: none;
+    -webkit-appearance: none;
+    appearance: none;
     -webkit-text-size-adjust: 100%;
 }
 
@@ -1040,12 +1042,12 @@ function openProductModal(variants) {
                     </button>
 
                     <input
-                        type="number"
-                        class="color-quantity-input"
-                        value="0"
-                        min="0"
-                        max="${available}"
-                        step="1"
+                 type="text"
+                inputmode="numeric"
+                 pattern="[0-9]*"
+                class="color-quantity-input"
+                 value="0"
+                  autocomplete="off"
                     >
 
                     <button
@@ -1142,9 +1144,9 @@ function openProductModal(variants) {
 
             input.addEventListener("input", function () {
 
-                updateColorQuantity(
-                    this.value
-                );
+            this.value = this.value.replace(/[^0-9]/g, "");
+
+              updateColorQuantity(this.value);
 
             });
 
