@@ -500,56 +500,33 @@ function setupFilters() {
 
 function openProductModal(variants) {
 
-    /*
-       نحذف أي نافذة قديمة
-    */
-
-    const oldModal =
-        document.getElementById("productSelectModal");
+    const oldModal = document.getElementById("productSelectModal");
 
     if (oldModal) {
         oldModal.remove();
     }
 
-
-    /*
-       منع التكرار
-    */
-
     if (!variants || variants.length === 0) {
         return;
     }
 
-
-    /* =====================================================
-       الشركات الموجودة لهذا TYPE
-    ===================================================== */
-
     const companies = [
         ...new Set(
             variants
-                .map(p => (p.company || "").trim())
+                .map(p => String(p.company || "").trim())
                 .filter(Boolean)
         )
     ];
 
-
-    /*
-       إنشاء النافذة
-    */
-
-    const modal =
-        document.createElement("div");
+    const modal = document.createElement("div");
 
     modal.id = "productSelectModal";
-
 
     modal.innerHTML = `
 
         <div class="product-modal-overlay">
 
             <div class="product-modal-box">
-
 
                 <button
                     type="button"
@@ -559,33 +536,30 @@ function openProductModal(variants) {
                     ×
                 </button>
 
-
                 <div class="product-modal-content">
 
                     <div class="modal-icon">
                         📱
                     </div>
 
-
                     <div class="modal-type">
-    ${variants[0].type || ""}
-</div>
+                        ${escapeHtml(variants[0].type || "")}
+                    </div>
 
-<div style="
-    text-align:center;
-    margin-bottom:10px;
-    font-size:14px;
-    font-weight:bold;
-    color:#4935b5;
-">
-    كود المنتج: ${escapeHtml(variants[0].product_code || "")}
-</div>
-
+                    <div style="
+                        text-align:center;
+                        margin-bottom:10px;
+                        font-size:14px;
+                        font-weight:bold;
+                        color:#4935b5;
+                    ">
+                        كود المنتج:
+                        ${escapeHtml(variants[0].product_code || "")}
+                    </div>
 
                     <h2>
                         اختيار المنتج
                     </h2>
-
 
                     <!-- الشركة -->
 
@@ -634,103 +608,126 @@ function openProductModal(variants) {
                     </select>
 
 
-                    <!-- اللون -->
+                    <!-- الألوان والكميات -->
 
-                    <label>
-                        اللون
-                    </label>
+                    <div id="colorsContainer"></div>
 
-                    <select
-                        id="colorSelect"
-                        class="product-select"
+
+                    <!-- معلومات المخزون -->
+
+                    <div
+                        id="stockSummary"
+                        class="stock-summary"
+                    >
+                        اختر الموديل
+                    </div>
+
+
+                    <!-- زر الإضافة -->
+
+                    <button
+                        type="button"
+                        id="confirmAddProduct"
+                        class="confirm-add-product"
                         disabled
                     >
-
-                        <option value="">
-                            اختر الموديل أولاً
-                        </option>
-
-                    </select>
-
-<!-- السعر -->
-
-<div
-    id="selectedProductPrice"
-    class="selected-product-price"
->
-    اختر المنتج
-</div>
-
-
-<!-- الكمية -->
-
-<label>
-    الكمية
-</label>
-
-<div class="quantity-control">
-
-    <button
-        type="button"
-        id="quantityMinus"
-        class="quantity-button"
-    >
-        −
-    </button>
-
-    <input
-        type="number"
-        id="quantityInput"
-        class="quantity-input"
-        value="1"
-        min="1"
-        step="1"
-    >
-
-    <button
-        type="button"
-        id="quantityPlus"
-        class="quantity-button"
-    >
-        +
-    </button>
-
-</div>
-
-
-<!-- زر الإضافة -->
-
-<button
-    type="button"
-    id="confirmAddProduct"
-    class="confirm-add-product"
-    disabled
->
-    إضافة للسلة
-</button>
+                        إضافة للسلة
+                    </button>
 
                 </div>
 
             </div>
 
         </div>
-    `;
 
+        .colors-title {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.color-quantity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    margin-top: 10px;
+    background: #f7f7f7;
+    border-radius: 14px;
+    border: 1px solid #eee;
+}
+
+.color-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.color-name {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.color-stock {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #777;
+}
+
+.color-quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.color-minus,
+.color-plus {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 10px;
+    background: #4935b5;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.color-quantity-input {
+    width: 55px;
+    height: 38px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    outline: none;
+}
+
+.color-quantity-input:focus {
+    border-color: #4935b5;
+}
+
+.stock-summary {
+    margin-top: 15px;
+    padding: 14px;
+    background: #f1efff;
+    border-radius: 14px;
+    text-align: center;
+    line-height: 1.9;
+    font-size: 15px;
+}
+
+.stock-summary strong {
+    color: #4935b5;
+    font-size: 18px;
+}
+    `;
 
     document.body.appendChild(modal);
 
-
-    /*
-       إضافة CSS للنافذة
-       حتى تشتغل حتى لو ما عندك CSS خاص بها
-    */
-
     addProductModalStyles();
-
-
-    /*
-       منع الصفحة من التحرك أثناء فتح النافذة
-    */
 
     document.body.style.overflow = "hidden";
 
@@ -745,502 +742,625 @@ function openProductModal(variants) {
     const modelSelect =
         document.getElementById("modelSelect");
 
-    const colorSelect =
-        document.getElementById("colorSelect");
+    const colorsContainer =
+        document.getElementById("colorsContainer");
 
-    const priceBox =
-        document.getElementById("selectedProductPrice");
+    const stockSummary =
+        document.getElementById("stockSummary");
 
     const addButton =
-    document.getElementById("confirmAddProduct");
-
-const quantityInput =
-    document.getElementById("quantityInput");
-
-const quantityMinus =
-    document.getElementById("quantityMinus");
-
-const quantityPlus =
-    document.getElementById("quantityPlus");
+        document.getElementById("confirmAddProduct");
 
 
-    let selectedProduct = null;
-/* =====================================================
-   التحكم بالكمية
-===================================================== */
+    let selectedColorProducts = [];
 
-quantityPlus.addEventListener("click", function () {
-
-    let quantity =
-        parseInt(quantityInput.value) || 1;
-
-    quantity++;
-
-    quantityInput.value = quantity;
-
-});
-
-
-quantityMinus.addEventListener("click", function () {
-
-    let quantity =
-        parseInt(quantityInput.value) || 1;
-
-    if (quantity > 1) {
-        quantity--;
-    }
-
-    quantityInput.value = quantity;
-
-});
-
-
-/*
-   السماح بكتابة الكمية يدوياً
-*/
-
-quantityInput.addEventListener("input", function () {
-
-    let quantity =
-        parseInt(this.value);
-
-    if (isNaN(quantity) || quantity < 1) {
-        this.value = 1;
-    }
-
-});
 
     /* =====================================================
        اختيار الماركة
     ===================================================== */
 
-    companySelect.addEventListener(
-        "change",
-        function() {
+    companySelect.addEventListener("change", function () {
 
-            const company =
-                this.value.trim();
+        const company =
+            this.value.trim();
+
+        modelSelect.innerHTML = `
+            <option value="">
+                اختر الموديل
+            </option>
+        `;
+
+        colorsContainer.innerHTML = "";
+
+        stockSummary.textContent =
+            "اختر الموديل";
+
+        addButton.disabled = true;
+
+        selectedColorProducts = [];
 
 
-            /*
-               تصفير الموديل واللون
-            */
-
-            modelSelect.innerHTML = `
-                <option value="">
-                    اختر الموديل
-                </option>
-            `;
-
-            colorSelect.innerHTML = `
-                <option value="">
-                    اختر الموديل أولاً
-                </option>
-            `;
+        if (!company) {
 
             modelSelect.disabled = true;
-            colorSelect.disabled = true;
 
-            addButton.disabled = true;
-
-            selectedProduct = null;
-
-            priceBox.textContent =
-                "اختر الموديل";
+            return;
+        }
 
 
-            if (!company) {
-                return;
-            }
+        const companyProducts =
+            variants.filter(product => {
 
-
-            /*
-               جلب موديلات الشركة فقط
-            */
-
-            const companyProducts =
-                variants.filter(product => {
-
-                    return (
-                        (product.company || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        company
-                            .toLowerCase()
-                    );
-
-                });
-
-
-            const models = [
-                ...new Set(
-                    companyProducts
-                        .map(p =>
-                            (p.model || "").trim()
-                        )
-                        .filter(Boolean)
-                )
-            ];
-
-
-            models.forEach(model => {
-
-                const option =
-                    document.createElement("option");
-
-                option.value = model;
-
-                option.textContent = model;
-
-                modelSelect.appendChild(option);
+                return (
+                    String(product.company || "")
+                        .trim()
+                        .toLowerCase()
+                    ===
+                    company
+                        .toLowerCase()
+                );
 
             });
 
 
-            modelSelect.disabled =
-                models.length === 0;
+        const models = [
+            ...new Set(
+                companyProducts
+                    .map(p =>
+                        String(p.model || "").trim()
+                    )
+                    .filter(Boolean)
+            )
+        ];
 
-        }
-    );
+
+        models.forEach(model => {
+
+            const option =
+                document.createElement("option");
+
+            option.value = model;
+
+            option.textContent = model;
+
+            modelSelect.appendChild(option);
+
+        });
+
+
+        modelSelect.disabled =
+            models.length === 0;
+
+    });
 
 
     /* =====================================================
        اختيار الموديل
     ===================================================== */
 
-    modelSelect.addEventListener(
-        "change",
-        function() {
-
-            const company =
-                companySelect.value.trim();
-
-            const model =
-                this.value.trim();
-
-
-            colorSelect.innerHTML = `
-                <option value="">
-                    اختر اللون
-                </option>
-            `;
-
-            colorSelect.disabled = true;
-
-            addButton.disabled = true;
-
-            selectedProduct = null;
-
-
-            if (!company || !model) {
-
-                priceBox.textContent =
-                    "اختر اللون";
-
-                return;
-            }
-
-
-            /*
-               المنتجات التي تطابق:
-               الشركة + الموديل
-            */
-
-            const modelProducts =
-                variants.filter(product => {
-
-                    return (
-
-                        (product.company || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        company
-                            .toLowerCase()
-
-                        &&
-
-                        (product.model || "")
-                            .trim()
-                            .toLowerCase()
-                        ===
-                        model
-                            .toLowerCase()
-
-                    );
-
-                });
-
-
-            /*
-               الألوان الموجودة لهذا الموديل
-            */
-
-            const colors = [
-                ...new Set(
-                    modelProducts
-                        .map(p =>
-                            (p.color || "").trim()
-                        )
-                        .filter(Boolean)
-                )
-            ];
-
-
-            /*
-               إذا ما فيه ألوان
-            */
-
-            if (colors.length === 0) {
-
-                /*
-                   إذا فيه منتج واحد فقط
-                   نستخدمه مباشرة
-                */
-
-                if (modelProducts.length === 1) {
-
-                    selectedProduct =
-                        modelProducts[0];
-
-                    showSelectedProductPrice(
-                        selectedProduct,
-                        priceBox
-                    );
-
-                    addButton.disabled = false;
-
-                } else {
-
-                    priceBox.textContent =
-                        "لا يوجد لون محدد";
-
-                }
-
-                return;
-            }
-
-
-            /*
-               إضافة الألوان
-            */
-
-            colors.forEach(color => {
-
-                const option =
-                    document.createElement("option");
-
-                option.value = color;
-
-                option.textContent = color;
-
-                colorSelect.appendChild(option);
-
-            });
-
-
-            colorSelect.disabled = false;
-
-            priceBox.textContent =
-                "اختر اللون";
-
-        }
-    );
-
-
-   /* =====================================================
-   اختيار اللون
-===================================================== */
-
-colorSelect.addEventListener(
-    "change",
-    function() {
+    modelSelect.addEventListener("change", function () {
 
         const company =
             companySelect.value.trim();
 
         const model =
-            modelSelect.value.trim();
-
-        const color =
             this.value.trim();
 
 
-        if (!company || !model || !color) {
+        colorsContainer.innerHTML = "";
 
-            selectedProduct = null;
+        stockSummary.textContent =
+            "اختر اللون";
 
-            addButton.disabled = true;
+        addButton.disabled = true;
 
-            priceBox.textContent =
-                "اختر اللون";
+        selectedColorProducts = [];
 
+
+        if (!company || !model) {
             return;
         }
 
 
-        /*
-           البحث داخل منتجات نفس الشركة والموديل
-        */
+        /* المنتجات الخاصة بالشركة + الموديل */
 
         const modelProducts =
             variants.filter(product => {
 
-                const productCompany =
+                return (
+
                     String(product.company || "")
                         .trim()
-                        .toLowerCase();
-
-                const productModel =
-                    String(product.model || "")
-                        .trim()
-                        .toLowerCase();
-
-                const productColor =
-                    String(product.color || "")
-                        .trim()
-                        .toLowerCase();
-
-
-                return (
-                    productCompany ===
+                        .toLowerCase()
+                    ===
                     company.toLowerCase()
 
                     &&
 
-                    productModel ===
+                    String(product.model || "")
+                        .trim()
+                        .toLowerCase()
+                    ===
                     model.toLowerCase()
 
-                    &&
-
-                    productColor ===
-                    color.toLowerCase()
                 );
 
             });
 
 
         /*
-           أخذ أول منتج مطابق
+           كل لون يعتبر منتج مستقل
         */
 
-        selectedProduct =
-            modelProducts.length > 0
-                ? modelProducts[0]
-                : null;
+        const colorProducts = [];
+
+        const usedColors = new Set();
 
 
-        /*
-           إذا لم نجد المنتج
-        */
+        modelProducts.forEach(product => {
 
-        if (!selectedProduct) {
+            const color =
+                String(product.color || "").trim();
 
-            console.log(
-                "لم يتم العثور على المنتج:",
-                {
-                    company,
-                    model,
-                    color,
-                    variants
+
+            /*
+               المنتجات التي بدون لون
+            */
+
+            if (!color) {
+
+                if (!usedColors.has("__NO_COLOR__")) {
+
+                    usedColors.add("__NO_COLOR__");
+
+                    colorProducts.push(product);
+
                 }
-            );
 
-            priceBox.textContent =
-                "المنتج غير موجود";
+                return;
+            }
 
-            addButton.disabled = true;
+
+            const colorKey =
+                color.toLowerCase();
+
+
+            /*
+               منع تكرار نفس اللون
+            */
+
+            if (!usedColors.has(colorKey)) {
+
+                usedColors.add(colorKey);
+
+                colorProducts.push(product);
+
+            }
+
+        });
+
+
+        if (colorProducts.length === 0) {
+
+            stockSummary.textContent =
+                "لا توجد منتجات لهذا الموديل";
 
             return;
         }
 
 
-        /*
-           عرض السعر
-        */
-
-        showSelectedProductPrice(
-            selectedProduct,
-            priceBox
-        );
+        selectedColorProducts =
+            colorProducts;
 
 
-        /*
-           تفعيل زر الإضافة
-        */
+        /* =================================================
+           عنوان الألوان
+        ================================================= */
 
-        addButton.disabled = false;
+        const title =
+            document.createElement("div");
 
-    }
-);
+        title.className =
+            "colors-title";
+
+        title.textContent =
+            "اختر الكمية لكل لون";
+
+        colorsContainer.appendChild(title);
+
+
+        /* =================================================
+           إنشاء صف لكل لون
+        ================================================= */
+
+        colorProducts.forEach((product, index) => {
+
+            const available =
+                Math.max(
+                    0,
+                    Number(product.quantity) || 0
+                );
+
+
+            const color =
+                String(product.color || "").trim();
+
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "color-quantity-row";
+
+
+            row.dataset.productId =
+                product.id;
+
+
+            row.innerHTML = `
+
+                <div class="color-info">
+
+                    <div class="color-name">
+                        ${escapeHtml(color || "بدون لون")}
+                    </div>
+
+                    <div class="color-stock">
+                        المتوفر: ${available}
+                    </div>
+
+                </div>
+
+
+                <div class="color-quantity-control">
+
+                    <button
+                        type="button"
+                        class="color-minus"
+                    >
+                        −
+                    </button>
+
+                    <input
+                        type="number"
+                        class="color-quantity-input"
+                        value="0"
+                        min="0"
+                        max="${available}"
+                        step="1"
+                    >
+
+                    <button
+                        type="button"
+                        class="color-plus"
+                    >
+                        +
+                    </button>
+
+                </div>
+
+            `;
+
+
+            const input =
+                row.querySelector(
+                    ".color-quantity-input"
+                );
+
+            const minus =
+                row.querySelector(
+                    ".color-minus"
+                );
+
+            const plus =
+                row.querySelector(
+                    ".color-plus"
+                );
+
+
+            /* =================================================
+               تحديث الكمية
+            ================================================= */
+
+            function updateColorQuantity(value) {
+
+                let quantity =
+                    parseInt(value);
+
+
+                if (isNaN(quantity)) {
+                    quantity = 0;
+                }
+
+
+                if (quantity < 0) {
+                    quantity = 0;
+                }
+
+
+                if (quantity > available) {
+                    quantity = available;
+                }
+
+
+                input.value =
+                    quantity;
+
+
+                updateStockSummary();
+
+            }
+
+
+            /* ناقص */
+
+            minus.addEventListener("click", function () {
+
+                let quantity =
+                    parseInt(input.value) || 0;
+
+                quantity--;
+
+                updateColorQuantity(quantity);
+
+            });
+
+
+            /* زائد */
+
+            plus.addEventListener("click", function () {
+
+                let quantity =
+                    parseInt(input.value) || 0;
+
+                quantity++;
+
+                updateColorQuantity(quantity);
+
+            });
+
+
+            /* إدخال يدوي */
+
+            input.addEventListener("input", function () {
+
+                updateColorQuantity(
+                    this.value
+                );
+
+            });
+
+
+            colorsContainer.appendChild(row);
+
+        });
+
+
+        updateStockSummary();
+
+    });
 
 
     /* =====================================================
-       إضافة المنتج للسلة
+       حساب مجموع الكميات
     ===================================================== */
 
-   addButton.addEventListener(
-    "click",
-    async function() {
+    function updateStockSummary() {
 
-        if (!selectedProduct) {
+        const rows =
+            colorsContainer.querySelectorAll(
+                ".color-quantity-row"
+            );
 
-            alert("اختر الماركة والموديل واللون أولاً");
+
+        let totalSelected = 0;
+
+        let totalStock = 0;
+
+
+        rows.forEach(row => {
+
+            const input =
+                row.querySelector(
+                    ".color-quantity-input"
+                );
+
+
+            const product =
+                selectedColorProducts.find(
+                    p =>
+                        String(p.id) ===
+                        String(row.dataset.productId)
+                );
+
+
+            const quantity =
+                parseInt(input.value) || 0;
+
+
+            totalSelected +=
+                quantity;
+
+
+            if (product) {
+
+                totalStock +=
+                    Math.max(
+                        0,
+                        Number(product.quantity) || 0
+                    );
+
+            }
+
+        });
+
+
+        stockSummary.innerHTML = `
+
+            <div>
+                إجمالي الكمية المختارة:
+                <strong>
+                    ${totalSelected}
+                </strong>
+            </div>
+
+            <div>
+                إجمالي المخزون:
+                <strong>
+                    ${totalStock}
+                </strong>
+            </div>
+
+        `;
+
+
+        /*
+           لازم يكون فيه كمية مختارة
+        */
+
+        addButton.disabled =
+            totalSelected <= 0;
+
+    }
+
+
+    /* =====================================================
+       إضافة جميع الألوان للسلة
+    ===================================================== */
+
+    addButton.addEventListener("click", async function () {
+
+        const rows =
+            colorsContainer.querySelectorAll(
+                ".color-quantity-row"
+            );
+
+
+        const selectedItems = [];
+
+
+        rows.forEach(row => {
+
+            const input =
+                row.querySelector(
+                    ".color-quantity-input"
+                );
+
+
+            const quantity =
+                parseInt(input.value) || 0;
+
+
+            if (quantity <= 0) {
+                return;
+            }
+
+
+            const product =
+                selectedColorProducts.find(
+                    p =>
+                        String(p.id) ===
+                        String(row.dataset.productId)
+                );
+
+
+            if (product) {
+
+                selectedItems.push({
+
+                    product: product,
+
+                    quantity: quantity
+
+                });
+
+            }
+
+        });
+
+
+        if (selectedItems.length === 0) {
+
+            alert("اختر كمية لون واحد على الأقل");
 
             return;
         }
 
-        /*
-           إضافة المنتج للسلة
-           بدون إغلاق البطاقة
-        */
-const quantity =
-    parseInt(quantityInput.value) || 1;
-await addProduct(
-    selectedProduct,
-    quantity
-);
 
         /*
-           بعد الإضافة:
-           نخلي البطاقة مفتوحة
-           ونصفر الاختيارات عشان يقدر
-           يختار موديل/لون ثاني مباشرة
+           منع الضغط المتكرر
         */
 
-        selectedProduct = null;
+        addButton.disabled = true;
 
-        companySelect.value = "";
-
-        modelSelect.innerHTML = `
-            <option value="">
-                اختر الماركة أولاً
-            </option>
-        `;
-
-        colorSelect.innerHTML = `
-            <option value="">
-                اختر الموديل أولاً
-            </option>
-        `;
-
-        modelSelect.disabled = true;
-        colorSelect.disabled = true;
+        addButton.textContent =
+            "جاري الإضافة...";
 
 
-priceBox.textContent = "اختر المنتج";
+        try {
 
-quantityInput.value = 1;
+            /*
+               إضافة كل لون كمنتج مستقل
+            */
 
-addButton.disabled = true;
+            for (const item of selectedItems) {
 
-    }
-);
+                await addProduct(
+                    item.product,
+                    item.quantity
+                );
+
+            }
+
+
+            alert(
+                "تمت إضافة جميع الألوان للسلة بنجاح"
+            );
+
+
+            /*
+               تصفير الكميات
+            */
+
+            rows.forEach(row => {
+
+                const input =
+                    row.querySelector(
+                        ".color-quantity-input"
+                    );
+
+                input.value = 0;
+
+            });
+
+
+            updateStockSummary();
+
+
+        } catch (error) {
+
+            console.error(
+                "خطأ إضافة الألوان:",
+                error
+            );
+
+            alert(
+                "حدث خطأ أثناء إضافة المنتجات"
+            );
+
+        }
+
+
+        addButton.textContent =
+            "إضافة للسلة";
+
+        updateStockSummary();
+
+    });
 
 
     /* =====================================================
-       زر الإغلاق
+       إغلاق
     ===================================================== */
 
     document
@@ -1251,29 +1371,19 @@ addButton.disabled = true;
         );
 
 
-    /*
-       الضغط خارج النافذة
-    */
-
     modal
         .querySelector(".product-modal-overlay")
-        .addEventListener(
-            "click",
-            function(e) {
+        .addEventListener("click", function (e) {
 
-                if (
-                    e.target === this
-                ) {
+            if (e.target === this) {
 
-                    closeProductModal();
-
-                }
+                closeProductModal();
 
             }
-        );
+
+        });
 
 }
-
 
 /* =========================================================
    عرض السعر
