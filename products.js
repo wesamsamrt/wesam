@@ -1250,14 +1250,159 @@ function openProductModal(variants) {
 
     addButton.addEventListener("click", async function () {
 
-        const rows =
-            colorsContainer.querySelectorAll(
-                ".color-quantity-row"
+    /* ==========================================
+       التأكد من تسجيل الدخول مرة واحدة فقط
+    ========================================== */
+
+    const {
+        data: { user },
+        error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+
+        alert("يجب تسجيل الدخول أولاً");
+
+        window.location.href = "login.html";
+
+        return;
+    }
+
+
+    /* ==========================================
+       جمع الألوان والكميات
+    ========================================== */
+
+    const rows =
+        colorsContainer.querySelectorAll(
+            ".color-quantity-row"
+        );
+
+    const selectedItems = [];
+
+
+    rows.forEach(row => {
+
+        const input =
+            row.querySelector(
+                ".color-quantity-input"
+            );
+
+        const quantity =
+            parseInt(input.value) || 0;
+
+
+        if (quantity <= 0) {
+            return;
+        }
+
+
+        const product =
+            selectedColorProducts.find(
+                p =>
+                    String(p.id) ===
+                    String(row.dataset.productId)
             );
 
 
-        const selectedItems = [];
+        if (product) {
 
+            selectedItems.push({
+
+                product: product,
+
+                quantity: quantity
+
+            });
+
+        }
+
+    });
+
+
+    /* ==========================================
+       التأكد من اختيار لون
+    ========================================== */
+
+    if (selectedItems.length === 0) {
+
+        alert("اختر كمية لون واحد على الأقل");
+
+        return;
+    }
+
+
+    /* ==========================================
+       منع الضغط المتكرر
+    ========================================== */
+
+    addButton.disabled = true;
+
+    addButton.textContent =
+        "جاري الإضافة...";
+
+
+    try {
+
+        /* ==========================================
+           إضافة جميع الألوان
+           بدون أي alert من هنا
+        ========================================== */
+
+        try {
+
+    for (const item of selectedItems) {
+
+        await addProduct(
+            item.product,
+            item.quantity
+        );
+
+    }
+
+    alert(
+        `تمت إضافة ${selectedItems.length} ${
+            selectedItems.length === 1
+                ? "لون"
+                : "ألوان"
+        } إلى السلة بنجاح`
+    );
+
+} catch (error) {
+
+    console.error("خطأ إضافة الألوان:", error);
+
+    if (error.message === "LOGIN_REQUIRED") {
+
+        alert("يجب تسجيل الدخول أولاً");
+
+        window.location.href = "login.html";
+
+    } else {
+
+        alert("حدث خطأ أثناء إضافة المنتجات");
+
+    }
+
+}
+
+
+        /* ==========================================
+           رسالة واحدة فقط بعد انتهاء الجميع
+        ========================================== */
+
+        alert(
+            `تمت إضافة ${selectedItems.length} ${
+                selectedItems.length === 1
+                    ? "لون"
+                    : "ألوان"
+            } إلى السلة بنجاح`
+        );
+
+
+        /* ==========================================
+           تصفير الكميات
+        ========================================== */
 
         rows.forEach(row => {
 
@@ -1266,117 +1411,34 @@ function openProductModal(variants) {
                     ".color-quantity-input"
                 );
 
-
-            const quantity =
-                parseInt(input.value) || 0;
-
-
-            if (quantity <= 0) {
-                return;
-            }
-
-
-            const product =
-                selectedColorProducts.find(
-                    p =>
-                        String(p.id) ===
-                        String(row.dataset.productId)
-                );
-
-
-            if (product) {
-
-                selectedItems.push({
-
-                    product: product,
-
-                    quantity: quantity
-
-                });
-
-            }
+            input.value = 0;
 
         });
 
 
-        if (selectedItems.length === 0) {
-
-            alert("اختر كمية لون واحد على الأقل");
-
-            return;
-        }
-
-
-        /*
-           منع الضغط المتكرر
-        */
-
-        addButton.disabled = true;
-
-        addButton.textContent =
-            "جاري الإضافة...";
-
-
-        try {
-
-            /*
-               إضافة كل لون كمنتج مستقل
-            */
-
-            for (const item of selectedItems) {
-
-                await addProduct(
-                    item.product,
-                    item.quantity
-                );
-
-            }
-
-
-            alert(
-                "تمت إضافة جميع الألوان للسلة بنجاح"
-            );
-
-
-            /*
-               تصفير الكميات
-            */
-
-            rows.forEach(row => {
-
-                const input =
-                    row.querySelector(
-                        ".color-quantity-input"
-                    );
-
-                input.value = 0;
-
-            });
-
-
-            updateStockSummary();
-
-
-        } catch (error) {
-
-            console.error(
-                "خطأ إضافة الألوان:",
-                error
-            );
-
-            alert(
-                "حدث خطأ أثناء إضافة المنتجات"
-            );
-
-        }
-
-
-        addButton.textContent =
-            "إضافة للسلة";
-
         updateStockSummary();
 
-    });
+
+    } catch (error) {
+
+        console.error(
+            "خطأ إضافة الألوان:",
+            error
+        );
+
+        alert(
+            "حدث خطأ أثناء إضافة المنتجات"
+        );
+
+    }
+
+
+    addButton.disabled = false;
+
+    addButton.textContent =
+        "إضافة للسلة";
+
+});
 
 
     /* =====================================================
@@ -1867,385 +1929,233 @@ async function addProduct(product, quantity = 1) {
         quantity = 1;
     }
 
-    try {
+    // التأكد من تسجيل الدخول
+    const {
+        data: { user },
+        error: userError
+    } = await supabaseClient.auth.getUser();
 
-        /* =========================
-           التأكد من تسجيل الدخول
-        ========================= */
+    if (userError || !user) {
+        throw new Error("LOGIN_REQUIRED");
+    }
 
-        const {
-            data: { user },
-            error: userError
-        } = await supabaseClient.auth.getUser();
+    if (!product || !product.id) {
+        throw new Error("PRODUCT_NOT_FOUND");
+    }
 
+    // البحث عن الطلب المفتوح
+    const {
+        data: orders,
+        error: ordersError
+    } = await supabaseClient
+        .from("orders")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "جديد")
+        .order("id", {
+            ascending: false
+        })
+        .limit(1);
 
-        if (userError || !user) {
+    if (ordersError) {
+        throw ordersError;
+    }
 
-            alert("يجب تسجيل الدخول أولاً");
+    let order;
 
-            window.location.href = "login.html";
-
-            return;
-        }
-
-
-        /* =========================
-           التأكد من وجود المنتج
-        ========================= */
-
-        if (!product || !product.id) {
-
-            console.error(
-                "المنتج غير صالح:",
-                product
-            );
-
-            alert("المنتج غير موجود");
-
-            return;
-        }
-
-
-        console.log(
-            "✅ المنتج الذي سيتم إضافته:",
-            product
-        );
-
-
-        /* =========================
-           البحث عن طلب مفتوح
-        ========================= */
+    // إنشاء طلب جديد إذا ما فيه طلب
+    if (!orders || orders.length === 0) {
 
         const {
-            data: orders,
-            error: ordersError
+            data: newOrder,
+            error: createError
         } = await supabaseClient
             .from("orders")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("status", "جديد")
-            .order("id", {
-                ascending: false
+            .insert({
+
+                user_id: user.id,
+
+                customer_name:
+                    user.user_metadata?.name ||
+                    user.email ||
+                    "عميل",
+
+                customer_phone:
+                    user.user_metadata?.phone ||
+                    "",
+
+                status: "جديد",
+
+                total: 0
+
             })
-            .limit(1);
+            .select()
+            .single();
 
-
-        if (ordersError) {
-
-            console.error(
-                "خطأ البحث عن الطلب:",
-                ordersError
-            );
-
-            alert(
-                "حدث خطأ أثناء البحث عن الطلب"
-            );
-
-            return;
+        if (createError) {
+            throw createError;
         }
 
+        order = newOrder;
 
-        /* =========================
-           الحصول على الطلب
-        ========================= */
+    } else {
 
-        let order;
-
-
-        if (!orders || orders.length === 0) {
-
-            const {
-                data: newOrder,
-                error: createError
-            } = await supabaseClient
-                .from("orders")
-                .insert({
-
-                    user_id: user.id,
-
-                    customer_name:
-                        user.user_metadata?.name ||
-                        user.email ||
-                        "عميل",
-
-                    customer_phone:
-                        user.user_metadata?.phone ||
-                        "",
-
-                    status: "جديد",
-
-                    total: 0
-
-                })
-                .select()
-                .single();
-
-
-            if (createError) {
-
-                console.error(
-                    "خطأ إنشاء الطلب:",
-                    createError
-                );
-
-                alert(
-                    "حدث خطأ أثناء إنشاء الطلب"
-                );
-
-                return;
-            }
-
-
-            order = newOrder;
-
-        } else {
-
-            order = orders[0];
-
-        }
-
-
-        /* =========================
-           البحث عن المنتج داخل السلة
-        ========================= */
-
-        const {
-            data: existingItem,
-            error: itemError
-        } = await supabaseClient
-            .from("order_items")
-            .select("*")
-            .eq("order_id", order.id)
-            .eq("product_id", product.id)
-            .maybeSingle();
-
-
-        if (itemError) {
-
-            console.error(
-                "خطأ البحث عن المنتج في السلة:",
-                itemError
-            );
-
-            alert(
-                "حدث خطأ أثناء البحث عن المنتج"
-            );
-
-            return;
-        }
-
-
-        /* =========================
-           المنتج موجود بالسلة
-        ========================= */
-
-        if (existingItem) {
-
-            const newQuantity =
-                (Number(existingItem.quantity) || 0)
-                +
-                quantity;
-
-
-            const {
-                error: updateError
-            } = await supabaseClient
-                .from("order_items")
-                .update({
-
-                    quantity: newQuantity,
-
-                    product_code:
-                        product.product_code
-
-                })
-                .eq(
-                    "id",
-                    existingItem.id
-                );
-
-
-            if (updateError) {
-
-                console.error(
-                    "خطأ تحديث الكمية:",
-                    updateError
-                );
-
-                alert(
-                    "حدث خطأ أثناء تحديث الكمية"
-                );
-
-                return;
-            }
-
-        }
-
-
-        /* =========================
-           المنتج غير موجود بالسلة
-        ========================= */
-
-        else {
-
-            const {
-                error: insertError
-            } = await supabaseClient
-                .from("order_items")
-                .insert({
-
-                    order_id:
-                        order.id,
-
-                    product_id:
-                        product.id,
-
-                    quantity:
-                        quantity,
-
-                    product_code:
-                        product.product_code,
-
-                    category:
-                        product.category,
-
-                    product_type:
-                        product.product_type,
-
-                    type:
-                        product.type,
-
-                    company:
-                        product.company,
-
-                    model:
-                        product.model,
-
-                    color:
-                        product.color,
-
-                    price:
-                        product.price,
-
-                    image:
-                        product.image
-
-                });
-
-
-            if (insertError) {
-
-                console.error(
-                    "خطأ إضافة المنتج:",
-                    insertError
-                );
-
-                alert(
-                    "حدث خطأ أثناء إضافة المنتج"
-                );
-
-                return;
-            }
-
-        }
-
-
-        /* =========================
-           إعادة حساب الإجمالي
-        ========================= */
-
-        const {
-            data: items,
-            error: totalError
-        } = await supabaseClient
-            .from("order_items")
-            .select("quantity, price")
-            .eq(
-                "order_id",
-                order.id
-            );
-
-
-        if (!totalError && items) {
-
-            const total =
-                items.reduce(
-                    (sum, item) => {
-
-                        return (
-                            sum +
-                            (
-                                Number(item.price) || 0
-                            ) *
-                            (
-                                Number(item.quantity) || 1
-                            )
-                        );
-
-                    },
-                    0
-                );
-
-
-            const {
-                error: updateTotalError
-            } = await supabaseClient
-                .from("orders")
-                .update({
-
-                    total: total
-
-                })
-                .eq(
-                    "id",
-                    order.id
-                );
-
-
-            if (updateTotalError) {
-
-                console.error(
-                    "خطأ تحديث الإجمالي:",
-                    updateTotalError
-                );
-
-            }
-
-        }
-
-
-        /* =========================
-           رسالة النجاح
-        ========================= */
-
-        alert(
-            "تمت إضافة " +
-            (
-                product.model ||
-                "المنتج"
-            ) +
-            (
-                product.color
-                ?
-                " - " + product.color
-                :
-                ""
-            ) +
-            " إلى السلة"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "خطأ غير متوقع:",
-            error
-        );
-
-        alert(
-            "حدث خطأ غير متوقع"
-        );
+        order = orders[0];
 
     }
 
+    // البحث عن المنتج داخل السلة
+    const {
+        data: existingItem,
+        error: itemError
+    } = await supabaseClient
+        .from("order_items")
+        .select("*")
+        .eq("order_id", order.id)
+        .eq("product_id", product.id)
+        .maybeSingle();
+
+    if (itemError) {
+        throw itemError;
+    }
+
+    // إذا المنتج موجود نزيد الكمية
+    if (existingItem) {
+
+        const newQuantity =
+            (Number(existingItem.quantity) || 0) +
+            quantity;
+
+        const {
+            error: updateError
+        } = await supabaseClient
+            .from("order_items")
+            .update({
+
+                quantity: newQuantity,
+
+                product_code:
+                    product.product_code
+
+            })
+            .eq(
+                "id",
+                existingItem.id
+            );
+
+        if (updateError) {
+            throw updateError;
+        }
+
+    }
+
+    // إذا المنتج غير موجود نضيفه
+    else {
+
+        const {
+            error: insertError
+        } = await supabaseClient
+            .from("order_items")
+            .insert({
+
+                order_id:
+                    order.id,
+
+                product_id:
+                    product.id,
+
+                quantity:
+                    quantity,
+
+                product_code:
+                    product.product_code,
+
+                category:
+                    product.category,
+
+                product_type:
+                    product.product_type,
+
+                type:
+                    product.type,
+
+                company:
+                    product.company,
+
+                model:
+                    product.model,
+
+                color:
+                    product.color,
+
+                price:
+                    product.price,
+
+                image:
+                    product.image
+
+            });
+
+        if (insertError) {
+            throw insertError;
+        }
+
+    }
+
+    // إعادة حساب الإجمالي
+    const {
+        data: items,
+        error: totalError
+    } = await supabaseClient
+        .from("order_items")
+        .select("quantity, price")
+        .eq(
+            "order_id",
+            order.id
+        );
+
+    if (totalError) {
+        throw totalError;
+    }
+
+    if (items) {
+
+        const total =
+            items.reduce(
+                (sum, item) => {
+
+                    return (
+                        sum +
+                        (
+                            Number(item.price) || 0
+                        ) *
+                        (
+                            Number(item.quantity) || 1
+                        )
+                    );
+
+                },
+                0
+            );
+
+        const {
+            error: updateTotalError
+        } = await supabaseClient
+            .from("orders")
+            .update({
+                total: total
+            })
+            .eq(
+                "id",
+                order.id
+            );
+
+        if (updateTotalError) {
+            throw updateTotalError;
+        }
+
+    }
+
+    // مهم جدًا:
+    // لا يوجد alert هنا
 }
