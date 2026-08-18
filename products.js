@@ -700,9 +700,10 @@ function openProductModal(variants) {
     border: 1px solid #ddd;
     border-radius: 10px;
     text-align: center;
-    font-size: 16px;
+    font-size: 16px !important;
     font-weight: bold;
     outline: none;
+    -webkit-text-size-adjust: 100%;
 }
 
 .color-quantity-input:focus {
