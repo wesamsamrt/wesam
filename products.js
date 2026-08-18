@@ -1256,7 +1256,7 @@ function openProductModal(variants) {
        إضافة جميع الألوان للسلة
     ===================================================== */
 
-    addButton.addEventListener("click", async function () {
+    addButton.onclick = async function () {
 
     /* ==========================================
        التأكد من تسجيل الدخول مرة واحدة فقط
@@ -1446,7 +1446,7 @@ function openProductModal(variants) {
     addButton.textContent =
         "إضافة للسلة";
 
-});
+};
 
 
     /* =====================================================
