@@ -1583,333 +1583,314 @@ function addProductModalStyles() {
 
 
     style.textContent = `
+     #productSelectModal {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    direction: rtl;
+}
 
-        #productSelectModal {
-            position: fixed;
-            inset: 0;
-            z-index: 999999;
-            direction: rtl;
-        }
+.product-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
 
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        .product-modal-overlay {
-            position: absolute;
-            inset: 0;
+    padding: 15px;
+    overflow-y: auto;
+}
 
-            background: rgba(0,0,0,0.55);
+.product-modal-box {
+    width: 100%;
+    max-width: 520px;
+    max-height: 92vh;
 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+    background: white;
 
-            padding: 20px;
+    border-radius: 26px;
 
-            overflow-y: auto;
-        }
+    position: relative;
 
+    box-shadow:
+        0 25px 70px rgba(0,0,0,0.25);
 
-        .product-modal-box {
+    overflow: hidden;
+}
 
-            width: 100%;
-            max-width: 520px;
+.product-modal-content {
+    padding: 28px 20px;
 
-            max-height: 90vh;
+    max-height: 92vh;
+    overflow-y: auto;
+}
 
-            background: white;
+/* زر الإغلاق */
 
-            border-radius: 24px;
+.product-modal-close {
+    position: absolute;
 
-            position: relative;
+    top: 14px;
+    left: 14px;
 
-            box-shadow:
-                0 25px 70px
-                rgba(0,0,0,0.25);
+    width: 42px;
+    height: 42px;
 
-            overflow: hidden;
-        }
+    border: none;
+    border-radius: 50%;
 
+    background: #f1f1f4;
 
-        .product-modal-content {
+    font-size: 27px;
 
-            padding: 30px;
+    cursor: pointer;
 
-            max-height: 90vh;
+    z-index: 5;
+}
 
-            overflow-y: auto;
-        }
+/* العنوان */
 
+.modal-icon {
+    text-align: center;
+    font-size: 42px;
+    margin-bottom: 5px;
+}
 
-        .product-modal-close {
+.modal-type {
+    text-align: center;
 
-            position: absolute;
+    font-size: 13px;
 
-            top: 15px;
-            left: 15px;
+    color: #777;
+}
 
-            width: 44px;
-            height: 44px;
+.product-modal-content h2 {
+    text-align: center;
 
-            border: none;
+    margin: 8px 0 25px;
 
-            border-radius: 50%;
+    font-size: 23px;
 
-            background: #f1f1f1;
+    font-weight: 800;
+}
 
-            font-size: 28px;
+/* الماركة والموديل */
 
-            cursor: pointer;
+.product-modal-content label {
+    display: block;
 
-            z-index: 2;
-        }
+    margin: 17px 0 8px;
 
+    font-size: 14px;
 
-        .product-modal-close:hover {
-            background: #e5e5e5;
-        }
+    font-weight: 800;
 
+    color: #333;
+}
 
-        .modal-icon {
+.product-select {
+    width: 100%;
 
-            text-align: center;
+    height: 52px;
 
-            font-size: 45px;
+    padding: 0 15px;
 
-            margin-bottom: 5px;
-        }
+    border: 1px solid #e4e4ea;
 
+    border-radius: 14px;
 
-        .modal-type {
+    background: #fafafa;
 
-            text-align: center;
+    font-size: 16px;
 
-            font-size: 14px;
+    outline: none;
+}
 
-            color: #555;
+.product-select:focus {
+    background: white;
 
-            margin-bottom: 5px;
-        }
+    border-color: #4935b5;
 
+    box-shadow:
+        0 0 0 4px
+        rgba(73,53,181,0.1);
+}
 
-        .product-modal-content h2 {
+/* الألوان */
 
-            text-align: center;
+.colors-title {
+    margin-top: 25px;
 
-            margin-top: 5px;
+    margin-bottom: 12px;
 
-            margin-bottom: 25px;
-        }
+    font-size: 17px;
 
+    font-weight: 800;
 
-        .product-modal-content label {
+    color: #222;
+}
 
-            display: block;
-
-            font-weight: bold;
-
-            margin:
-
-                14px
-
-                0
-
-                7px;
-        }
-
-
-        .product-select {
-
-            width: 100%;
-
-            height: 50px;
-
-            padding: 0 14px;
-
-            border: 1px solid #ddd;
-
-            border-radius: 12px;
-
-            background: white;
-
-            font-size: 16px;
-
-            outline: none;
-        }
-
-
-        .product-select:focus {
-
-            border-color: #4935b5;
-
-            box-shadow:
-                0 0 0 3px
-                rgba(73,53,181,0.1);
-        }
-
-
-        .product-select:disabled {
-
-            background: #f4f4f4;
-
-            color: #999;
-
-            cursor: not-allowed;
-        }
-
-
-        .selected-product-price {
-
-            margin-top: 22px;
-
-            padding: 16px;
-
-            background: #f7f7f7;
-
-            border-radius: 14px;
-
-            text-align: center;
-
-            line-height: 1.8;
-
-            min-height: 30px;
-        }
-
-
-        .modal-price {
-
-            font-size: 22px;
-
-            font-weight: bold;
-
-            margin-top: 5px;
-        }
-
-
-
-.quantity-control {
-
+.color-quantity-row {
     display: flex;
 
     align-items: center;
 
-    justify-content: center;
+    justify-content: space-between;
 
-    gap: 10px;
+    gap: 12px;
 
-    margin-top: 8px;
+    padding: 14px;
 
+    margin-top: 10px;
+
+    background: white;
+
+    border: 1px solid #e8e8ee;
+
+    border-radius: 17px;
+
+    box-shadow:
+        0 4px 14px rgba(0,0,0,0.04);
 }
 
+.color-info {
+    flex: 1;
+}
 
-.quantity-button {
+.color-name {
+    font-size: 16px;
 
-    width: 50px;
+    font-weight: 800;
 
-    height: 50px;
+    color: #222;
+}
+
+.color-stock {
+    margin-top: 5px;
+
+    font-size: 13px;
+
+    color: #888;
+}
+
+/* أزرار الكمية */
+
+.color-quantity-control {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    direction: ltr;
+}
+
+.color-minus,
+.color-plus {
+    width: 39px;
+
+    height: 39px;
 
     border: none;
 
-    border-radius: 12px;
+    border-radius: 11px;
 
     background: #4935b5;
 
     color: white;
 
-    font-size: 28px;
+    font-size: 21px;
 
     font-weight: bold;
 
     cursor: pointer;
-
 }
 
+.color-quantity-input {
+    width: 50px;
 
-.quantity-button:hover {
-
-    opacity: 0.9;
-
-}
-
-
-.quantity-input {
-
-    width: 120px;
-
-    height: 50px;
+    height: 39px;
 
     border: 1px solid #ddd;
 
-    border-radius: 12px;
+    border-radius: 11px;
+
+    background: #fafafa;
 
     text-align: center;
 
-    font-size: 20px;
+    font-size: 16px !important;
 
-    font-weight: bold;
+    font-weight: 800;
 
     outline: none;
-
 }
 
+/* ملخص الكمية */
 
-.quantity-input:focus {
+.stock-summary {
+    margin-top: 18px;
 
-    border-color: #4935b5;
+    padding: 15px;
+
+    background: #f5f3ff;
+
+    border: 1px solid #e5e0ff;
+
+    border-radius: 17px;
+
+    text-align: center;
+
+    line-height: 1.9;
+
+    font-size: 14px;
+
+    color: #666;
+}
+
+.stock-summary strong {
+    color: #4935b5;
+
+    font-size: 19px;
+}
+
+/* زر إضافة للسلة */
+
+.confirm-add-product {
+    width: 100%;
+
+    height: 54px;
+
+    margin-top: 18px;
+
+    border: none;
+
+    border-radius: 15px;
+
+    background: #4935b5;
+
+    color: white;
+
+    font-size: 17px;
+
+    font-weight: 800;
+
+    cursor: pointer;
 
     box-shadow:
-        0 0 0 3px
-        rgba(73,53,181,0.1);
-
+        0 7px 18px
+        rgba(73,53,181,0.2);
 }
 
+.confirm-add-product:disabled {
+    background: #ccc;
 
-/* إخفاء أسهم input number */
+    box-shadow: none;
 
-.quantity-input::-webkit-inner-spin-button,
-.quantity-input::-webkit-outer-spin-button {
-
-    opacity: 1;
-
+    cursor: not-allowed;
 }
-
-
-
-        .confirm-add-product {
-
-            width: 100%;
-
-            height: 52px;
-
-            margin-top: 18px;
-
-            border: none;
-
-            border-radius: 14px;
-
-            background: #4935b5;
-
-            color: white;
-
-            font-size: 17px;
-
-            font-weight: bold;
-
-            cursor: pointer;
-        }
-
-
-        .confirm-add-product:hover {
-
-            opacity: 0.9;
-        }
-
-
-        .confirm-add-product:disabled {
-
-            background: #ccc;
-
-            cursor: not-allowed;
-        }
-
     `;
 
 
