@@ -541,7 +541,187 @@
 
 
 
+<!-- =========================================================
+     نافذة تعديل الطلب
+========================================================= -->
 
+<div
+    id="editOrderModal"
+    class="edit-order-modal"
+    style="display:none;"
+>
+
+    <div class="edit-order-box">
+
+        <div class="edit-order-header">
+
+            <div>
+                <h2>تعديل الطلب</h2>
+
+                <p id="editOrderNumber">
+                    الطلب #
+                </p>
+            </div>
+
+            <button
+                type="button"
+                id="closeEditOrderButton"
+                class="close-edit-order"
+            >
+                ✕
+            </button>
+
+        </div>
+
+
+        <!-- بيانات العميل -->
+
+        <div class="edit-order-section">
+
+            <h3>
+                بيانات العميل
+            </h3>
+
+            <div class="edit-order-grid">
+
+                <div class="edit-order-field">
+
+                    <label>
+                        اسم العميل
+                    </label>
+
+                    <input
+                        type="text"
+                        id="editOrderCustomerName"
+                    >
+
+                </div>
+
+
+                <div class="edit-order-field">
+
+                    <label>
+                        رقم الجوال
+                    </label>
+
+                    <input
+                        type="text"
+                        id="editOrderCustomerPhone"
+                    >
+
+                </div>
+
+
+                <div class="edit-order-field">
+
+                    <label>
+                        اسم المندوب
+                    </label>
+
+                    <input
+                        type="text"
+                        id="editOrderDriverName"
+                    >
+
+                </div>
+
+
+                <div class="edit-order-field">
+
+                    <label>
+                        رقم المندوب
+                    </label>
+
+                    <input
+                        type="text"
+                        id="editOrderDriverNumber"
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- منتجات الطلب -->
+
+        <div class="edit-order-section">
+
+            <div class="edit-order-items-title">
+
+                <h3>
+                    منتجات الطلب
+                </h3>
+
+                <button
+                    type="button"
+                    id="addOrderItemButton"
+                    class="add-order-item-button"
+                >
+                    + إضافة منتج
+                </button>
+
+            </div>
+
+
+            <div
+                id="editOrderItems"
+                class="edit-order-items"
+            ></div>
+
+        </div>
+
+
+        <!-- الإجمالي -->
+
+        <div class="edit-order-total">
+
+            <span>
+                إجمالي الطلب
+            </span>
+
+            <strong>
+                <span id="editOrderTotal">
+                    0.00
+                </span>
+                ر.س
+            </strong>
+
+        </div>
+
+
+        <!-- الأزرار -->
+
+        <div class="edit-order-actions">
+
+            <button
+                type="button"
+                id="saveOrderEditButton"
+                class="save-order-edit"
+            >
+                حفظ التعديلات
+            </button>
+
+            <button
+                type="button"
+                id="cancelOrderEditButton"
+                class="cancel-order-edit"
+            >
+                إلغاء
+            </button>
+
+        </div>
+
+
+        <div
+            id="editOrderMessage"
+            class="edit-order-message"
+        ></div>
+
+    </div>
+
+</div>
 
 
     <script src="admin.js"></script>

@@ -3,6 +3,16 @@
 
 <head>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6557ed">
+
+
+
+
+
+
+
+
     <meta charset="UTF-8">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3373,6 +3383,31 @@ async function searchProducts(value) {
 
 
     </script>
+
+
+
+
+
+
+
+
+<script>
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js")
+            .then(() => {
+                console.log("PWA جاهز ✅");
+            })
+            .catch(error => {
+                console.error("خطأ:", error);
+            });
+    });
+}
+</script>
+
+
+
+
 
 
 </body>

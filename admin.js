@@ -1935,12 +1935,23 @@ Object.entries(typeCodes).forEach(
 
                 ${date}
 
-                <button
-                    class="print-order-button"
-                    onclick="printOrder(${order.id})"
-                >
-                    🖨️ طباعة الطلب
-                </button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+
+    <button
+        class="edit-order-button"
+        onclick="editOrder(${order.id})"
+    >
+        ✏️ تعديل الطلب
+    </button>
+
+    <button
+        class="print-order-button"
+        onclick="printOrder(${order.id})"
+    >
+        🖨️ طباعة الطلب
+    </button>
+
+</div>
 
             </div>
 
@@ -2919,6 +2930,1312 @@ Object.entries(typeCodes).forEach(
             "حدث خطأ أثناء تجهيز الطلب للطباعة"
         );
 
+    }
+
+}
+
+
+/* =========================================================
+   تعديل الطلب
+========================================================= */
+
+let editingOrderId = null;
+let editingOrderItems = [];
+
+
+/* عناصر نافذة التعديل */
+
+const editOrderModal =
+    document.getElementById("editOrderModal");
+
+const closeEditOrderButton =
+    document.getElementById("closeEditOrderButton");
+
+const cancelOrderEditButton =
+    document.getElementById("cancelOrderEditButton");
+
+const saveOrderEditButton =
+    document.getElementById("saveOrderEditButton");
+
+const addOrderItemButton =
+    document.getElementById("addOrderItemButton");
+
+const editOrderItems =
+    document.getElementById("editOrderItems");
+
+const editOrderTotal =
+    document.getElementById("editOrderTotal");
+
+const editOrderMessage =
+    document.getElementById("editOrderMessage");
+
+
+/* =========================================================
+   فتح تعديل الطلب
+========================================================= */
+
+async function editOrder(orderId) {
+
+    try {
+
+        editOrderMessage.textContent = "";
+
+        editingOrderId = orderId;
+
+
+        /* =========================
+           جلب الطلب
+        ========================= */
+
+        const {
+            data: order,
+            error: orderError
+        } = await supabaseClient
+            .from("orders")
+            .select("*")
+            .eq("id", orderId)
+            .single();
+
+
+        if (orderError || !order) {
+
+            console.error(orderError);
+
+            alert("لم يتم العثور على الطلب");
+
+            return;
+
+        }
+
+
+        /* =========================
+           جلب منتجات الطلب
+        ========================= */
+
+        const {
+            data: items,
+            error: itemsError
+        } = await supabaseClient
+            .from("order_items")
+            .select("*")
+            .eq("order_id", orderId)
+            .order("id", {
+                ascending: true
+            });
+
+
+        if (itemsError) {
+
+            console.error(itemsError);
+
+            alert(
+                "حدث خطأ أثناء تحميل منتجات الطلب:\n" +
+                itemsError.message
+            );
+
+            return;
+
+        }
+
+
+        /* =========================
+           بيانات العميل
+        ========================= */
+
+        document.getElementById(
+            "editOrderNumber"
+        ).textContent =
+            `الطلب #${order.id}`;
+
+
+        document.getElementById(
+            "editOrderCustomerName"
+        ).value =
+            order.customer_name || "";
+
+
+        document.getElementById(
+            "editOrderCustomerPhone"
+        ).value =
+            order.customer_phone || "";
+
+
+        document.getElementById(
+            "editOrderDriverName"
+        ).value =
+            order.driver_name || "";
+
+
+        document.getElementById(
+            "editOrderDriverNumber"
+        ).value =
+            order.driver_number || "";
+
+
+        /* =========================
+           نسخ المنتجات
+        ========================= */
+
+        editingOrderItems =
+            (items || []).map(item => ({
+                ...item
+            }));
+
+
+        renderEditOrderItems();
+
+
+        /* =========================
+           فتح النافذة
+        ========================= */
+
+        editOrderModal.style.display =
+            "flex";
+
+
+        document.body.style.overflow =
+            "hidden";
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Edit Order Error:",
+            error
+        );
+
+        alert(
+            "حدث خطأ أثناء فتح تعديل الطلب"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   عرض منتجات الطلب داخل النافذة
+========================================================= */
+
+function renderEditOrderItems() {
+
+    editOrderItems.innerHTML = "";
+
+
+    if (!editingOrderItems.length) {
+
+        editOrderItems.innerHTML = `
+
+            <div class="message">
+
+                لا توجد منتجات في الطلب
+
+            </div>
+
+        `;
+
+        calculateEditOrderTotal();
+
+        return;
+
+    }
+
+
+    editingOrderItems.forEach(
+        (item, index) => {
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "edit-order-item";
+
+
+            row.innerHTML = `
+
+                <div class="edit-order-item-grid">
+
+                    <div class="edit-order-item-field">
+
+                        <label>
+                            الموديل
+                        </label>
+
+                        <input
+                            type="text"
+                            value="${escapeHtmlAttribute(item.model || "")}"
+                            onchange="changeEditOrderItem(${index}, 'model', this.value)"
+                        >
+
+                    </div>
+
+
+                    <div class="edit-order-item-field">
+
+                        <label>
+                            اللون
+                        </label>
+
+                        <input
+                            type="text"
+                            value="${escapeHtmlAttribute(item.color || "")}"
+                            onchange="changeEditOrderItem(${index}, 'color', this.value)"
+                        >
+
+                    </div>
+
+
+                    <div class="edit-order-item-field">
+
+                        <label>
+                            الكمية
+                        </label>
+
+                        <input
+                            type="number"
+                            min="1"
+                            value="${Number(item.quantity || 1)}"
+                            onchange="changeEditOrderItem(${index}, 'quantity', this.value)"
+                        >
+
+                    </div>
+
+
+                    <div class="edit-order-item-field">
+
+                        <label>
+                            السعر
+                        </label>
+
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value="${Number(item.price || 0)}"
+                            onchange="changeEditOrderItem(${index}, 'price', this.value)"
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="remove-order-item"
+                        onclick="removeEditOrderItem(${index})"
+                    >
+                        🗑️
+                    </button>
+
+                </div>
+
+            `;
+
+
+            editOrderItems.appendChild(row);
+
+        }
+    );
+
+
+    calculateEditOrderTotal();
+
+}
+
+
+/* =========================================================
+   تغيير بيانات منتج
+========================================================= */
+
+function changeEditOrderItem(
+    index,
+    field,
+    value
+) {
+
+    if (!editingOrderItems[index]) {
+
+        return;
+
+    }
+
+
+    if (
+        field === "quantity"
+    ) {
+
+        value =
+            Math.max(
+                1,
+                Number(value) || 1
+            );
+
+    }
+
+
+    if (
+        field === "price"
+    ) {
+
+        value =
+            Math.max(
+                0,
+                Number(value) || 0
+            );
+
+    }
+
+
+    editingOrderItems[index][field] =
+        value;
+
+
+    calculateEditOrderTotal();
+
+}
+
+
+/* =========================================================
+   حذف منتج من الطلب
+========================================================= */
+
+function removeEditOrderItem(index) {
+
+    if (!editingOrderItems[index]) {
+
+        return;
+
+    }
+
+
+    const confirmed =
+        confirm(
+            "هل تريد حذف هذا المنتج من الطلب؟"
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    editingOrderItems.splice(
+        index,
+        1
+    );
+
+
+    renderEditOrderItems();
+
+}
+
+
+/* =========================================================
+   حساب الإجمالي
+========================================================= */
+
+function calculateEditOrderTotal() {
+
+    const total =
+        editingOrderItems.reduce(
+            (sum, item) => {
+
+                const price =
+                    Number(item.price || 0);
+
+                const quantity =
+                    Number(item.quantity || 1);
+
+                return sum +
+                    (price * quantity);
+
+            },
+            0
+        );
+
+
+    editOrderTotal.textContent =
+        total.toFixed(2);
+
+
+    return total;
+
+}
+
+
+/* =========================================================
+   إضافة منتج جديد للطلب
+========================================================= */
+
+
+
+/* =========================================================
+   حفظ تعديل الطلب
+========================================================= */
+
+saveOrderEditButton.addEventListener(
+    "click",
+    saveOrderEdit
+);
+
+
+async function saveOrderEdit() {
+
+    if (!editingOrderId) {
+
+        return;
+
+    }
+
+
+    try {
+
+        saveOrderEditButton.disabled =
+            true;
+
+        saveOrderEditButton.textContent =
+            "جاري الحفظ...";
+
+
+        editOrderMessage.textContent = "";
+
+
+        /* =========================
+           بيانات العميل
+        ========================= */
+
+        const customerName =
+            document.getElementById(
+                "editOrderCustomerName"
+            ).value.trim();
+
+
+        const customerPhone =
+            document.getElementById(
+                "editOrderCustomerPhone"
+            ).value.trim();
+
+
+        const driverName =
+            document.getElementById(
+                "editOrderDriverName"
+            ).value.trim();
+
+
+        const driverNumber =
+            document.getElementById(
+                "editOrderDriverNumber"
+            ).value.trim();
+
+
+        /* =========================
+           حساب الإجمالي
+        ========================= */
+
+        const total =
+            calculateEditOrderTotal();
+
+
+        /* =========================
+           تحديث الطلب
+        ========================= */
+
+        const {
+            error: orderUpdateError
+        } = await supabaseClient
+            .from("orders")
+            .update({
+
+                customer_name:
+                    customerName,
+
+                customer_phone:
+                    customerPhone,
+
+                driver_name:
+                    driverName,
+
+                driver_number:
+                    driverNumber,
+
+                total:
+                    total
+
+            })
+            .eq("id", editingOrderId);
+
+
+        if (orderUpdateError) {
+
+            throw orderUpdateError;
+
+        }
+
+
+        /* =========================
+           تحديث المنتجات
+        ========================= */
+
+        const originalItems =
+            editingOrderItems.filter(
+                item => item.id
+            );
+
+
+        const currentIds =
+            originalItems.map(
+                item => item.id
+            );
+
+
+        /* =========================
+           حذف المنتجات التي حذفها الأدمن
+        ========================= */
+
+        const {
+            data: oldItems,
+            error: oldItemsError
+        } = await supabaseClient
+            .from("order_items")
+            .select("id")
+            .eq("order_id", editingOrderId);
+
+
+        if (oldItemsError) {
+
+            throw oldItemsError;
+
+        }
+
+
+        const idsToDelete =
+            (oldItems || [])
+                .filter(
+                    oldItem =>
+                        !currentIds.includes(
+                            oldItem.id
+                        )
+                )
+                .map(
+                    item => item.id
+                );
+
+
+        if (idsToDelete.length) {
+
+            const {
+                error: deleteError
+            } = await supabaseClient
+                .from("order_items")
+                .delete()
+                .in(
+                    "id",
+                    idsToDelete
+                );
+
+
+            if (deleteError) {
+
+                throw deleteError;
+
+            }
+
+        }
+
+
+        /* =========================
+           تحديث المنتجات الموجودة
+        ========================= */
+
+        for (
+            const item
+            of originalItems
+        ) {
+
+            const {
+                error: itemUpdateError
+            } = await supabaseClient
+                .from("order_items")
+                .update({
+
+                    product_code:
+                        item.product_code || null,
+
+                    category:
+                        item.category || null,
+
+                    product_type:
+                        item.product_type || null,
+
+                    type:
+                        item.type || null,
+
+                    company:
+                        item.company || null,
+
+                    model:
+                        item.model || null,
+
+                    color:
+                        item.color || null,
+
+                    quantity:
+                        Math.max(
+                            1,
+                            Number(
+                                item.quantity
+                            ) || 1
+                        ),
+
+                    price:
+                        Math.max(
+                            0,
+                            Number(
+                                item.price
+                            ) || 0
+                        ),
+
+                    image:
+                        item.image || null
+
+                })
+                .eq(
+                    "id",
+                    item.id
+                );
+
+
+            if (itemUpdateError) {
+
+                throw itemUpdateError;
+
+            }
+
+        }
+
+
+        /* =========================
+           إضافة المنتجات الجديدة
+        ========================= */
+
+        const newItems =
+            editingOrderItems.filter(
+                item => !item.id
+            );
+
+
+        if (newItems.length) {
+
+            const insertData =
+                newItems.map(item => ({
+
+                    order_id:
+                        editingOrderId,
+
+                    product_id:
+                       item.product_id,    
+
+                    product_code:
+                        item.product_code || null,
+
+                    category:
+                        item.category || null,
+
+                    product_type:
+                        item.product_type || null,
+
+                    type:
+                        item.type || null,
+
+                    company:
+                        item.company || null,
+
+                    model:
+                        item.model || null,
+
+                    color:
+                        item.color || null,
+
+                    quantity:
+                        Math.max(
+                            1,
+                            Number(
+                                item.quantity
+                            ) || 1
+                        ),
+
+                    price:
+                        Math.max(
+                            0,
+                            Number(
+                                item.price
+                            ) || 0
+                        ),
+
+                    image:
+                        item.image || null
+
+                }));
+
+
+            const {
+                error: insertError
+            } = await supabaseClient
+                .from("order_items")
+                .insert(
+                    insertData
+                );
+
+
+            if (insertError) {
+
+                throw insertError;
+
+            }
+
+        }
+
+
+        /* =========================
+           نجاح
+        ========================= */
+
+        editOrderMessage.textContent =
+            "تم حفظ تعديل الطلب بنجاح ✅";
+
+        editOrderMessage.style.color =
+            "#2e9d69";
+
+
+        setTimeout(
+            async function () {
+
+                closeEditOrder();
+
+                await loadAdminOrders();
+
+            },
+            700
+        );
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Save Order Edit Error:",
+            error
+        );
+
+
+        editOrderMessage.textContent =
+            "حدث خطأ أثناء حفظ التعديلات:\n" +
+            error.message;
+
+        editOrderMessage.style.color =
+            "#e05265";
+
+    }
+
+    finally {
+
+        saveOrderEditButton.disabled =
+            false;
+
+        saveOrderEditButton.textContent =
+            "حفظ التعديلات";
+
+    }
+
+}
+
+
+/* =========================================================
+   إغلاق نافذة التعديل
+========================================================= */
+
+function closeEditOrder() {
+
+    editOrderModal.style.display =
+        "none";
+
+    document.body.style.overflow =
+        "";
+
+    editingOrderId = null;
+
+    editingOrderItems = [];
+
+}
+
+
+/* =========================================================
+   أزرار الإغلاق
+========================================================= */
+
+closeEditOrderButton.addEventListener(
+    "click",
+    closeEditOrder
+);
+
+
+cancelOrderEditButton.addEventListener(
+    "click",
+    closeEditOrder
+);
+
+
+/* إغلاق عند الضغط خارج النافذة */
+
+editOrderModal.addEventListener(
+    "click",
+    function (event) {
+
+        if (
+            event.target ===
+            editOrderModal
+        ) {
+
+            closeEditOrder();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   حماية النصوص داخل value=""
+========================================================= */
+
+function escapeHtmlAttribute(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+}
+
+
+
+/* =========================================================
+   اختيار منتج لإضافته إلى الطلب
+========================================================= */
+addOrderItemButton.addEventListener("click", async function () {
+
+    addOrderItemButton.disabled = true;
+    addOrderItemButton.textContent = "جاري تحميل المنتجات...";
+
+    try {
+
+        const { data, error } = await supabaseClient
+            .from("products")
+            .select("*")
+            .order("id", { ascending: false })
+            .limit(1000);
+
+        if (error) {
+
+            console.error("PRODUCT LOAD ERROR:", error);
+
+            alert(
+                "خطأ في تحميل المنتجات:\n\n" +
+                error.message
+            );
+
+            return;
+        }
+
+        console.log(
+            "منتجات الإضافة:",
+            data
+        );
+
+        if (!data || data.length === 0) {
+
+            alert("لم يتم العثور على منتجات");
+
+            return;
+        }
+
+        showOrderProductList(data);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "ADD PRODUCT ERROR:",
+            error
+        );
+
+        alert(
+            "حدث خطأ:\n\n" +
+            error.message
+        );
+
+    }
+
+    finally {
+
+        addOrderItemButton.disabled = false;
+
+        addOrderItemButton.textContent =
+            "+ إضافة منتج";
+
+    }
+
+});
+
+
+function showOrderProductList(products) {
+
+    const oldPicker =
+        document.getElementById("orderProductPicker");
+
+    if (oldPicker) {
+        oldPicker.remove();
+    }
+
+
+    const picker =
+        document.createElement("div");
+
+    picker.id =
+        "orderProductPicker";
+
+    picker.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0,0,0,.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    `;
+
+
+    picker.innerHTML = `
+
+        <div style="
+            background:white;
+            width:100%;
+            max-width:700px;
+            max-height:85vh;
+            overflow:hidden;
+            border-radius:20px;
+            padding:20px;
+        ">
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:15px;
+            ">
+
+                <h3 style="margin:0;">
+                    اختر المنتج
+                </h3>
+
+                <button
+                    type="button"
+                    onclick="closeOrderProductPicker()"
+                    style="
+                        border:none;
+                        background:#eee;
+                        border-radius:10px;
+                        width:38px;
+                        height:38px;
+                        cursor:pointer;
+                    "
+                >
+                    ✕
+                </button>
+
+            </div>
+
+
+            <input
+                id="orderProductSearch"
+                type="text"
+                placeholder="ابحث عن موديل أو شركة..."
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:13px;
+                    border:1px solid #ddd;
+                    border-radius:12px;
+                    margin-bottom:15px;
+                    font-family:inherit;
+                "
+            >
+
+
+            <div
+                id="orderProductList"
+                style="
+                    max-height:60vh;
+                    overflow-y:auto;
+                "
+            ></div>
+
+        </div>
+    `;
+
+
+    document.body.appendChild(picker);
+
+
+    renderOrderProductList(products);
+
+
+    document
+        .getElementById("orderProductSearch")
+        .addEventListener("input", function () {
+
+            const search =
+                this.value
+                    .trim()
+                    .toLowerCase();
+
+
+            const filtered =
+                products.filter(product => {
+
+                    const text = `
+                        ${product.model || ""}
+                        ${product.company || ""}
+                        ${product.product_code || ""}
+                        ${product.category || ""}
+                        ${product.product_type || ""}
+                        ${product.type || ""}
+                    `.toLowerCase();
+
+
+                    return text.includes(search);
+
+                });
+
+
+            renderOrderProductList(filtered);
+
+        });
+
+}
+
+function renderOrderProductList(products) {
+
+    const list =
+        document.getElementById(
+            "orderProductList"
+        );
+
+    if (!list) return;
+
+    list.innerHTML = "";
+
+
+    products.forEach(product => {
+
+        const button =
+            document.createElement("button");
+
+        button.type = "button";
+
+        button.style.cssText = `
+            width:100%;
+            display:flex;
+            align-items:center;
+            gap:12px;
+            padding:12px;
+            margin-bottom:8px;
+            border:1px solid #eee;
+            border-radius:12px;
+            background:white;
+            cursor:pointer;
+            text-align:right;
+            font-family:inherit;
+        `;
+
+
+        button.innerHTML = `
+
+            <div style="
+                width:55px;
+                height:55px;
+                border-radius:10px;
+                overflow:hidden;
+                background:#f3f3f3;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                flex-shrink:0;
+            ">
+
+                ${
+                    product.image
+                    ?
+                    `<img
+                        src="${escapeHtmlAttribute(product.image)}"
+                        style="
+                            width:100%;
+                            height:100%;
+                            object-fit:cover;
+                        "
+                    >`
+                    :
+                    "📦"
+                }
+
+            </div>
+
+
+            <div>
+
+                <strong>
+                    ${escapeHtmlAttribute(
+                        product.model ||
+                        "بدون موديل"
+                    )}
+                </strong>
+
+                <div style="
+                    color:#777;
+                    font-size:12px;
+                    margin-top:4px;
+                ">
+
+                    ${escapeHtmlAttribute(
+                        product.company || ""
+                    )}
+
+                    ${
+                        product.color
+                        ?
+                        " • " +
+                        escapeHtmlAttribute(
+                            product.color
+                        )
+                        :
+                        ""
+                    }
+
+                </div>
+
+
+                <div style="
+                    color:#6557ed;
+                    font-size:12px;
+                    margin-top:4px;
+                ">
+
+                    ${Number(
+                        product.price || 0
+                    ).toFixed(2)} ر.س
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        button.addEventListener(
+            "click",
+            function () {
+
+                addProductToCurrentOrder(
+                    product
+                );
+
+            }
+        );
+
+
+        list.appendChild(button);
+
+    });
+
+}
+
+
+
+function addProductToCurrentOrder(product) {
+
+    if (!product || !product.id) {
+
+        alert(
+            "المنتج لا يحتوي على رقم product_id"
+        );
+
+        return;
+
+    }
+
+
+    editingOrderItems.push({
+
+        id: null,
+
+        order_id:
+            editingOrderId,
+
+        product_id:
+            product.id,
+
+        product_code:
+            product.product_code || null,
+
+        category:
+            product.category || null,
+
+        product_type:
+            product.product_type || null,
+
+        type:
+            product.type || null,
+
+        company:
+            product.company || null,
+
+        model:
+            product.model || null,
+
+        color:
+            product.color || null,
+
+        quantity: 1,
+
+        price:
+            Number(product.price || 0),
+
+        image:
+            product.image || null
+
+    });
+
+
+    closeOrderProductPicker();
+
+    renderEditOrderItems();
+
+}
+function closeOrderProductPicker() {
+
+    const picker =
+        document.getElementById(
+            "orderProductPicker"
+        );
+
+    if (picker) {
+        picker.remove();
     }
 
 }

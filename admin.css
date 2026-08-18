@@ -931,3 +931,496 @@ body {
     white-space: nowrap;
 
 }
+
+/* =========================================================
+   نافذة تعديل الطلب
+========================================================= */
+
+.edit-order-modal {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    background: rgba(0, 0, 0, 0.55);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+    overflow-y: auto;
+
+}
+
+
+.edit-order-box {
+
+    width: 100%;
+
+    max-width: 900px;
+
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    background: white;
+
+    border-radius: 22px;
+
+    padding: 25px;
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.25);
+
+}
+
+
+.edit-order-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    margin-bottom: 25px;
+
+}
+
+
+.edit-order-header h2 {
+
+    margin: 0;
+
+    font-size: 24px;
+
+}
+
+
+.edit-order-header p {
+
+    margin: 5px 0 0;
+
+    color: #777;
+
+    font-size: 14px;
+
+}
+
+
+.close-edit-order {
+
+    width: 40px;
+
+    height: 40px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background: #f1f1f1;
+
+    cursor: pointer;
+
+    font-size: 18px;
+
+}
+
+
+.edit-order-section {
+
+    margin-bottom: 25px;
+
+    padding: 20px;
+
+    background: #f8f8fb;
+
+    border-radius: 18px;
+
+}
+
+
+.edit-order-section h3 {
+
+    margin: 0 0 18px;
+
+    font-size: 18px;
+
+}
+
+
+.edit-order-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 15px;
+
+}
+
+
+.edit-order-field {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 7px;
+
+}
+
+
+.edit-order-field label {
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+}
+
+
+.edit-order-field input {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    border: 1px solid #ddd;
+
+    border-radius: 12px;
+
+    padding: 12px;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    background: white;
+
+    outline: none;
+
+}
+
+
+.edit-order-field input:focus {
+
+    border-color: #6557ed;
+
+}
+
+
+/* =========================================================
+   عنوان المنتجات
+========================================================= */
+
+.edit-order-items-title {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+    margin-bottom: 15px;
+
+}
+
+
+.edit-order-items-title h3 {
+
+    margin: 0;
+
+}
+
+
+.add-order-item-button {
+
+    border: none;
+
+    border-radius: 11px;
+
+    padding: 10px 15px;
+
+    background: #6557ed;
+
+    color: white;
+
+    font-family: inherit;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+}
+
+
+/* =========================================================
+   المنتج داخل التعديل
+========================================================= */
+
+.edit-order-item {
+
+    background: white;
+
+    border: 1px solid #e5e5e5;
+
+    border-radius: 16px;
+
+    padding: 15px;
+
+    margin-bottom: 12px;
+
+}
+
+
+.edit-order-item-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        1.5fr
+        1fr
+        0.7fr
+        0.8fr
+        auto;
+
+    gap: 10px;
+
+    align-items: end;
+
+}
+
+
+.edit-order-item-field {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+}
+
+
+.edit-order-item-field label {
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    color: #666;
+
+}
+
+
+.edit-order-item-field input {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 10px;
+
+    border: 1px solid #ddd;
+
+    border-radius: 10px;
+
+    font-family: inherit;
+
+    outline: none;
+
+}
+
+
+.edit-order-item-field input:focus {
+
+    border-color: #6557ed;
+
+}
+
+
+.remove-order-item {
+
+    border: none;
+
+    background: #ffe8e8;
+
+    color: #d33;
+
+    width: 40px;
+
+    height: 40px;
+
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    font-size: 16px;
+
+}
+
+
+/* =========================================================
+   إجمالي الطلب
+========================================================= */
+
+.edit-order-total {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 18px 20px;
+
+    border-radius: 16px;
+
+    background: #eeeaff;
+
+    margin-bottom: 20px;
+
+    font-size: 17px;
+
+}
+
+
+.edit-order-total strong {
+
+    font-size: 20px;
+
+}
+
+
+/* =========================================================
+   أزرار الحفظ والإلغاء
+========================================================= */
+
+.edit-order-actions {
+
+    display: flex;
+
+    gap: 10px;
+
+}
+
+
+.save-order-edit,
+.cancel-order-edit {
+
+    flex: 1;
+
+    border: none;
+
+    border-radius: 13px;
+
+    padding: 14px;
+
+    font-family: inherit;
+
+    font-size: 15px;
+
+    font-weight: 800;
+
+    cursor: pointer;
+
+}
+
+
+.save-order-edit {
+
+    background: #2e9d69;
+
+    color: white;
+
+}
+
+
+.cancel-order-edit {
+
+    background: #eee;
+
+    color: #333;
+
+}
+
+
+.edit-order-message {
+
+    text-align: center;
+
+    margin-top: 12px;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+}
+
+
+/* =========================================================
+   الجوال
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .edit-order-modal {
+
+        padding: 10px;
+
+        align-items: flex-start;
+
+    }
+
+
+    .edit-order-box {
+
+        margin-top: 10px;
+
+        padding: 17px;
+
+        border-radius: 18px;
+
+    }
+
+
+    .edit-order-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .edit-order-item-grid {
+
+        grid-template-columns: 1fr 1fr;
+
+    }
+
+
+    .remove-order-item {
+
+        width: 100%;
+
+        grid-column: 1 / -1;
+
+    }
+
+
+    .edit-order-actions {
+
+        flex-direction: column;
+
+    }
+
+}

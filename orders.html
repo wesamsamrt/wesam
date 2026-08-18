@@ -955,19 +955,6 @@ if (!customerName) {
 }
 
 
-// =========================
-// التأكد من الموقع
-// =========================
-
-if (
-    customerLat === null ||
-    customerLng === null
-) {
-
-    alert("يجب تحديد موقع العميل من الخريطة أولاً");
-
-    return;
-}
         // =========================
         // التأكد من إدخال الرقم
         // =========================
@@ -1171,13 +1158,18 @@ if (
             customerName,
 
         customer_location:
-            `${customerLat},${customerLng}`,
+    (
+        customerLat !== null &&
+        customerLng !== null
+    )
+        ? `${customerLat},${customerLng}`
+        : null,
 
-        customer_lat:
-            customerLat,
+customer_lat:
+    customerLat,
 
-        customer_lng:
-            customerLng
+customer_lng:
+    customerLng
 
     })
     .eq("id", order.id)
