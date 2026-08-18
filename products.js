@@ -723,6 +723,23 @@ function openProductModal(variants) {
     color: #4935b5;
     font-size: 18px;
 }
+
+
+#productSelectModal input,
+#productSelectModal select,
+#productSelectModal textarea {
+    font-size: 16px !important;
+    transform: none !important;
+    -webkit-text-size-adjust: 100%;
+}
+
+#productSelectModal input:focus,
+#productSelectModal select:focus,
+#productSelectModal textarea:focus {
+    font-size: 16px !important;
+}
+
+
     `;
 
     document.body.appendChild(modal);
