@@ -640,23 +640,25 @@ function openProductModal(variants) {
 
         </div>
 
-        .colors-title {
-    margin-top: 20px;
-    margin-bottom: 10px;
-    font-weight: bold;
-    font-size: 16px;
+       .colors-title {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #222;
 }
 
 .color-quantity-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 14px;
+    gap: 15px;
+    padding: 14px 16px;
     margin-top: 10px;
-    background: #f7f7f7;
-    border-radius: 14px;
-    border: 1px solid #eee;
+    background: #fff;
+    border: 1px solid #e9e9ef;
+    border-radius: 16px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.04);
 }
 
 .color-info {
@@ -666,19 +668,21 @@ function openProductModal(variants) {
 
 .color-name {
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 800;
+    color: #222;
 }
 
 .color-stock {
-    margin-top: 4px;
+    margin-top: 5px;
     font-size: 13px;
-    color: #777;
+    color: #888;
 }
 
 .color-quantity-control {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 7px;
+    direction: ltr;
 }
 
 .color-minus,
@@ -686,30 +690,34 @@ function openProductModal(variants) {
     width: 38px;
     height: 38px;
     border: none;
-    border-radius: 10px;
+    border-radius: 11px;
     background: #4935b5;
     color: white;
-    font-size: 22px;
-    font-weight: bold;
+    font-size: 21px;
+    font-weight: 700;
     cursor: pointer;
 }
 
 .color-quantity-input {
-    width: 55px;
+    width: 52px;
     height: 38px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
+    padding: 0;
+    border: 1px solid #e1e1e8;
+    border-radius: 11px;
+    background: #fafafa;
+    color: #222;
     text-align: center;
     font-size: 16px !important;
-    font-weight: bold;
+    font-weight: 800;
     outline: none;
     -webkit-appearance: none;
     appearance: none;
-    -webkit-text-size-adjust: 100%;
 }
 
 .color-quantity-input:focus {
+    background: white;
     border-color: #4935b5;
+    box-shadow: 0 0 0 3px rgba(73,53,181,0.10);
 }
 
 .stock-summary {
