@@ -631,24 +631,24 @@ async function loadOrders() {
             <div class="order-info">
 
                 <h3>
-                    ${item.model || "بدون موديل"}
-                </h3>
+    ${item.product_type || "بدون نوع منتج"}
+</h3>
 
-                <p>
-                    ${
-                        item.category
-                        ? "التصنيف: " + item.category
-                        : ""
-                    }
-                </p>
+<p>
+    ${
+        item.model
+        ? "الموديل: " + item.model
+        : ""
+    }
+</p>
 
-                <p>
-                    ${
-                        item.product_type
-                        ? "نوع المنتج: " + item.product_type
-                        : ""
-                    }
-                </p>
+<p>
+    ${
+        item.category
+        ? "التصنيف: " + item.category
+        : ""
+    }
+</p>
 
                 <p>
                     ${
