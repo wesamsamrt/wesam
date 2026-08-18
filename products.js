@@ -1368,13 +1368,7 @@ function openProductModal(variants) {
 
     }
 
-    alert(
-        `تمت إضافة ${selectedItems.length} ${
-            selectedItems.length === 1
-                ? "لون"
-                : "ألوان"
-        } إلى السلة بنجاح`
-    );
+    
 
 } catch (error) {
 
