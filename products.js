@@ -34,8 +34,15 @@ async function loadProducts() {
         query = query.eq("product_type", productType);
     }
 
+   let allData = [];
+let from = 0;
+const pageSize = 1000;
+
+while (true) {
+
     const { data, error } = await query
-        .order("id", { ascending: true });
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
 
     if (error) {
 
@@ -50,10 +57,25 @@ async function loadProducts() {
         return;
     }
 
-    allProducts = data || [];
+    if (!data || data.length === 0) {
+        break;
+    }
 
-    renderProducts(allProducts);
-    setupFilters();
+    allData.push(...data);
+
+    if (data.length < pageSize) {
+        break;
+    }
+
+    from += pageSize;
+}
+
+allProducts = allData;
+
+console.log("عدد المنتجات المحملة كامل:", allProducts.length);
+
+renderProducts(allProducts);
+setupFilters();
 }
 
 
@@ -199,7 +221,7 @@ ${
                 <span class="price">
                     ${
                         firstProduct.price != null
-                        ? "من " + firstProduct.price + " ر.س"
+                        ? " " + firstProduct.price + " ر.س"
                         : ""
                     }
                 </span>
