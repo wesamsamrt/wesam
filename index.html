@@ -618,7 +618,21 @@ box-shadow:0 14px 36px rgba(10,31,82,.14)}
       <button class="icon-button cart-button" type="button" onclick="openOrders()" title="السلة" aria-label="السلة">
         🛒<span id="cartBadge" class="notification">0</span>
       </button>
-      <button class="icon-button profile-button" type="button" onclick="openAccount()" title="الملف الشخصي" aria-label="الملف الشخصي">👤</button>
+      <button
+    class="profile-icon"
+    type="button"
+    onclick="window.location.href='profile.html'"
+>
+    👤
+</button>
+<button
+    type="button"
+    class="admin-button"
+    onclick="window.location.href='admin.html'"
+>
+    ⚙️ الإدارة
+</button>
+
       <span class="user-name">سلطان</span>
       <button class="icon-button notification-button" id="notificationsButton" type="button" onclick="openNotifications()" title="الإشعارات" aria-label="الإشعارات">
         🔔<span id="notificationBadge" class="notification">0</span>
