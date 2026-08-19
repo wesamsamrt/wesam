@@ -2082,123 +2082,104 @@ function closeLocationMap() {
 
 async function clearCart() {
 
-    const confirmed = confirm(
-        "هل أنت متأكد من حذف جميع منتجات السلة؟"
-    );
+    const {
+        data: { user }
+    } = await supabaseClient.auth.getUser();
 
-    if (!confirmed) return;
-
-    try {
-
-        // المستخدم الحالي
-        const {
-            data: { user },
-            error: userError
-        } = await supabaseClient.auth.getUser();
-
-        if (userError || !user) {
-            alert("يجب تسجيل الدخول أولاً");
-            return;
-        }
-
-
-        // جلب السلة الحالية
-        const {
-            data: orders,
-            error: ordersError
-        } = await supabaseClient
-            .from("orders")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("status", "جديد")
-            .order("id", { ascending: false })
-            .limit(1);
-
-        if (ordersError) {
-            console.error(ordersError);
-            alert("خطأ في جلب السلة:\n" + ordersError.message);
-            return;
-        }
-
-
-        if (!orders || orders.length === 0) {
-            alert("لا توجد سلة حالية");
-            return;
-        }
-
-
-        const orderId = orders[0].id;
-
-        console.log("رقم السلة:", orderId);
-
-
-        // حذف جميع منتجات السلة
-        const {
-            data: deletedItems,
-            error: deleteError
-        } = await supabaseClient
-            .from("order_items")
-            .delete()
-            .eq("order_id", orderId)
-            .select();
-
-        if (deleteError) {
-
-            console.error("خطأ الحذف:", deleteError);
-
-            alert(
-                "لم يتم حذف المنتجات ❌\n\n" +
-                deleteError.message
-            );
-
-            return;
-        }
-
-
-        console.log("المنتجات المحذوفة:", deletedItems);
-
-
-        // تصفير الإجمالي
-        const {
-            error: updateError
-        } = await supabaseClient
-            .from("orders")
-            .update({
-                total: 0
-            })
-            .eq("id", orderId)
-            .eq("user_id", user.id);
-
-
-        if (updateError) {
-
-            console.error(updateError);
-
-            alert(
-                "تم حذف المنتجات، لكن حدث خطأ في تحديث الإجمالي:\n" +
-                updateError.message
-            );
-
-            return;
-        }
-
-
-        // تحديث السلة مباشرة
-        await loadOrders();
-
-        alert("تم حذف جميع منتجات السلة ✅");
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "حدث خطأ غير متوقع:\n" +
-            error.message
-        );
+    if (!user) {
+        alert("لا يوجد مستخدم مسجل دخول");
+        return;
     }
-}
 
+    // جلب السلة
+    const {
+        data: orders,
+        error: ordersError
+    } = await supabaseClient
+        .from("orders")
+        .select("id, user_id, status")
+        .eq("user_id", user.id)
+        .eq("status", "جديد")
+        .order("id", { ascending: false })
+        .limit(1);
+
+    if (ordersError) {
+        alert("خطأ في جلب السلة: " + ordersError.message);
+        return;
+    }
+
+    if (!orders || orders.length === 0) {
+        alert("لم يتم العثور على السلة");
+        return;
+    }
+
+    const orderId = orders[0].id;
+
+    console.log("ORDER ID:", orderId);
+
+    // جلب المنتجات قبل الحذف
+    const {
+        data: beforeItems,
+        error: beforeError
+    } = await supabaseClient
+        .from("order_items")
+        .select("id, order_id, model, product_type")
+        .eq("order_id", orderId);
+
+    if (beforeError) {
+        alert("خطأ في قراءة المنتجات: " + beforeError.message);
+        return;
+    }
+
+    console.log("قبل الحذف:", beforeItems);
+
+    if (!beforeItems || beforeItems.length === 0) {
+        alert("السلة أصلًا لا تحتوي منتجات");
+        await loadOrders();
+        return;
+    }
+
+    // الحذف
+    const {
+        data: deletedItems,
+        error: deleteError
+    } = await supabaseClient
+        .from("order_items")
+        .delete()
+        .eq("order_id", orderId)
+        .select("id");
+
+    if (deleteError) {
+        alert("خطأ الحذف: " + deleteError.message);
+        console.error(deleteError);
+        return;
+    }
+
+    console.log("بعد الحذف:", deletedItems);
+
+    // تحديث الإجمالي
+    const {
+        error: updateError
+    } = await supabaseClient
+        .from("orders")
+        .update({
+            total: 0
+        })
+        .eq("id", orderId);
+
+    if (updateError) {
+        alert("خطأ تحديث الإجمالي: " + updateError.message);
+        return;
+    }
+
+    await loadOrders();
+
+    alert(
+        "تم حذف " +
+        (deletedItems?.length || 0) +
+        " منتج من السلة ✅"
+    );
+}
 
 
 </script>
