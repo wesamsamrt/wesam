@@ -2201,146 +2201,145 @@ if ("serviceWorker" in navigator) {
    ===================================================== */
 
 async function loadBestSellingProducts() {
-
     const container = document.getElementById("bestProducts");
-
     if (!container) return;
 
     container.innerHTML = `
-        <div style="
-            grid-column:1/-1;
-            min-height:220px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            color:#777;
-            font-weight:700;
-        ">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
             جاري تحميل الأكثر مبيعًا...
         </div>
     `;
 
     try {
+        // نستخدم الجداول الموجودة فعليًا: orders + order_items
+        const { data: orders, error: ordersError } = await supabaseClient
+            .from("orders")
+            .select("id")
+            .eq("status", "مقدم");
 
-        const { data, error } = await supabaseClient
-            .rpc("get_best_selling_products");
+        if (ordersError) throw ordersError;
 
-        if (error) {
-            console.error("get_best_selling_products:", error);
-            throw error;
-        }
-
-        if (!data || data.length === 0) {
-
+        if (!orders || orders.length === 0) {
             container.innerHTML = `
-                <div style="
-                    grid-column:1/-1;
-                    min-height:180px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    color:#858796;
-                    text-align:center;
-                ">
-                    لا توجد مبيعات مكتملة حتى الآن
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
+                    لا توجد مبيعات مقدمة حتى الآن
                 </div>
             `;
+            return;
+        }
 
+        const orderIds = orders.map(o => o.id);
+
+        const { data: items, error: itemsError } = await supabaseClient
+            .from("order_items")
+            .select("product_code, model, company, image, price, quantity, order_id")
+            .in("order_id", orderIds);
+
+        if (itemsError) throw itemsError;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
+                    لا توجد منتجات مباعة حتى الآن
+                </div>
+            `;
+            return;
+        }
+
+        // تجميع الكميات حسب product_code
+        const grouped = {};
+
+        items.forEach(item => {
+            const key = item.product_code || item.model || ("item_" + item.order_id);
+
+            if (!grouped[key]) {
+                grouped[key] = {
+                    product_code: item.product_code,
+                    model: item.model,
+                    company: item.company,
+                    image: item.image,
+                    price: item.price,
+                    total_sold: 0
+                };
+            }
+
+            grouped[key].total_sold += Number(item.quantity) || 1;
+
+            // استخدم صورة أحدث إذا لم تكن موجودة
+            if (!grouped[key].image && item.image) {
+                grouped[key].image = item.image;
+            }
+        });
+
+        const bestProducts = Object.values(grouped)
+            .sort((a, b) => b.total_sold - a.total_sold)
+            .slice(0, 5);
+
+        if (bestProducts.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
+                    لا توجد منتجات مباعة حتى الآن
+                </div>
+            `;
             return;
         }
 
         container.innerHTML = "";
 
-        data.forEach((product, index) => {
-
+        bestProducts.forEach((product, index) => {
             const card = document.createElement("div");
-
-            card.className = "best-product-card";
-
-            card.onclick = () => {
-
-                if (product.product_code) {
-
-                    window.location.href =
-                        "products.html?product_code=" +
-                        encodeURIComponent(product.product_code);
-
-                } else {
-
-                    window.location.href = "products.html";
-
-                }
-
-            };
-
-            const imageHtml = product.image
-                ? `<img src="${escapeHtml(product.image)}"
-                        alt="${escapeHtml(product.model || "منتج")}"
-                        loading="lazy">`
-                : `<span style="font-size:45px">📦</span>`;
+            card.className = "product-card";
+            card.style.cursor = "pointer";
 
             card.innerHTML = `
-                <div class="best-product-rank">
-                    #${index + 1}
-                </div>
-
-                <div class="product-heart"
-                     onclick="event.stopPropagation()">
-                    ♡
-                </div>
+                <div class="product-heart">♡</div>
 
                 <div class="product-image">
-                    ${imageHtml}
+                    ${
+                        product.image
+                        ? `<img src="${product.image}" alt="${product.model || "منتج"}">`
+                        : "📦"
+                    }
                 </div>
 
                 <div class="product-name">
-                    ${escapeHtml(product.model || "منتج")}
+                    ${product.model || "منتج"}
                 </div>
 
-                ${
-                    product.company
-                    ? `
-                    <div class="best-product-company">
-                        ${escapeHtml(product.company)}
-                    </div>
-                    `
-                    : ""
-                }
-
-                <div class="best-product-price">
-                    ${Number(product.price || 0).toLocaleString("ar-SA")} ر.س
+                <div class="price">
+                    <strong>
+                        ${Number(product.price || 0).toLocaleString("ar-SA")} ر.س
+                    </strong>
                 </div>
 
-                <div class="best-product-sold">
-                    🔥 مباع ${Number(product.total_sold || 0).toLocaleString("ar-SA")} مرة
+                <div style="
+                    margin-top:5px;
+                    font-size:9px;
+                    color:#3151dd;
+                    font-weight:700;
+                ">
+                    🔥 مباع ${product.total_sold} مرة
                 </div>
             `;
 
             container.appendChild(card);
-
         });
 
     } catch (error) {
-
-        console.error("خطأ في تحميل الأكثر مبيعًا:", error);
+        console.error("خطأ تحميل الأكثر مبيعًا:", error);
 
         container.innerHTML = `
             <div style="
                 grid-column:1/-1;
-                min-height:180px;
-                display:flex;
-                align-items:center;
-                justify-content:center;
                 text-align:center;
+                padding:40px;
                 color:#e05265;
-                font-weight:700;
-                padding:20px;
             ">
-                تعذر تحميل الأكثر مبيعًا.<br>
-                تأكد من إضافة دالة Supabase المطلوبة.
+                تعذر تحميل الأكثر مبيعًا
+                <br>
+                <small>${error.message || ""}</small>
             </div>
         `;
-
     }
 }
 
