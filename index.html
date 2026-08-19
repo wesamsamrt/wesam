@@ -521,6 +521,77 @@ box-shadow:0 14px 36px rgba(10,31,82,.14)}
   .top-header .header-actions{margin-right:auto!important}
 }
 
+
+/* ===== Dynamic best-selling products ===== */
+#bestProducts .best-product-card{
+  position:relative;
+  background:#fff;
+  border-radius:18px;
+  padding:12px;
+  min-height:220px;
+  cursor:pointer;
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+#bestProducts .best-product-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 10px 28px rgba(50,50,100,.10);
+}
+#bestProducts .best-product-rank{
+  position:absolute;
+  top:9px;
+  right:9px;
+  min-width:30px;
+  height:30px;
+  padding:0 8px;
+  border-radius:10px;
+  background:#eeeaff;
+  color:#6557ed;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  font-weight:800;
+  z-index:2;
+}
+#bestProducts .best-product-card .product-image{
+  height:130px;
+  border-radius:14px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#f4f5fa;
+  margin-bottom:10px;
+}
+#bestProducts .best-product-card .product-image img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+#bestProducts .best-product-card .product-name{
+  font-weight:800;
+  font-size:13px;
+  line-height:1.5;
+  min-height:39px;
+}
+#bestProducts .best-product-company{
+  color:#858796;
+  font-size:10px;
+  margin-top:3px;
+}
+#bestProducts .best-product-price{
+  margin-top:7px;
+  color:#6557ed;
+  font-size:14px;
+  font-weight:800;
+}
+#bestProducts .best-product-sold{
+  margin-top:5px;
+  color:#3151dd;
+  font-size:10px;
+  font-weight:800;
+}
+
 </style>
 </head>
 
@@ -651,12 +722,18 @@ box-shadow:0 14px 36px rgba(10,31,82,.14)}
         <a href="products.html">عرض الكل ←</a>
       </div>
 
-      <div class="product-grid" id="bestProducts">
-        <div class="product-card"><div class="product-heart">♡</div><div class="product-image">📷</div><div class="product-name">كاميرا DJI Action 4</div><div class="price"><strong>1,499 ر.س</strong><del>1,799</del></div></div>
-        <div class="product-card"><div class="product-heart">♡</div><div class="product-image">🎮</div><div class="product-name">يد تحكم لاسلكية</div><div class="price"><strong>199 ر.س</strong><del>249</del></div></div>
-        <div class="product-card"><div class="product-heart">♡</div><div class="product-image">🔊</div><div class="product-name">سماعة ذكية برو</div><div class="price"><strong>299 ر.س</strong><del>399</del></div></div>
-        <div class="product-card"><div class="product-heart">♡</div><div class="product-image">⌚</div><div class="product-name">ساعة ذكية Ultra 2</div><div class="price"><strong>1,299 ر.س</strong><del>1,599</del></div></div>
-        <div class="product-card"><div class="product-heart">♡</div><div class="product-image">🎧</div><div class="product-name">AirPods Pro 2</div><div class="price"><strong>649 ر.س</strong><del>799</del></div></div>
+      \1
+        <div class="best-loading" style="
+            grid-column:1/-1;
+            min-height:220px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#777;
+            font-weight:700;
+        ">
+            جاري تحميل الأكثر مبيعًا...
+        </div>
       </div>
     </div>
 
@@ -2116,6 +2193,164 @@ if ("serviceWorker" in navigator) {
   const cartBadge = document.getElementById('cartBadge');
   if(cartBadge && !cartBadge.textContent.trim()) cartBadge.style.display='none';
 })();
+</script>
+<script>
+
+/* =====================================================
+   الأكثر مبيعًا - مرتبط بمبيعات الطلبات الفعلية
+   ===================================================== */
+
+async function loadBestSellingProducts() {
+
+    const container = document.getElementById("bestProducts");
+
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="
+            grid-column:1/-1;
+            min-height:220px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#777;
+            font-weight:700;
+        ">
+            جاري تحميل الأكثر مبيعًا...
+        </div>
+    `;
+
+    try {
+
+        const { data, error } = await supabaseClient
+            .rpc("get_best_selling_products");
+
+        if (error) {
+            console.error("get_best_selling_products:", error);
+            throw error;
+        }
+
+        if (!data || data.length === 0) {
+
+            container.innerHTML = `
+                <div style="
+                    grid-column:1/-1;
+                    min-height:180px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    color:#858796;
+                    text-align:center;
+                ">
+                    لا توجد مبيعات مكتملة حتى الآن
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = "";
+
+        data.forEach((product, index) => {
+
+            const card = document.createElement("div");
+
+            card.className = "best-product-card";
+
+            card.onclick = () => {
+
+                if (product.product_code) {
+
+                    window.location.href =
+                        "products.html?product_code=" +
+                        encodeURIComponent(product.product_code);
+
+                } else {
+
+                    window.location.href = "products.html";
+
+                }
+
+            };
+
+            const imageHtml = product.image
+                ? `<img src="${escapeHtml(product.image)}"
+                        alt="${escapeHtml(product.model || "منتج")}"
+                        loading="lazy">`
+                : `<span style="font-size:45px">📦</span>`;
+
+            card.innerHTML = `
+                <div class="best-product-rank">
+                    #${index + 1}
+                </div>
+
+                <div class="product-heart"
+                     onclick="event.stopPropagation()">
+                    ♡
+                </div>
+
+                <div class="product-image">
+                    ${imageHtml}
+                </div>
+
+                <div class="product-name">
+                    ${escapeHtml(product.model || "منتج")}
+                </div>
+
+                ${
+                    product.company
+                    ? `
+                    <div class="best-product-company">
+                        ${escapeHtml(product.company)}
+                    </div>
+                    `
+                    : ""
+                }
+
+                <div class="best-product-price">
+                    ${Number(product.price || 0).toLocaleString("ar-SA")} ر.س
+                </div>
+
+                <div class="best-product-sold">
+                    🔥 مباع ${Number(product.total_sold || 0).toLocaleString("ar-SA")} مرة
+                </div>
+            `;
+
+            container.appendChild(card);
+
+        });
+
+    } catch (error) {
+
+        console.error("خطأ في تحميل الأكثر مبيعًا:", error);
+
+        container.innerHTML = `
+            <div style="
+                grid-column:1/-1;
+                min-height:180px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                text-align:center;
+                color:#e05265;
+                font-weight:700;
+                padding:20px;
+            ">
+                تعذر تحميل الأكثر مبيعًا.<br>
+                تأكد من إضافة دالة Supabase المطلوبة.
+            </div>
+        `;
+
+    }
+}
+
+/* تحميل القسم عند فتح الرئيسية */
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", loadBestSellingProducts);
+} else {
+    loadBestSellingProducts();
+}
+
 </script>
 <script src="./no-zoom.js"></script>
 </body>
