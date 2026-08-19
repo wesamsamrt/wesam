@@ -706,14 +706,7 @@ box-shadow:0 14px 36px rgba(10,31,82,.14)}
   <section id="offers" class="sales-layout">
 
     <div class="sale-card">
-      <h3>عروض لفترة محدودة</h3>
-      <div class="timer">
-        <div class="timer-box"><b>58</b><span>الثواني</span></div>
-        <div class="timer-box"><b>36</b><span>الدقائق</span></div>
-        <div class="timer-box"><b>14</b><span>الساعات</span></div>
-        <div class="timer-box"><b>02</b><span>الأيام</span></div>
-      </div>
-      <button class="sale-button" onclick="window.location.href='products.html'">← استعرض العروض</button>
+     e-button" onclick="window.location.href='products.html'">← استعرض العروض</button>
     </div>
 
     <div class="products-panel">
@@ -2275,7 +2268,7 @@ async function loadBestSellingProducts() {
                         ? `
                             <img
                                 src="${product.image}"
-                                alt="${product.model || "منتج"}"
+                                alt="${product.type|| "منتج"}"
                             >
                           `
                         : "📦"
@@ -2284,7 +2277,7 @@ async function loadBestSellingProducts() {
                 </div>
 
                 <div class="product-name">
-                    ${product.model || "منتج"}
+                    ${product.type|| "منتج"}
                 </div>
 
                 <div class="price">
