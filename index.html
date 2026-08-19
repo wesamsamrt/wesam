@@ -717,33 +717,42 @@ box-shadow:0 14px 36px rgba(10,31,82,.14)}
     </div>
 
     <div class="products-panel">
-      <div class="products-head">
+
+    <div class="products-head">
         <h2>الأكثر مبيعاً</h2>
         <a href="products.html">عرض الكل ←</a>
-      </div>
+    </div>
 
-      \1
-        <div class="best-loading" style="
-            grid-column:1/-1;
-            min-height:220px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            color:#777;
-            font-weight:700;
-        ">
+    <div
+        class="product-grid"
+        id="bestProducts"
+    >
+
+        <div
+            class="best-loading"
+            style="
+                grid-column:1/-1;
+                min-height:220px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:#777;
+                font-weight:700;
+            "
+        >
             جاري تحميل الأكثر مبيعًا...
         </div>
-      </div>
+
     </div>
+
+</div>
 
   </section>
 
   <section class="membership">
     <button class="membership-button" onclick="window.location.href='products.html'">← اكتشف المزايا</button>
     <div class="membership-copy">
-      <h2>👑 انضم إلى عضوية الوسام</h2>
-      <p>احصل على شحن مجاني + خصومات حصرية + عروض خاصة بالأعضاء</p>
+      
     </div>
   </section>
 
@@ -2342,7 +2351,7 @@ async function loadBestSellingProducts() {
         `;
     }
 }
-
+console.log("🔥 تم تشغيل قسم الأكثر مبيعًا");
 /* تحميل القسم عند فتح الرئيسية */
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", loadBestSellingProducts);
@@ -2352,5 +2361,27 @@ if (document.readyState === "loading") {
 
 </script>
 <script src="./no-zoom.js"></script>
+
+<script>
+(function () {
+    function startBestSelling() {
+        if (typeof loadBestSellingProducts === "function") {
+            loadBestSellingProducts();
+        } else {
+            var box = document.getElementById("bestProducts");
+            if (box) {
+                box.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#e05265;">تعذر تشغيل قسم الأكثر مبيعًا</div>';
+            }
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", startBestSelling);
+    } else {
+        startBestSelling();
+    }
+})();
+</script>
+
 </body>
 </html>
