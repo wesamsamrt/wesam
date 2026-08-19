@@ -1424,3 +1424,70 @@ body {
     }
 
 }
+
+
+/* =========================================================
+   أفضل المنتجات - عرض أفقي للجوال
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .best-products-panel {
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .best-products-list {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+
+        gap: 12px;
+
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        width: 100%;
+
+        padding: 8px 2px 14px;
+
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+
+        -webkit-overflow-scrolling: touch;
+
+        scrollbar-width: none;
+    }
+
+    /* إخفاء شريط التمرير */
+    .best-products-list::-webkit-scrollbar {
+        display: none;
+    }
+
+
+    .best-product-item {
+        flex: 0 0 82%;
+
+        min-width: 82%;
+
+        scroll-snap-align: start;
+
+        box-sizing: border-box;
+    }
+
+}
+
+
+/* =========================================================
+   الجوال الأصغر
+========================================================= */
+
+@media (max-width: 480px) {
+
+    .best-product-item {
+        flex: 0 0 88%;
+        min-width: 88%;
+    }
+
+}

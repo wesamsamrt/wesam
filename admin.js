@@ -2821,7 +2821,7 @@ Object.entries(typeCodes).forEach(
              ${order.driver_name || "-"}
               ${
                  order.driver_number
-            ? ` (${order.driverr_number})`
+            ? ` (${order.driver_number})`
               : ""
               }
              </span>
