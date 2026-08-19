@@ -1269,23 +1269,7 @@ plus.addEventListener("pointerdown", function (e) {
    إضافة المنتج للسلة - سريع وفوري
 ========================================================= */
 
-addButton.onclick = async function () {
-
-    /* ==========================================
-       منع الضغط المتكرر
-    ========================================== */
-
-    if (addButton.disabled) {
-        return;
-    }
-
-    addButton.disabled = true;
-    addButton.textContent = "✓ تمت الإضافة";
-
-
-    /* ==========================================
-       جمع الكميات المختارة
-    ========================================== */
+addButton.onclick = function () {
 
     const rows =
         colorsContainer.querySelectorAll(
@@ -1334,284 +1318,54 @@ addButton.onclick = async function () {
     });
 
 
-    /* ==========================================
-       التأكد من وجود منتجات
-    ========================================== */
-
     if (selectedItems.length === 0) {
 
-        alert("اختر كمية لون واحد على الأقل");
-
-        addButton.disabled = false;
-        addButton.textContent =
-            "إضافة للسلة";
+        alert(
+            "اختر كمية لون واحد على الأقل"
+        );
 
         return;
+
     }
 
 
-   
+    /* ==========================================
+       نحفظ الإضافة فورًا
+    ========================================== */
+
+    selectedItems.forEach(item => {
+
+        queueCartItem(
+            item.product,
+            item.quantity
+        );
+
+    });
 
 
     /* ==========================================
-       رسالة فورية للمستخدم
+       إغلاق النافذة فورًا
     ========================================== */
 
-    showFastCartMessage(
-        `✓ تمت إضافة ${selectedItems.reduce(
-            (sum, item) =>
-                sum + item.quantity,
-            0
-        )} قطعة إلى السلة`
+    closeProductModal();
+
+
+    /* ==========================================
+       بدء الإرسال بدون انتظار
+    ========================================== */
+
+    processPendingCartItems();
+
+
+    /* ==========================================
+       رسالة سريعة
+    ========================================== */
+
+    showCartAddedMessage(
+        selectedItems.length
     );
-
-
-    /* ==========================================
-       الإضافة في الخلفية
-    ========================================== */
-
-    try {
-
-        /* --------------------------------------
-           التأكد من تسجيل الدخول
-        -------------------------------------- */
-
-        const {
-            data: { user },
-            error: userError
-        } =
-            await supabaseClient.auth.getUser();
-
-
-        if (userError || !user) {
-
-            console.error(
-                "المستخدم غير مسجل الدخول"
-            );
-
-            showFastCartMessage(
-                "⚠️ يجب تسجيل الدخول أولاً"
-            );
-
-            window.location.href =
-                "login.html";
-
-            return;
-        }
-
-
-        /* --------------------------------------
-           إضافة المنتجات واحدًا واحدًا
-        -------------------------------------- */
-
-        for (const item of selectedItems) {
-
-            try {
-
-                await addProduct(
-                    item.product,
-                    item.quantity
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "خطأ إضافة المنتج:",
-                    error
-                );
-
-            }
-
-        }
-
-
-        console.log(
-            "✓ تمت إضافة المنتجات للسلة بنجاح"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "خطأ إضافة المنتجات للسلة:",
-            error
-        );
-
-        showFastCartMessage(
-            "⚠️ حدث خطأ أثناء إضافة المنتج"
-        );
-
-    }
 
 };
-
-
-/* =========================================================
-   رسالة سريعة للمستخدم
-========================================================= */
-
-function showFastCartMessage(message) {
-
-    /* حذف الرسالة القديمة */
-
-    const oldMessage =
-        document.getElementById(
-            "fastCartMessage"
-        );
-
-    if (oldMessage) {
-        oldMessage.remove();
-    }
-
-
-    /* إنشاء الرسالة */
-
-    const messageBox =
-        document.createElement("div");
-
-    messageBox.id =
-        "fastCartMessage";
-
-    messageBox.textContent =
-        message;
-
-
-    messageBox.style.cssText = `
-
-        position: fixed;
-
-        top: 20px;
-
-        left: 50%;
-
-        transform: translateX(-50%);
-
-        z-index: 9999999;
-
-        background: #4935b5;
-
-        color: white;
-
-        padding: 14px 22px;
-
-        border-radius: 14px;
-
-        font-size: 15px;
-
-        font-weight: 800;
-
-        box-shadow:
-            0 10px 30px
-            rgba(0,0,0,0.18);
-
-        direction: rtl;
-
-        white-space: nowrap;
-
-        animation:
-            fastCartMessageIn
-            0.15s ease;
-
-    `;
-
-
-    document.body.appendChild(
-        messageBox
-    );
-
-
-    /* إزالة الرسالة بعد فترة */
-
-    setTimeout(() => {
-
-        if (messageBox) {
-
-            messageBox.style.opacity =
-                "0";
-
-            messageBox.style.transition =
-                "opacity 0.2s";
-
-            setTimeout(() => {
-
-                messageBox.remove();
-
-            }, 200);
-
-        }
-
-    }, 1800);
-
-}
-
-    /* =====================================================
-       إغلاق
-    ===================================================== */
-
-    document
-        .getElementById("closeProductModal")
-        .addEventListener(
-            "click",
-            closeProductModal
-        );
-
-
-    modal
-        .querySelector(".product-modal-overlay")
-        .addEventListener("click", function (e) {
-
-            if (e.target === this) {
-
-                closeProductModal();
-
-            }
-
-        });
-
-}
-
-/* =========================================================
-   عرض السعر
-========================================================= */
-
-function showSelectedProductPrice(
-    product,
-    priceBox
-) {
-
-    const price =
-        Number(product.price) || 0;
-
-
-    priceBox.innerHTML = `
-
-        <div>
-            <strong>
-                ${product.company || ""}
-            </strong>
-        </div>
-
-        <div>
-            ${product.model || ""}
-        </div>
-
-        ${
-            product.color
-            ?
-            `<div>
-                اللون: ${product.color}
-            </div>`
-            :
-            ""
-        }
-
-        <div class="modal-price">
-            ${price} ر.س
-        </div>
-
-    `;
-
-}
 
 
 /* =========================================================
@@ -2278,4 +2032,165 @@ async function addProduct(product, quantity = 1) {
 
     // مهم جدًا:
     // لا يوجد alert هنا
+}
+
+
+
+
+/* =========================================================
+   نظام حفظ السلة المضمون
+   يحفظ الإضافة محليًا قبل إرسالها إلى Supabase
+========================================================= */
+
+const PENDING_CART_KEY = "pending_cart_items";
+
+
+function getPendingCartItems() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(PENDING_CART_KEY) || "[]"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "خطأ قراءة الإضافات المعلقة:",
+            error
+        );
+
+        return [];
+
+    }
+
+}
+
+
+function savePendingCartItems(items) {
+
+    localStorage.setItem(
+        PENDING_CART_KEY,
+        JSON.stringify(items)
+    );
+
+}
+
+
+/* =========================================================
+   إضافة عملية جديدة للطابور
+========================================================= */
+
+function queueCartItem(product, quantity) {
+
+    const pending =
+        getPendingCartItems();
+
+    pending.push({
+
+        product: product,
+
+        quantity: Number(quantity) || 1,
+
+        createdAt: Date.now()
+
+    });
+
+    savePendingCartItems(pending);
+
+}
+
+
+/* =========================================================
+   معالجة الإضافات المعلقة
+========================================================= */
+
+async function processPendingCartItems() {
+
+    const pending =
+        getPendingCartItems();
+
+    if (!pending.length) {
+        return;
+    }
+
+
+    console.log(
+        "🔄 جاري معالجة الإضافات المعلقة:",
+        pending.length
+    );
+
+
+    const remaining = [];
+
+
+    for (const item of pending) {
+
+        try {
+
+            await addProduct(
+                item.product,
+                item.quantity
+            );
+
+            console.log(
+                "✅ تمت إضافة المنتج:",
+                item.product?.id
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ فشل إضافة المنتج:",
+                error
+            );
+
+            /*
+               نحتفظ به للمحاولة القادمة
+            */
+
+            remaining.push(item);
+
+        }
+
+    }
+
+
+    savePendingCartItems(
+        remaining
+    );
+
+
+    if (remaining.length === 0) {
+
+        console.log(
+            "✅ تم إنهاء جميع الإضافات المعلقة"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   تشغيل المعالجة عند فتح أي صفحة
+========================================================= */
+
+if (
+    document.readyState === "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            processPendingCartItems();
+
+        }
+    );
+
+} else {
+
+    processPendingCartItems();
+
 }
