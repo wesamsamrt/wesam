@@ -1122,30 +1122,39 @@ function openProductModal(variants) {
 
             /* ناقص */
 
-            minus.addEventListener("click", function () {
+           minus.addEventListener("pointerdown", function (e) {
 
-                let quantity =
-                    parseInt(input.value) || 0;
+    e.preventDefault();
+    e.stopPropagation();
 
-                quantity--;
+    let quantity =
+        parseInt(input.value) || 0;
 
-                updateColorQuantity(quantity);
+    quantity--;
 
-            });
+    updateColorQuantity(quantity);
+
+});
 
 
             /* زائد */
+/* =================================================
+   زائد - استجابة فورية للجوال
+================================================= */
 
-            plus.addEventListener("click", function () {
+plus.addEventListener("pointerdown", function (e) {
 
-                let quantity =
-                    parseInt(input.value) || 0;
+    e.preventDefault();
+    e.stopPropagation();
 
-                quantity++;
+    let quantity =
+        parseInt(input.value) || 0;
 
-                updateColorQuantity(quantity);
+    quantity++;
 
-            });
+    updateColorQuantity(quantity);
+
+});
 
 
             /* إدخال يدوي */
@@ -1780,7 +1789,24 @@ function addProductModalStyles() {
 
     direction: ltr;
 }
+.color-minus,
+.color-plus {
+    width: 39px;
+    height: 39px;
+    border: none;
+    border-radius: 11px;
+    background: #4935b5;
+    color: white;
+    font-size: 21px;
+    font-weight: bold;
+    cursor: pointer;
 
+    /* مهم للجوال */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
 .color-minus,
 .color-plus {
     width: 39px;
