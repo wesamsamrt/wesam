@@ -2208,155 +2208,322 @@ if ("serviceWorker" in navigator) {
 /* =====================================================
    الأكثر مبيعًا - مرتبط بمبيعات الطلبات الفعلية
    ===================================================== */
-
 async function loadBestSellingProducts() {
+
     const container = document.getElementById("bestProducts");
-    if (!container) return;
+
+    if (!container) {
+        console.error("❌ لم يتم العثور على bestProducts");
+        return;
+    }
 
     container.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
+        <div class="best-loading" style="
+            grid-column:1/-1;
+            min-height:220px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#777;
+            font-weight:700;
+        ">
             جاري تحميل الأكثر مبيعًا...
         </div>
     `;
 
     try {
-        // نستخدم الجداول الموجودة فعليًا: orders + order_items
-        const { data: orders, error: ordersError } = await supabaseClient
+
+        /*
+         * جميع الطلبات في المتجر
+         * بدون user_id
+         */
+        const {
+            data: orders,
+            error: ordersError
+        } = await supabaseClient
             .from("orders")
             .select("id")
             .eq("status", "مقدم");
 
-        if (ordersError) throw ordersError;
+        if (ordersError) {
+            throw ordersError;
+        }
+
+        console.log("📦 جميع الطلبات المقدمة:", orders);
 
         if (!orders || orders.length === 0) {
+
             container.innerHTML = `
-                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
-                    لا توجد مبيعات مقدمة حتى الآن
+                <div style="
+                    grid-column:1/-1;
+                    text-align:center;
+                    padding:40px;
+                    color:#777;
+                ">
+                    لا توجد مبيعات حتى الآن
                 </div>
             `;
+
             return;
         }
 
-        const orderIds = orders.map(o => o.id);
+        const orderIds = orders.map(order => order.id);
 
-        const { data: items, error: itemsError } = await supabaseClient
+        /*
+         * منتجات جميع الطلبات
+         */
+        const {
+            data: items,
+            error: itemsError
+        } = await supabaseClient
             .from("order_items")
-            .select("product_code, model, company, image, price, quantity, order_id")
+            .select(`
+                product_code,
+                model,
+                company,
+                image,
+                price,
+                quantity,
+                order_id
+            `)
             .in("order_id", orderIds);
 
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+            throw itemsError;
+        }
+
+        console.log("🛒 منتجات جميع الطلبات:", items);
 
         if (!items || items.length === 0) {
+
             container.innerHTML = `
-                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
+                <div style="
+                    grid-column:1/-1;
+                    text-align:center;
+                    padding:40px;
+                    color:#777;
+                ">
                     لا توجد منتجات مباعة حتى الآن
                 </div>
             `;
+
             return;
         }
 
-        // تجميع الكميات حسب product_code
+        /*
+         * تجميع المبيعات لجميع العملاء
+         */
         const grouped = {};
 
         items.forEach(item => {
-            const key = item.product_code || item.model || ("item_" + item.order_id);
+
+            const key =
+                item.product_code ||
+                item.model ||
+                item.id;
 
             if (!grouped[key]) {
+
                 grouped[key] = {
+
                     product_code: item.product_code,
+
                     model: item.model,
+
                     company: item.company,
+
                     image: item.image,
+
                     price: item.price,
+
                     total_sold: 0
+
                 };
+
             }
 
-            grouped[key].total_sold += Number(item.quantity) || 1;
+            grouped[key].total_sold +=
+                Number(item.quantity) || 1;
 
-            // استخدم صورة أحدث إذا لم تكن موجودة
-            if (!grouped[key].image && item.image) {
-                grouped[key].image = item.image;
+            if (
+                !grouped[key].image &&
+                item.image
+            ) {
+
+                grouped[key].image =
+                    item.image;
+
             }
+
         });
 
-        const bestProducts = Object.values(grouped)
-            .sort((a, b) => b.total_sold - a.total_sold)
-            .slice(0, 5);
+        /*
+         * ترتيب المنتجات من الأكثر مبيعًا
+         */
+        const bestProducts =
+            Object.values(grouped)
+                .sort(
+                    (a, b) =>
+                        b.total_sold -
+                        a.total_sold
+                )
+                .slice(0, 5);
+
+        console.log(
+            "🔥 الأكثر مبيعًا لجميع العملاء:",
+            bestProducts
+        );
 
         if (bestProducts.length === 0) {
+
             container.innerHTML = `
-                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#777;">
+                <div style="
+                    grid-column:1/-1;
+                    text-align:center;
+                    padding:40px;
+                    color:#777;
+                ">
                     لا توجد منتجات مباعة حتى الآن
                 </div>
             `;
+
             return;
         }
 
         container.innerHTML = "";
 
-        bestProducts.forEach((product, index) => {
-            const card = document.createElement("div");
-            card.className = "product-card";
-            card.style.cursor = "pointer";
+        bestProducts.forEach(
+            (product, index) => {
 
-            card.innerHTML = `
-                <div class="product-heart">♡</div>
+                const card =
+                    document.createElement("div");
 
-                <div class="product-image">
-                    ${
-                        product.image
-                        ? `<img src="${product.image}" alt="${product.model || "منتج"}">`
-                        : "📦"
-                    }
-                </div>
+                card.className =
+                    "product-card";
 
-                <div class="product-name">
-                    ${product.model || "منتج"}
-                </div>
+                card.style.cursor =
+                    "pointer";
 
-                <div class="price">
-                    <strong>
-                        ${Number(product.price || 0).toLocaleString("ar-SA")} ر.س
-                    </strong>
-                </div>
+                card.innerHTML = `
 
-                <div style="
-                    margin-top:5px;
-                    font-size:9px;
-                    color:#3151dd;
-                    font-weight:700;
-                ">
-                    🔥 مباع ${product.total_sold} مرة
-                </div>
-            `;
+                    <div class="product-heart">
+                        ♡
+                    </div>
 
-            container.appendChild(card);
-        });
+                    <div class="product-image">
 
-    } catch (error) {
-        console.error("خطأ تحميل الأكثر مبيعًا:", error);
+                        ${
+                            product.image
+
+                            ?
+
+                            `
+                            <img
+                                src="${product.image}"
+                                alt="${product.model || "منتج"}"
+                            >
+                            `
+
+                            :
+
+                            "📦"
+                        }
+
+                    </div>
+
+                    <div class="product-name">
+
+                        ${product.model || "منتج"}
+
+                    </div>
+
+                    <div class="price">
+
+                        <strong>
+
+                            ${
+                                Number(
+                                    product.price || 0
+                                ).toLocaleString("ar-SA")
+                            }
+
+                            ر.س
+
+                        </strong>
+
+                    </div>
+
+                    <div style="
+                        margin-top:6px;
+                        font-size:10px;
+                        color:#3151dd;
+                        font-weight:700;
+                    ">
+
+                        🔥 مباع
+                        ${product.total_sold}
+                        قطعة
+
+                    </div>
+
+                `;
+
+                container.appendChild(card);
+
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ خطأ الأكثر مبيعًا:",
+            error
+        );
 
         container.innerHTML = `
+
             <div style="
                 grid-column:1/-1;
                 text-align:center;
                 padding:40px;
                 color:#e05265;
             ">
+
                 تعذر تحميل الأكثر مبيعًا
+
                 <br>
-                <small>${error.message || ""}</small>
+
+                <small>
+                    ${error.message || ""}
+                </small>
+
             </div>
+
         `;
+
     }
+
 }
+
+
+/* تشغيل القسم */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        loadBestSellingProducts();
+
+    }
+);
 console.log("🔥 تم تشغيل قسم الأكثر مبيعًا");
 /* تحميل القسم عند فتح الرئيسية */
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", loadBestSellingProducts);
 } else {
-    loadBestSellingProducts();
+    
 }
 
 </script>
