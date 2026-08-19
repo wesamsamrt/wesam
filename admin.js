@@ -427,40 +427,87 @@ backToDashboard.addEventListener("click", function () {
 
 
 /* تحميل المنتجات */
-
 async function loadAdminProducts() {
 
     adminProducts.innerHTML = `
         <div class="loading">
-            جاري تحميل المنتجات...
+            جاري تحميل جميع المنتجات...
         </div>
     `;
 
+    try {
 
-    const { data, error } =
-        await supabaseClient
-            .from("products")
-            .select("*")
-            .order("id", { ascending: false });
+        let allProducts = [];
+        let from = 0;
+        const pageSize = 1000;
 
+        while (true) {
 
-    if (error) {
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("products")
+                .select("*")
+                .order("id", {
+                    ascending: false
+                })
+                .range(
+                    from,
+                    from + pageSize - 1
+                );
 
-        console.error(error);
+            if (error) {
+                throw error;
+            }
+
+            if (!data || data.length === 0) {
+                break;
+            }
+
+            allProducts.push(...data);
+
+            console.log(
+                "تم تحميل المنتجات:",
+                allProducts.length
+            );
+
+            // إذا رجعت أقل من 1000
+            // فهذا يعني أننا وصلنا للنهاية
+            if (data.length < pageSize) {
+                break;
+            }
+
+            from += pageSize;
+        }
+
+        adminProductsData = allProducts;
+
+        console.log(
+            "✅ إجمالي المنتجات:",
+            adminProductsData.length
+        );
+
+        renderAdminProducts(adminProductsData);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ خطأ تحميل جميع المنتجات:",
+            error
+        );
 
         adminProducts.innerHTML = `
             <div class="message error">
-                ${error.message}
+                حدث خطأ أثناء تحميل المنتجات
+                <br>
+                ${error.message || ""}
             </div>
         `;
 
-        return;
     }
-
-
-    adminProductsData = data || [];
-
-    renderAdminProducts(adminProductsData);
 
 }
 
@@ -566,13 +613,14 @@ adminProductSearch.addEventListener(
         const filtered =
             adminProductsData.filter(product => {
 
-                const text = `
+               const text = `
 
-                    ${product.model || ""}
-                    ${product.company || ""}
-                    ${product.category || ""}
-                    ${product.product_type || ""}
-                    ${product.type || ""}
+                 ${product.product_code || ""}
+                ${product.model || ""}
+                 ${product.company || ""}
+                     ${product.category || ""}
+                 ${product.product_type || ""}
+                 ${product.type || ""}
 
                 `.toLowerCase();
 

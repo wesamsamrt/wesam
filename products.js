@@ -1265,11 +1265,32 @@ plus.addEventListener("pointerdown", function (e) {
        إضافة جميع الألوان للسلة
     ===================================================== */
 
-    /* =========================================================
-   إضافة المنتج للسلة - سريع وفوري
-========================================================= */
+    addButton.onclick = async function () {
 
-addButton.onclick = function () {
+        
+
+    /* ==========================================
+       التأكد من تسجيل الدخول مرة واحدة فقط
+    ========================================== */
+
+    const {
+        data: { user },
+        error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+
+        alert("يجب تسجيل الدخول أولاً");
+
+        window.location.href = "login.html";
+
+        return;
+    }
+
+
+    /* ==========================================
+       جمع الألوان والكميات
+    ========================================== */
 
     const rows =
         colorsContainer.querySelectorAll(
@@ -1318,54 +1339,189 @@ addButton.onclick = function () {
     });
 
 
+    /* ==========================================
+       التأكد من اختيار لون
+    ========================================== */
+
     if (selectedItems.length === 0) {
 
-        alert(
-            "اختر كمية لون واحد على الأقل"
-        );
+        alert("اختر كمية لون واحد على الأقل");
 
         return;
-
     }
 
 
     /* ==========================================
-       نحفظ الإضافة فورًا
+       منع الضغط المتكرر
     ========================================== */
 
-    selectedItems.forEach(item => {
+    addButton.disabled = true;
 
-        queueCartItem(
+    addButton.textContent =
+        "جاري الإضافة...";
+
+
+    try {
+
+        /* ==========================================
+           إضافة جميع الألوان
+           بدون أي alert من هنا
+        ========================================== */
+
+        try {
+
+    for (const item of selectedItems) {
+
+        await addProduct(
             item.product,
             item.quantity
         );
 
-    });
+    }
+
+    
+
+} catch (error) {
+
+    console.error("خطأ إضافة الألوان:", error);
+
+    if (error.message === "LOGIN_REQUIRED") {
+
+        alert("يجب تسجيل الدخول أولاً");
+
+        window.location.href = "login.html";
+
+    } else {
+
+        alert("حدث خطأ أثناء إضافة المنتجات");
+
+    }
+
+}
 
 
-    /* ==========================================
-       إغلاق النافذة فورًا
-    ========================================== */
+        /* ==========================================
+           رسالة واحدة فقط بعد انتهاء الجميع
+        ========================================== */
 
-    closeProductModal();
+        alert(
+            `تمت إضافة ${selectedItems.length} ${
+                selectedItems.length === 1
+                    ? "لون"
+                    : "ألوان"
+            } إلى السلة بنجاح`
+        );
 
 
-    /* ==========================================
-       بدء الإرسال بدون انتظار
-    ========================================== */
+        /* ==========================================
+           تصفير الكميات
+        ========================================== */
 
-    processPendingCartItems();
+        rows.forEach(row => {
+
+            const input =
+                row.querySelector(
+                    ".color-quantity-input"
+                );
+
+            input.value = 0;
+
+        });
 
 
-    /* ==========================================
-       رسالة سريعة
-    ========================================== */
+        updateStockSummary();
 
-    showCartAddedMessage(
-        selectedItems.length
-    );
+
+    } catch (error) {
+
+        console.error(
+            "خطأ إضافة الألوان:",
+            error
+        );
+
+        alert(
+            "حدث خطأ أثناء إضافة المنتجات"
+        );
+
+    }
+
+
+    addButton.disabled = false;
+
+    addButton.textContent =
+        "إضافة للسلة";
 
 };
+
+
+    /* =====================================================
+       إغلاق
+    ===================================================== */
+
+    document
+        .getElementById("closeProductModal")
+        .addEventListener(
+            "click",
+            closeProductModal
+        );
+
+
+    modal
+        .querySelector(".product-modal-overlay")
+        .addEventListener("click", function (e) {
+
+            if (e.target === this) {
+
+                closeProductModal();
+
+            }
+
+        });
+
+}
+
+/* =========================================================
+   عرض السعر
+========================================================= */
+
+function showSelectedProductPrice(
+    product,
+    priceBox
+) {
+
+    const price =
+        Number(product.price) || 0;
+
+
+    priceBox.innerHTML = `
+
+        <div>
+            <strong>
+                ${product.company || ""}
+            </strong>
+        </div>
+
+        <div>
+            ${product.model || ""}
+        </div>
+
+        ${
+            product.color
+            ?
+            `<div>
+                اللون: ${product.color}
+            </div>`
+            :
+            ""
+        }
+
+        <div class="modal-price">
+            ${price} ر.س
+        </div>
+
+    `;
+
+}
 
 
 /* =========================================================
@@ -1757,25 +1913,6 @@ function addProductModalStyles() {
 
     cursor: not-allowed;
 }
-
-
-@keyframes fastCartMessageIn {
-
-    from {
-        opacity: 0;
-        transform:
-            translateX(-50%)
-            translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform:
-            translateX(-50%)
-            translateY(0);
-    }
-
-}
     `;
 
 
@@ -2032,165 +2169,4 @@ async function addProduct(product, quantity = 1) {
 
     // مهم جدًا:
     // لا يوجد alert هنا
-}
-
-
-
-
-/* =========================================================
-   نظام حفظ السلة المضمون
-   يحفظ الإضافة محليًا قبل إرسالها إلى Supabase
-========================================================= */
-
-const PENDING_CART_KEY = "pending_cart_items";
-
-
-function getPendingCartItems() {
-
-    try {
-
-        return JSON.parse(
-            localStorage.getItem(PENDING_CART_KEY) || "[]"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "خطأ قراءة الإضافات المعلقة:",
-            error
-        );
-
-        return [];
-
-    }
-
-}
-
-
-function savePendingCartItems(items) {
-
-    localStorage.setItem(
-        PENDING_CART_KEY,
-        JSON.stringify(items)
-    );
-
-}
-
-
-/* =========================================================
-   إضافة عملية جديدة للطابور
-========================================================= */
-
-function queueCartItem(product, quantity) {
-
-    const pending =
-        getPendingCartItems();
-
-    pending.push({
-
-        product: product,
-
-        quantity: Number(quantity) || 1,
-
-        createdAt: Date.now()
-
-    });
-
-    savePendingCartItems(pending);
-
-}
-
-
-/* =========================================================
-   معالجة الإضافات المعلقة
-========================================================= */
-
-async function processPendingCartItems() {
-
-    const pending =
-        getPendingCartItems();
-
-    if (!pending.length) {
-        return;
-    }
-
-
-    console.log(
-        "🔄 جاري معالجة الإضافات المعلقة:",
-        pending.length
-    );
-
-
-    const remaining = [];
-
-
-    for (const item of pending) {
-
-        try {
-
-            await addProduct(
-                item.product,
-                item.quantity
-            );
-
-            console.log(
-                "✅ تمت إضافة المنتج:",
-                item.product?.id
-            );
-
-        } catch (error) {
-
-            console.error(
-                "❌ فشل إضافة المنتج:",
-                error
-            );
-
-            /*
-               نحتفظ به للمحاولة القادمة
-            */
-
-            remaining.push(item);
-
-        }
-
-    }
-
-
-    savePendingCartItems(
-        remaining
-    );
-
-
-    if (remaining.length === 0) {
-
-        console.log(
-            "✅ تم إنهاء جميع الإضافات المعلقة"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   تشغيل المعالجة عند فتح أي صفحة
-========================================================= */
-
-if (
-    document.readyState === "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        function () {
-
-            processPendingCartItems();
-
-        }
-    );
-
-} else {
-
-    processPendingCartItems();
-
 }
