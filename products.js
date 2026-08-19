@@ -1265,29 +1265,26 @@ plus.addEventListener("pointerdown", function (e) {
        إضافة جميع الألوان للسلة
     ===================================================== */
 
-    addButton.onclick = async function () {
+    /* =========================================================
+   إضافة المنتج للسلة - سريع وفوري
+========================================================= */
+
+addButton.onclick = async function () {
 
     /* ==========================================
-       التأكد من تسجيل الدخول مرة واحدة فقط
+       منع الضغط المتكرر
     ========================================== */
 
-    const {
-        data: { user },
-        error: userError
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-
-        alert("يجب تسجيل الدخول أولاً");
-
-        window.location.href = "login.html";
-
+    if (addButton.disabled) {
         return;
     }
 
+    addButton.disabled = true;
+    addButton.textContent = "✓ تمت الإضافة";
+
 
     /* ==========================================
-       جمع الألوان والكميات
+       جمع الكميات المختارة
     ========================================== */
 
     const rows =
@@ -1338,119 +1335,218 @@ plus.addEventListener("pointerdown", function (e) {
 
 
     /* ==========================================
-       التأكد من اختيار لون
+       التأكد من وجود منتجات
     ========================================== */
 
     if (selectedItems.length === 0) {
 
         alert("اختر كمية لون واحد على الأقل");
 
+        addButton.disabled = false;
+        addButton.textContent =
+            "إضافة للسلة";
+
         return;
     }
 
 
     /* ==========================================
-       منع الضغط المتكرر
+       إغلاق النافذة فورًا
     ========================================== */
 
-    addButton.disabled = true;
+    closeProductModal();
 
-    addButton.textContent =
-        "جاري الإضافة...";
 
+    /* ==========================================
+       رسالة فورية للمستخدم
+    ========================================== */
+
+    showFastCartMessage(
+        `✓ تمت إضافة ${selectedItems.reduce(
+            (sum, item) =>
+                sum + item.quantity,
+            0
+        )} قطعة إلى السلة`
+    );
+
+
+    /* ==========================================
+       الإضافة في الخلفية
+    ========================================== */
 
     try {
 
-        /* ==========================================
-           إضافة جميع الألوان
-           بدون أي alert من هنا
-        ========================================== */
+        /* --------------------------------------
+           التأكد من تسجيل الدخول
+        -------------------------------------- */
 
-        try {
-
-    for (const item of selectedItems) {
-
-        await addProduct(
-            item.product,
-            item.quantity
-        );
-
-    }
-
-    
-
-} catch (error) {
-
-    console.error("خطأ إضافة الألوان:", error);
-
-    if (error.message === "LOGIN_REQUIRED") {
-
-        alert("يجب تسجيل الدخول أولاً");
-
-        window.location.href = "login.html";
-
-    } else {
-
-        alert("حدث خطأ أثناء إضافة المنتجات");
-
-    }
-
-}
+        const {
+            data: { user },
+            error: userError
+        } =
+            await supabaseClient.auth.getUser();
 
 
-        /* ==========================================
-           رسالة واحدة فقط بعد انتهاء الجميع
-        ========================================== */
+        if (userError || !user) {
 
-        alert(
-            `تمت إضافة ${selectedItems.length} ${
-                selectedItems.length === 1
-                    ? "لون"
-                    : "ألوان"
-            } إلى السلة بنجاح`
-        );
+            console.error(
+                "المستخدم غير مسجل الدخول"
+            );
+
+            showFastCartMessage(
+                "⚠️ يجب تسجيل الدخول أولاً"
+            );
+
+            window.location.href =
+                "login.html";
+
+            return;
+        }
 
 
-        /* ==========================================
-           تصفير الكميات
-        ========================================== */
+        /* --------------------------------------
+           إضافة المنتجات واحدًا واحدًا
+        -------------------------------------- */
 
-        rows.forEach(row => {
+        for (const item of selectedItems) {
 
-            const input =
-                row.querySelector(
-                    ".color-quantity-input"
+            try {
+
+                await addProduct(
+                    item.product,
+                    item.quantity
                 );
 
-            input.value = 0;
+            } catch (error) {
 
-        });
+                console.error(
+                    "خطأ إضافة المنتج:",
+                    error
+                );
+
+            }
+
+        }
 
 
-        updateStockSummary();
+        console.log(
+            "✓ تمت إضافة المنتجات للسلة بنجاح"
+        );
 
 
     } catch (error) {
 
         console.error(
-            "خطأ إضافة الألوان:",
+            "خطأ إضافة المنتجات للسلة:",
             error
         );
 
-        alert(
-            "حدث خطأ أثناء إضافة المنتجات"
+        showFastCartMessage(
+            "⚠️ حدث خطأ أثناء إضافة المنتج"
         );
 
     }
 
-
-    addButton.disabled = false;
-
-    addButton.textContent =
-        "إضافة للسلة";
-
 };
 
+
+/* =========================================================
+   رسالة سريعة للمستخدم
+========================================================= */
+
+function showFastCartMessage(message) {
+
+    /* حذف الرسالة القديمة */
+
+    const oldMessage =
+        document.getElementById(
+            "fastCartMessage"
+        );
+
+    if (oldMessage) {
+        oldMessage.remove();
+    }
+
+
+    /* إنشاء الرسالة */
+
+    const messageBox =
+        document.createElement("div");
+
+    messageBox.id =
+        "fastCartMessage";
+
+    messageBox.textContent =
+        message;
+
+
+    messageBox.style.cssText = `
+
+        position: fixed;
+
+        top: 20px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        z-index: 9999999;
+
+        background: #4935b5;
+
+        color: white;
+
+        padding: 14px 22px;
+
+        border-radius: 14px;
+
+        font-size: 15px;
+
+        font-weight: 800;
+
+        box-shadow:
+            0 10px 30px
+            rgba(0,0,0,0.18);
+
+        direction: rtl;
+
+        white-space: nowrap;
+
+        animation:
+            fastCartMessageIn
+            0.15s ease;
+
+    `;
+
+
+    document.body.appendChild(
+        messageBox
+    );
+
+
+    /* إزالة الرسالة بعد فترة */
+
+    setTimeout(() => {
+
+        if (messageBox) {
+
+            messageBox.style.opacity =
+                "0";
+
+            messageBox.style.transition =
+                "opacity 0.2s";
+
+            setTimeout(() => {
+
+                messageBox.remove();
+
+            }, 200);
+
+        }
+
+    }, 1800);
+
+}
 
     /* =====================================================
        إغلاق
@@ -1910,6 +2006,25 @@ function addProductModalStyles() {
     box-shadow: none;
 
     cursor: not-allowed;
+}
+
+
+@keyframes fastCartMessageIn {
+
+    from {
+        opacity: 0;
+        transform:
+            translateX(-50%)
+            translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translateX(-50%)
+            translateY(0);
+    }
+
 }
     `;
 
