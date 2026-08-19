@@ -1427,67 +1427,126 @@ body {
 
 
 /* =========================================================
-   أفضل المنتجات - عرض أفقي للجوال
+   MOBILE — نفس تصميم الكمبيوتر داخل شاشة الجوال
+   لا نغيّر ترتيب الصفحة
 ========================================================= */
 
 @media (max-width: 768px) {
 
-    .best-products-panel {
-        width: 100%;
-        min-width: 0;
-        overflow: hidden;
+    html,
+    body {
+        min-width: 1180px;
+        width: 1180px;
+        overflow-x: auto;
     }
 
+    body {
+        overflow-y: auto;
+    }
+
+
+    /* الصفحة الرئيسية */
+    .admin-page {
+        min-width: 1180px;
+        width: 1180px;
+    }
+
+
+    /* القائمة الجانبية */
+    .admin-sidebar {
+        width: 250px;
+        min-width: 250px;
+    }
+
+
+    /* المحتوى الرئيسي */
+    .admin-main {
+        min-width: 930px;
+        width: calc(100% - 250px);
+    }
+
+
+    /* الهيدر */
+    .top-header {
+        min-width: 930px;
+        width: 100%;
+    }
+
+
+    /* محتوى لوحة التحكم */
+    .dashboard-content {
+        min-width: 930px;
+        width: 100%;
+    }
+
+
+    /* البانر */
+    .dashboard-banner {
+        min-width: 0;
+    }
+
+
+    /* الإحصائيات */
+    .stats-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        min-width: 0;
+    }
+
+
+    /* القسم الأوسط */
+    .dashboard-middle-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        min-width: 0;
+    }
+
+
+    /* القسم السفلي */
+    .dashboard-bottom-grid {
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        min-width: 0;
+    }
+
+
+    /* الجداول لا تتكسر */
+    .orders-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+
+    /* أفضل المنتجات تبقى بنفس تصميم الكمبيوتر */
     .best-products-list {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-
-        gap: 12px;
-
         overflow-x: auto;
         overflow-y: hidden;
-
-        width: 100%;
-
-        padding: 8px 2px 14px;
-
-        scroll-snap-type: x mandatory;
-        scroll-behavior: smooth;
-
         -webkit-overflow-scrolling: touch;
-
-        scrollbar-width: none;
-    }
-
-    /* إخفاء شريط التمرير */
-    .best-products-list::-webkit-scrollbar {
-        display: none;
     }
 
 
-    .best-product-item {
-        flex: 0 0 82%;
-
-        min-width: 82%;
-
-        scroll-snap-align: start;
-
-        box-sizing: border-box;
+    /* المنتجات */
+    .products-admin,
+    .categories-admin,
+    .orders-admin {
+        min-width: 930px;
     }
 
 }
 
 
 /* =========================================================
-   الجوال الأصغر
+   الجوال الصغير جدًا
+   نفس التصميم، فقط السماح بالسحب الأفقي
 ========================================================= */
 
 @media (max-width: 480px) {
 
-    .best-product-item {
-        flex: 0 0 88%;
-        min-width: 88%;
+    html,
+    body {
+        min-width: 1180px;
+        width: 1180px;
+    }
+
+    .admin-page {
+        min-width: 1180px;
     }
 
 }
