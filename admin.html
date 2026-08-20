@@ -44,10 +44,7 @@
 
     <!-- شاشة الدخول -->
 
-    <div
-        class="login-page"
-        id="loginPage"
-    >
+    <div class="login-page" id="loginPage">
 
         <div class="login-card">
 
@@ -88,129 +85,614 @@
 
     <!-- لوحة الإدارة -->
 
-    <div
-        class="admin-page"
-        id="adminPage"
-        style="display:none;"
-    >
+   <!-- =========================================================
+     لوحة الإدارة الرئيسية
+========================================================= -->
 
-        <header class="admin-header">
+<div
+    class="admin-page"
+    id="adminPage"
+>
+>
+
+    <!-- الشريط الجانبي -->
+
+    <aside class="admin-sidebar">
+
+        <div class="admin-logo">
+
+            <img
+                src="logo.png"
+                alt="WESAM SMART"
+            >
 
             <div>
+                <strong>WESAM SMART</strong>
+                <span>لوحة الإدارة</span>
+            </div>
 
-                <h1>
-                    لوحة الإدارة
-                </h1>
+        </div>
+
+
+        <nav class="admin-nav">
+
+            <button
+                class="admin-nav-item active"
+                id="dashboardButton"
+            >
+                <span>⌂</span>
+                <strong>الرئيسية</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+                id="productsButton"
+            >
+                <span>🛍️</span>
+                <strong>المنتجات</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+                id="ordersButton"
+            >
+                <span>📋</span>
+                <strong>الطلبات</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+                id="categoriesButton"
+            >
+                <span>◈</span>
+                <strong>التصنيفات</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+            >
+                <span>📦</span>
+                <strong>المخزون</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+            >
+                <span>👤</span>
+                <strong>العملاء</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+            >
+                <span>◷</span>
+                <strong>التقارير</strong>
+            </button>
+
+
+            <button
+                class="admin-nav-item"
+            >
+                <span>⚙️</span>
+                <strong>الإعدادات</strong>
+            </button>
+
+        </nav>
+
+
+        <div class="admin-sidebar-bottom">
+
+            <div class="admin-pro-card">
+
+                <div class="admin-pro-icon">
+                    ✦
+                </div>
+
+                <strong>
+                    نسخة برو
+                </strong>
 
                 <p>
-                    إدارة المتجر
+                    ميزات إضافية لتطوير متجرك
                 </p>
+
+                <button>
+                    ترقية الآن
+                </button>
 
             </div>
 
+
             <button
                 id="logoutButton"
-                class="logout"
+                class="admin-logout"
             >
+                ⇥
                 تسجيل الخروج
             </button>
+
+        </div>
+
+    </aside>
+
+
+
+    <!-- المحتوى -->
+
+    <main class="admin-main">
+
+        <!-- الهيدر -->
+
+        <header class="admin-topbar">
+
+            <div class="admin-search-box">
+
+                <input
+                    type="text"
+                    placeholder="ابحث عن منتج أو موديل..."
+                >
+
+                <span>
+                    🔍
+                </span>
+
+            </div>
+
+
+            <div class="admin-top-actions">
+
+                <button>
+                    🔔
+                    <span class="notification-dot">
+                        3
+                    </span>
+                </button>
+
+                <button>
+                    💬
+                </button>
+
+                <button>
+                    ⚙️
+                </button>
+
+
+                <div class="admin-profile">
+
+                    <div class="admin-profile-avatar">
+                        👨🏻
+                    </div>
+
+                    <div>
+                        <strong>
+                            المدير
+                        </strong>
+
+                        <span>
+                            مدير المتجر
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
 
         </header>
 
 
-        <main class="admin-content">
 
-            <div class="welcome-card">
+        <!-- محتوى الصفحة -->
 
-                <div>
+        <div class="admin-dashboard-content">
 
-                    <span>
-                        👋 أهلاً بك
+
+            <!-- الترحيب -->
+
+            <section class="dashboard-hero">
+
+                <div class="dashboard-hero-content">
+
+                    <span class="hero-small">
+                        👋 مرحباً بك في وسام سمارت
                     </span>
 
-                    <h2>
-                        ماذا تريد أن تدير؟
-                    </h2>
+                    <h1>
+                        تحكم كامل في
+                        <br>
+                        متجرك بكل سهولة
+                    </h1>
+
+                    <p>
+                        إدارة ذكية، تقارير دقيقة، وتجربة سلسة لنمو أعمالك
+                    </p>
 
                 </div>
 
-              </div>
+
+                <div class="dashboard-hero-image">
+
+                    <div class="hero-window">
+
+                        <div class="hero-window-top">
+                            ● ● ●
+                        </div>
+
+                        <div class="hero-chart">
+
+                            <div class="hero-chart-line"></div>
+
+                            <div class="hero-chart-box">
+                                📊
+                            </div>
+
+                            <div class="hero-chart-box small">
+                                🛍️
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
 
 
-             <div class="admin-grid">
 
-                  <button class="admin-card" id="productsButton">
+            <!-- الإحصائيات -->
 
-                 <div class="admin-card-icon">
-                      📦
-                  </div>
-
-                 <h3>
-                  المنتجات
-                   </h3>
-
-                    <p>
-                   إضافة وتعديل وحذف المنتجات
-                     </p>
-
-                    </button>
-
-<button class="admin-card" id="ordersButton">
-
-    <div class="admin-card-icon">
-        📋
-    </div>
-
-    <h3>
-        الطلبات
-    </h3>
-
-    <p>
-        مشاهدة وإدارة طلبات العملاء
-    </p>
-
-</button>
+            <section class="dashboard-stats">
 
 
-                <button class="admin-card" id="categoriesButton">
+                <div class="dashboard-stat-card">
 
-                 <div class="admin-card-icon">
-                 🗂️  
-                 </div>
-
-                     <h3>
-                        التصنيفات
-                     </h3>
-
-                  <p>
-                     إدارة تصنيفات المتجر
-                 </p>
-
-                    </button>
-
-
-                <button class="admin-card">
-
-                    <div class="admin-card-icon">
+                    <div class="stat-icon customers">
                         👥
                     </div>
 
-                    <h3>
-                        العملاء
-                    </h3>
+                    <div class="stat-info">
 
-                    <p>
-                        مشاهدة بيانات العملاء
-                    </p>
+                        <span>
+                            إجمالي العملاء
+                        </span>
 
-                </button>
+                        <strong id="dashboardCustomersCount">
+                            0
+                        </strong>
+
+                        <small>
+                            العملاء المسجلين
+                        </small>
+
+                    </div>
+
+                </div>
 
 
-            </div>
 
-        </main>
+                <div class="dashboard-stat-card">
 
-    </div>
+                    <div class="stat-icon sales">
+                        📈
+                    </div>
+
+                    <div class="stat-info">
+
+                        <span>
+                            إجمالي المبيعات
+                        </span>
+
+                        <strong id="dashboardSalesTotal">
+                            0 ر.س
+                        </strong>
+
+                        <small>
+                            إجمالي الطلبات
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="dashboard-stat-card">
+
+                    <div class="stat-icon products">
+                        📦
+                    </div>
+
+                    <div class="stat-info">
+
+                        <span>
+                            إجمالي المنتجات
+                        </span>
+
+                        <strong id="dashboardProductsCount">
+                            0
+                        </strong>
+
+                        <small>
+                            المنتجات المسجلة
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="dashboard-stat-card">
+
+                    <div class="stat-icon orders">
+                        🛍️
+                    </div>
+
+                    <div class="stat-info">
+
+                        <span>
+                            إجمالي الطلبات
+                        </span>
+
+                        <strong id="dashboardOrdersCount">
+                            0
+                        </strong>
+
+                        <small>
+                            جميع الطلبات
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- الصف الثاني -->
+
+            <section class="dashboard-middle">
+
+
+                <!-- الإجراءات السريعة -->
+
+                <div class="quick-actions-card">
+
+                    <div class="dashboard-section-header">
+
+                        <h2>
+                            إجراءات سريعة
+                        </h2>
+
+                    </div>
+
+
+                    <div class="quick-actions">
+
+
+                        <button
+                            class="quick-action purple"
+                            id="addProductDashboardButton"
+                        >
+
+                            <div>
+                                ＋
+                            </div>
+
+                            <strong>
+                                إضافة منتج
+                            </strong>
+
+                        </button>
+
+
+                        <button
+                            class="quick-action green"
+                            id="inventoryDashboardButton"
+                        >
+
+                            <div>
+                                📦
+                            </div>
+
+                            <strong>
+                                عرض المخزون
+                            </strong>
+
+                        </button>
+
+
+                        <button
+                            class="quick-action blue"
+                            id="newOrderDashboardButton"
+                        >
+
+                            <div>
+                                🛒
+                            </div>
+
+                            <strong>
+                                الطلبات
+                            </strong>
+
+                        </button>
+
+
+                        <button
+                            class="quick-action orange"
+                            id="reportsDashboardButton"
+                        >
+
+                            <div>
+                                📊
+                            </div>
+
+                            <strong>
+                                تقرير المبيعات
+                            </strong>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ملخص المبيعات -->
+
+                <div class="sales-summary-card">
+
+                    <div class="dashboard-section-header">
+
+                        <h2>
+                            ملخص المبيعات
+                        </h2>
+
+                        <button>
+                            هذا الشهر
+                            ˅
+                        </button>
+
+                    </div>
+
+
+                    <div class="sales-summary-number">
+
+                        <strong id="dashboardSalesSummary">
+                            0 ر.س
+                        </strong>
+
+                        <span>
+                            إجمالي المبيعات
+                        </span>
+
+                    </div>
+
+
+                    <div class="fake-sales-chart">
+
+                        <div class="chart-grid"></div>
+
+                        <svg
+                            viewBox="0 0 700 180"
+                            preserveAspectRatio="none"
+                        >
+
+                            <polyline
+                                points="
+                                0,145
+                                70,130
+                                140,132
+                                210,90
+                                280,125
+                                350,105
+                                420,118
+                                490,70
+                                560,55
+                                630,80
+                                700,45
+                                "
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="5"
+                            />
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- الصف الأخير -->
+
+            <section class="dashboard-bottom">
+
+
+                <!-- آخر الطلبات -->
+
+                <div class="latest-orders-card">
+
+                    <div class="dashboard-section-header">
+
+                        <h2>
+                            آخر الطلبات
+                        </h2>
+
+                        <button
+                            id="dashboardOrdersButton"
+                        >
+                            عرض الكل
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="dashboardLatestOrders"
+                        class="dashboard-latest-orders"
+                    >
+
+                        <div class="dashboard-empty">
+                            جاري تحميل الطلبات...
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- أفضل المنتجات -->
+
+                <div class="best-products-card">
+
+                    <div class="dashboard-section-header">
+
+                        <h2>
+                            أفضل المنتجات
+                        </h2>
+
+                        <button>
+                            هذا الشهر
+                            ˅
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="dashboardBestProducts"
+                        class="dashboard-best-products"
+                    >
+
+                        <div class="dashboard-empty">
+                            جاري تحميل المنتجات...
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+        </div>
+
+    </main>
+
+</div>
 
 
 

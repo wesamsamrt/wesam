@@ -11,11 +11,19 @@ const logoutButton = document.getElementById("logoutButton");
 /* =========================
    إظهار لوحة الإدارة
 ========================= */
-
 function showAdmin() {
 
-    loginPage.style.display = "none";
-    adminPage.style.display = "block";
+    const loginPage = document.getElementById("loginPage");
+    const adminPage = document.getElementById("adminPage");
+
+    if (loginPage) {
+        loginPage.style.display = "none";
+    }
+
+    if (adminPage) {
+        adminPage.style.display = "block";
+    }
+    loadDashboardLatestOrders();
 
 }
 
@@ -23,11 +31,21 @@ function showAdmin() {
 /* =========================
    إظهار تسجيل الدخول
 ========================= */
-
 function showLogin() {
 
-    loginPage.style.display = "flex";
-    adminPage.style.display = "none";
+    const loginPage =
+        document.getElementById("loginPage");
+
+    const adminPage =
+        document.getElementById("adminPage");
+
+    if (loginPage) {
+        loginPage.style.display = "flex";
+    }
+
+    if (adminPage) {
+        adminPage.style.display = "none";
+    }
 
 }
 
@@ -403,12 +421,12 @@ productImage.addEventListener("change", function () {
 });
 
 /* فتح إدارة المنتجات */
-
 productsButton.addEventListener("click", async function () {
 
-    dashboardContent.style.display = "none";
-
-    productsAdmin.style.display = "block";
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "block";
 
     await loadAdminProducts();
 
@@ -416,15 +434,13 @@ productsButton.addEventListener("click", async function () {
 
 
 /* الرجوع */
-
 backToDashboard.addEventListener("click", function () {
 
-    productsAdmin.style.display = "none";
+    document.getElementById("productsAdmin").style.display = "none";
 
-    dashboardContent.style.display = "block";
+    document.getElementById("adminPage").style.display = "block";
 
 });
-
 
 /* تحميل المنتجات */
 async function loadAdminProducts() {
@@ -1514,42 +1530,28 @@ async function uploadCategoryIcon(file, categoryId) {
 /* =========================================================
    فتح التصنيفات
    ========================================================= */
+categoriesButton.addEventListener("click", async function () {
 
-categoriesButton.addEventListener(
-    "click",
-    async function () {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "block";
 
-        dashboardContent.style.display =
-            "none";
+    await loadAdminCategories();
 
-        productsAdmin.style.display =
-            "none";
-
-        categoriesAdmin.style.display =
-            "block";
-
-        await loadAdminCategories();
-
-    }
-);
+});
 
 
 /* =========================================================
    الرجوع
    ========================================================= */
+backFromCategories.addEventListener("click", function () {
 
-backFromCategories.addEventListener(
-    "click",
-    function () {
+    document.getElementById("categoriesAdmin").style.display = "none";
 
-        categoriesAdmin.style.display =
-            "none";
+    document.getElementById("adminPage").style.display = "block";
 
-        dashboardContent.style.display =
-            "block";
-
-    }
-);
+});
 
 
 /* =========================================================
@@ -2228,39 +2230,48 @@ const backFromOrders =
 const adminOrders =
     document.getElementById("adminOrders");
 
+/* =========================================================
+   فتح صفحة الطلبات
+========================================================= */
 
-/* فتح الطلبات */
+ordersButton.addEventListener("click", async function () {
 
-ordersButton.addEventListener(
-    "click",
-    async function () {
+    // إخفاء الصفحة الرئيسية
+    const adminPage = document.getElementById("adminPage");
 
-        dashboardContent.style.display = "none";
-
-        productsAdmin.style.display = "none";
-
-        categoriesAdmin.style.display = "none";
-
-        ordersAdmin.style.display = "block";
-
-        await loadAdminOrders();
-
+    if (adminPage) {
+        adminPage.style.display = "none";
     }
-);
+
+    // إخفاء المنتجات
+    if (productsAdmin) {
+        productsAdmin.style.display = "none";
+    }
+
+    // إخفاء التصنيفات
+    if (categoriesAdmin) {
+        categoriesAdmin.style.display = "none";
+    }
+
+    // إظهار الطلبات
+    if (ordersAdmin) {
+        ordersAdmin.style.display = "block";
+    }
+
+    // تحميل الطلبات
+    await loadAdminOrders();
+
+});
 
 
 /* الرجوع */
+backFromOrders.addEventListener("click", function () {
 
-backFromOrders.addEventListener(
-    "click",
-    function () {
+    document.getElementById("ordersAdmin").style.display = "none";
 
-        ordersAdmin.style.display = "none";
+    document.getElementById("adminPage").style.display = "block";
 
-        dashboardContent.style.display = "block";
-
-    }
-);
+});
 
 
 /* تحميل الطلبات */
@@ -2354,6 +2365,186 @@ if (orders) {
 
 }
 
+
+const dashboardOrdersButton =
+    document.getElementById("dashboardOrdersButton");
+
+
+if (dashboardOrdersButton) {
+
+    dashboardOrdersButton.addEventListener(
+        "click",
+        function () {
+
+            document.getElementById("adminPage").style.display =
+                "none";
+
+            document.getElementById("productsAdmin").style.display =
+                "none";
+
+            document.getElementById("categoriesAdmin").style.display =
+                "none";
+
+            document.getElementById("ordersAdmin").style.display =
+                "block";
+
+            loadAdminOrders();
+
+        }
+    );
+
+}
+
+
+
+/* =========================================================
+   آخر الطلبات في الصفحة الرئيسية
+========================================================= */
+
+async function loadDashboardLatestOrders() {
+
+    const container =
+        document.getElementById("dashboardLatestOrders");
+
+    if (!container) {
+        console.error(
+            "لم يتم العثور على dashboardLatestOrders"
+        );
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="dashboard-empty">
+            جاري تحميل الطلبات...
+        </div>
+    `;
+
+    try {
+
+        const {
+            data: orders,
+            error
+        } = await supabaseClient
+            .from("orders")
+            .select(`
+                id,
+                status,
+                customer_name,
+                customer_phone,
+                total,
+                created_at
+            `)
+            .order("id", {
+                ascending: false
+            })
+            .limit(5);
+
+
+        if (error) {
+
+            console.error(
+                "Dashboard Orders Error:",
+                error
+            );
+
+            container.innerHTML = `
+                <div class="dashboard-empty">
+                    حدث خطأ أثناء تحميل الطلبات
+                </div>
+            `;
+
+            return;
+        }
+
+
+        if (!orders || orders.length === 0) {
+
+            container.innerHTML = `
+                <div class="dashboard-empty">
+                    لا توجد طلبات حتى الآن 📋
+                </div>
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML = "";
+
+
+        orders.forEach(order => {
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "dashboard-order-row";
+
+
+            const status =
+                order.status || "جديد";
+
+
+            const total =
+                Number(order.total || 0)
+                    .toFixed(2);
+
+
+            const customer =
+                order.customer_name || "عميل";
+
+
+            row.innerHTML = `
+
+                <div class="dashboard-order-info">
+
+                    <strong>
+                        الطلب #${order.id}
+                    </strong>
+
+                    <span>
+                        ${customer}
+                    </span>
+
+                </div>
+
+
+                <div class="dashboard-order-price">
+
+                    <strong>
+                        ${total} ر.س
+                    </strong>
+
+                    <span class="dashboard-order-status">
+                        ${status}
+                    </span>
+
+                </div>
+
+            `;
+
+
+            container.appendChild(row);
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "Dashboard Latest Orders Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="dashboard-empty">
+                حدث خطأ أثناء تحميل الطلبات
+            </div>
+        `;
+
+    }
+
+}
 
 /* عرض طلب واحد */
 
@@ -4876,3 +5067,4 @@ function closeOrderProductPicker() {
     }
 
 }
+
