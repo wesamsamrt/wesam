@@ -2060,28 +2060,19 @@ a{
 }
 
 
-/* =========================
-   البنر - يظهر كامل بالجوال
-========================= */
-
-.hero-banner {
+.hero-banner img {
     width: 100%;
     height: auto;
-    aspect-ratio: 5 / 1;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
+    display: block;
+    object-fit: contain;
 }
 
-/* للجوال */
+/* الجوال */
 @media (max-width: 768px) {
-    .hero-banner {
+    .hero-banner img {
         width: 100%;
         height: auto;
-        aspect-ratio: 5 / 1;
-        background-size: 100% 100%;
-        background-position: center;
-        background-repeat: no-repeat;
+        object-fit: contain;
     }
 }
 
