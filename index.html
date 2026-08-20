@@ -2057,6 +2057,17 @@ a{
     height:46px;
   }
 }
+
+
+
+
+.category-icon img{
+    width:34px;
+    height:34px;
+    object-fit:contain;
+    display:block;
+}
+
 </style>
 
 
@@ -3512,14 +3523,13 @@ async function searchProducts(value) {
 
                     card.innerHTML = `
 
-                        <div class="category-icon">
-
-                            ${
-                                category.icon ||
-                                "📦"
-                            }
-
-                        </div>
+                             <div class="category-icon">
+                      ${
+                      category.icon && category.icon.startsWith("http")
+                    ? `<img src="${category.icon}" alt="${category.name}">`
+                      : (category.icon || "📦")
+                         }
+                      </div>
 
 
                         <h3>

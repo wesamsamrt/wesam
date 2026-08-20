@@ -1207,8 +1207,11 @@ async function deleteProduct(id) {
 
 
 /* =========================================================
-   إدارة التصنيفات
-========================================================= */
+   إدارة التصنيفات + رفع الأيقونات
+   ========================================================= */
+
+const CATEGORY_BUCKET = "category-icons";
+
 
 const categoriesButton =
     document.getElementById("categoriesButton");
@@ -1237,22 +1240,293 @@ const categoriesList =
 const categoryFormMessage =
     document.getElementById("categoryFormMessage");
 
+const categoryIconFile =
+    document.getElementById("categoryIconFile");
+
+const categoryIconPreview =
+    document.getElementById("categoryIconPreview");
+
 
 let adminCategories = [];
 let editingCategoryId = null;
 
 
-/* فتح التصنيفات */
+/* =========================================================
+   اختيار صورة الأيقونة
+   ========================================================= */
+
+categoryIconFile.addEventListener("change", function () {
+
+    const file = this.files[0];
+
+    if (!file) {
+        categoryIconPreview.innerHTML =
+            "<span>لم يتم اختيار أيقونة</span>";
+        return;
+    }
+
+
+    const allowedTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/svg+xml"
+    ];
+
+
+    if (!allowedTypes.includes(file.type)) {
+
+        alert(
+            "نوع الصورة غير مدعوم.\n\n" +
+            "المسموح: PNG / JPG / WEBP / SVG"
+        );
+
+        this.value = "";
+
+        categoryIconPreview.innerHTML =
+            "<span>لم يتم اختيار أيقونة</span>";
+
+        return;
+    }
+
+
+    /* الحد الأقصى 2MB */
+
+    if (file.size > 2 * 1024 * 1024) {
+
+        alert(
+            "حجم الصورة كبير جداً.\n\n" +
+            "الحد الأقصى هو 2MB."
+        );
+
+        this.value = "";
+
+        categoryIconPreview.innerHTML =
+            "<span>لم يتم اختيار أيقونة</span>";
+
+        return;
+    }
+
+
+    const previewURL =
+        URL.createObjectURL(file);
+
+
+    categoryIconPreview.innerHTML = `
+        <img
+            src="${previewURL}"
+            alt="معاينة الأيقونة"
+        >
+    `;
+
+});
+
+
+/* =========================================================
+   عرض أيقونة موجودة مسبقاً
+   ========================================================= */
+
+function showCategoryIcon(icon) {
+
+    if (!icon) {
+
+        categoryIconPreview.innerHTML =
+            "<span>لم يتم اختيار أيقونة</span>";
+
+        return;
+    }
+
+
+    /* إذا كانت صورة */
+
+    if (
+        typeof icon === "string" &&
+        icon.startsWith("http")
+    ) {
+
+        categoryIconPreview.innerHTML = `
+            <img
+                src="${icon}"
+                alt="أيقونة التصنيف"
+            >
+        `;
+
+        return;
+    }
+
+
+    /* إذا كانت أيقونة قديمة عبارة عن إيموجي */
+
+    categoryIconPreview.innerHTML = `
+        <span style="
+            font-size:45px;
+        ">
+            ${icon}
+        </span>
+    `;
+}
+
+
+/* =========================================================
+   استخراج مسار الصورة من Supabase Storage
+   ========================================================= */
+
+function getStoragePathFromPublicUrl(url) {
+
+    if (!url || typeof url !== "string") {
+        return null;
+    }
+
+
+    const marker =
+        `/storage/v1/object/public/${CATEGORY_BUCKET}/`;
+
+
+    const index =
+        url.indexOf(marker);
+
+
+    if (index === -1) {
+        return null;
+    }
+
+
+    return decodeURIComponent(
+        url.substring(
+            index + marker.length
+        )
+    );
+}
+
+
+/* =========================================================
+   حذف صورة من Storage
+   ========================================================= */
+
+async function deleteCategoryIcon(iconUrl) {
+
+    const path =
+        getStoragePathFromPublicUrl(iconUrl);
+
+
+    if (!path) {
+        return;
+    }
+
+
+    const { error } =
+        await supabaseClient
+            .storage
+            .from(CATEGORY_BUCKET)
+            .remove([path]);
+
+
+    if (error) {
+
+        console.error(
+            "خطأ في حذف الأيقونة القديمة:",
+            error
+        );
+    }
+}
+
+
+/* =========================================================
+   رفع صورة جديدة
+   ========================================================= */
+
+async function uploadCategoryIcon(file, categoryId) {
+
+    if (!file) {
+        return null;
+    }
+
+
+    const extension =
+        file.name
+            .split(".")
+            .pop()
+            .toLowerCase();
+
+
+    const safeExtension =
+        extension.replace(
+            /[^a-z0-9]/gi,
+            ""
+        ) || "png";
+
+
+    const fileName =
+        `${crypto.randomUUID()}.${safeExtension}`;
+
+
+    const filePath =
+        `${categoryId}/${fileName}`;
+
+
+    const { error: uploadError } =
+        await supabaseClient
+            .storage
+            .from(CATEGORY_BUCKET)
+            .upload(
+                filePath,
+                file,
+                {
+                    cacheControl: "3600",
+                    upsert: false,
+                    contentType: file.type
+                }
+            );
+
+
+    if (uploadError) {
+
+        console.error(
+            "خطأ في رفع الأيقونة:",
+            uploadError
+        );
+
+        throw uploadError;
+    }
+
+
+    const {
+        data: publicData
+    } =
+        supabaseClient
+            .storage
+            .from(CATEGORY_BUCKET)
+            .getPublicUrl(filePath);
+
+
+    if (!publicData?.publicUrl) {
+
+        throw new Error(
+            "لم يتم الحصول على رابط الأيقونة"
+        );
+    }
+
+
+    return publicData.publicUrl;
+}
+
+
+/* =========================================================
+   فتح التصنيفات
+   ========================================================= */
 
 categoriesButton.addEventListener(
     "click",
     async function () {
 
-        dashboardContent.style.display = "none";
+        dashboardContent.style.display =
+            "none";
 
-        productsAdmin.style.display = "none";
+        productsAdmin.style.display =
+            "none";
 
-        categoriesAdmin.style.display = "block";
+        categoriesAdmin.style.display =
+            "block";
 
         await loadAdminCategories();
 
@@ -1260,21 +1534,27 @@ categoriesButton.addEventListener(
 );
 
 
-/* الرجوع */
+/* =========================================================
+   الرجوع
+   ========================================================= */
 
 backFromCategories.addEventListener(
     "click",
     function () {
 
-        categoriesAdmin.style.display = "none";
+        categoriesAdmin.style.display =
+            "none";
 
-        dashboardContent.style.display = "block";
+        dashboardContent.style.display =
+            "block";
 
     }
 );
 
 
-/* تحميل التصنيفات */
+/* =========================================================
+   تحميل التصنيفات
+   ========================================================= */
 
 async function loadAdminCategories() {
 
@@ -1285,11 +1565,16 @@ async function loadAdminCategories() {
     `;
 
 
-    const { data, error } =
+    const {
+        data,
+        error
+    } =
         await supabaseClient
             .from("categories")
             .select("*")
-            .order("id", { ascending: true });
+            .order("id", {
+                ascending: true
+            });
 
 
     if (error) {
@@ -1306,14 +1591,18 @@ async function loadAdminCategories() {
     }
 
 
-    adminCategories = data || [];
+    adminCategories =
+        data || [];
+
 
     renderAdminCategories();
 
 }
 
 
-/* عرض التصنيفات */
+/* =========================================================
+   عرض التصنيفات
+   ========================================================= */
 
 function renderAdminCategories() {
 
@@ -1337,15 +1626,43 @@ function renderAdminCategories() {
         const item =
             document.createElement("div");
 
+
         item.className =
             "category-admin-item";
+
+
+        let iconHTML =
+            "📦";
+
+
+        if (
+            category.icon &&
+            category.icon.startsWith("http")
+        ) {
+
+            iconHTML = `
+                <img
+                    src="${category.icon}"
+                    alt="${category.name}"
+                >
+            `;
+
+        }
+
+        else if (category.icon) {
+
+            iconHTML =
+                category.icon;
+
+        }
 
 
         item.innerHTML = `
 
             <div class="category-admin-icon">
-                ${category.icon || "📦"}
+                ${iconHTML}
             </div>
+
 
             <div class="category-admin-info">
 
@@ -1355,6 +1672,7 @@ function renderAdminCategories() {
 
             </div>
 
+
             <div class="category-admin-actions">
 
                 <button
@@ -1363,6 +1681,7 @@ function renderAdminCategories() {
                 >
                     ✏️
                 </button>
+
 
                 <button
                     class="delete-category"
@@ -1383,21 +1702,39 @@ function renderAdminCategories() {
 }
 
 
-/* إضافة تصنيف */
+/* =========================================================
+   إضافة تصنيف جديد
+   ========================================================= */
 
 addCategoryButton.addEventListener(
     "click",
     function () {
 
-        editingCategoryId = null;
+        editingCategoryId =
+            null;
 
-        document.getElementById("categoryName").value = "";
-        document.getElementById("categoryIcon").value = "";
+
+        document.getElementById(
+            "categoryName"
+        ).value = "";
+
+
+        categoryIconFile.value =
+            "";
+
+
+        showCategoryIcon(
+            null
+        );
+
 
         saveCategoryButton.textContent =
             "حفظ التصنيف";
 
-        categoryFormMessage.textContent = "";
+
+        categoryFormMessage.textContent =
+            "";
+
 
         categoryFormCard.style.display =
             "block";
@@ -1406,7 +1743,9 @@ addCategoryButton.addEventListener(
 );
 
 
-/* إلغاء */
+/* =========================================================
+   إلغاء
+   ========================================================= */
 
 cancelCategoryButton.addEventListener(
     "click",
@@ -1415,13 +1754,21 @@ cancelCategoryButton.addEventListener(
         categoryFormCard.style.display =
             "none";
 
-        editingCategoryId = null;
+
+        editingCategoryId =
+            null;
+
+
+        categoryIconFile.value =
+            "";
 
     }
 );
 
 
-/* حفظ */
+/* =========================================================
+   حفظ
+   ========================================================= */
 
 saveCategoryButton.addEventListener(
     "click",
@@ -1432,14 +1779,16 @@ saveCategoryButton.addEventListener(
 async function saveCategory() {
 
     const name =
-        document.getElementById("categoryName")
-            .value
-            .trim();
+        document.getElementById(
+            "categoryName"
+        )
+        .value
+        .trim();
 
-    const icon =
-        document.getElementById("categoryIcon")
-            .value
-            .trim();
+
+    const file =
+        categoryIconFile.files[0] ||
+        null;
 
 
     if (!name) {
@@ -1447,118 +1796,315 @@ async function saveCategory() {
         categoryFormMessage.textContent =
             "اكتب اسم التصنيف";
 
+
         categoryFormMessage.style.color =
             "#e05265";
+
 
         return;
     }
 
 
-    saveCategoryButton.disabled = true;
+    saveCategoryButton.disabled =
+        true;
+
 
     saveCategoryButton.textContent =
         "جاري الحفظ...";
 
 
-    let result;
+    try {
+
+        /* =================================================
+           تعديل تصنيف
+           ================================================= */
+
+        if (editingCategoryId) {
+
+            const oldCategory =
+                adminCategories.find(
+                    item =>
+                        item.id ===
+                        editingCategoryId
+                );
 
 
-    if (editingCategoryId) {
+            if (!oldCategory) {
 
-        result =
-            await supabaseClient
-                .from("categories")
-                .update({
-                    name: name,
-                    icon: icon || "📦"
-                })
-                .eq("id", editingCategoryId);
+                throw new Error(
+                    "لم يتم العثور على التصنيف"
+                );
+            }
+
+
+            let newIcon =
+                oldCategory.icon ||
+                null;
+
+
+            /* إذا اختار المستخدم صورة جديدة */
+
+            if (file) {
+
+                newIcon =
+                    await uploadCategoryIcon(
+                        file,
+                        editingCategoryId
+                    );
+
+            }
+
+
+            const {
+                error: updateError
+            } =
+                await supabaseClient
+                    .from("categories")
+                    .update({
+                        name: name,
+                        icon: newIcon
+                    })
+                    .eq(
+                        "id",
+                        editingCategoryId
+                    );
+
+
+            if (updateError) {
+
+                /* إذا تم رفع الصورة ولكن فشل
+                   تحديث قاعدة البيانات، نحذف
+                   الصورة الجديدة */
+
+                if (
+                    file &&
+                    newIcon
+                ) {
+
+                    await deleteCategoryIcon(
+                        newIcon
+                    );
+
+                }
+
+
+                throw updateError;
+            }
+
+
+            /* بعد نجاح تحديث قاعدة البيانات
+               نحذف الصورة القديمة */
+
+            if (
+                file &&
+                oldCategory.icon &&
+                oldCategory.icon.startsWith("http")
+            ) {
+
+                await deleteCategoryIcon(
+                    oldCategory.icon
+                );
+
+            }
+
+
+            categoryFormMessage.textContent =
+                "تم تعديل التصنيف بنجاح ✅";
+
+
+            categoryFormMessage.style.color =
+                "#2e9d69";
+
+        }
+
+
+        /* =================================================
+           إضافة تصنيف جديد
+           ================================================= */
+
+        else {
+
+            /* أولاً نضيف التصنيف */
+
+            const {
+                data: insertedCategory,
+                error: insertError
+            } =
+                await supabaseClient
+                    .from("categories")
+                    .insert({
+                        name: name,
+                        icon: null
+                    })
+                    .select()
+                    .single();
+
+
+            if (insertError) {
+                throw insertError;
+            }
+
+
+            let newIcon =
+                null;
+
+
+            /* إذا اختار المستخدم صورة */
+
+            if (file) {
+
+                newIcon =
+                    await uploadCategoryIcon(
+                        file,
+                        insertedCategory.id
+                    );
+
+
+                /* حفظ رابط الصورة */
+
+                const {
+                    error: iconUpdateError
+                } =
+                    await supabaseClient
+                        .from("categories")
+                        .update({
+                            icon: newIcon
+                        })
+                        .eq(
+                            "id",
+                            insertedCategory.id
+                        );
+
+
+                if (iconUpdateError) {
+
+                    /* حذف الصورة إذا فشل
+                       حفظ الرابط */
+
+                    await deleteCategoryIcon(
+                        newIcon
+                    );
+
+
+                    /* حذف التصنيف */
+
+                    await supabaseClient
+                        .from("categories")
+                        .delete()
+                        .eq(
+                            "id",
+                            insertedCategory.id
+                        );
+
+
+                    throw iconUpdateError;
+                }
+
+            }
+
+
+            categoryFormMessage.textContent =
+                "تمت إضافة التصنيف بنجاح ✅";
+
+
+            categoryFormMessage.style.color =
+                "#2e9d69";
+
+        }
+
+
+        editingCategoryId =
+            null;
+
+
+        categoryIconFile.value =
+            "";
+
+
+        categoryFormCard.style.display =
+            "none";
+
+
+        await loadAdminCategories();
 
     }
 
-    else {
+    catch (error) {
 
-        result =
-            await supabaseClient
-                .from("categories")
-                .insert({
-                    name: name,
-                    icon: icon || "📦"
-                });
+        console.error(
+            "Category Save Error:",
+            error
+        );
 
-    }
-
-
-    if (result.error) {
 
         categoryFormMessage.textContent =
-            result.error.message;
+            error.message ||
+            "حدث خطأ أثناء حفظ التصنيف";
+
 
         categoryFormMessage.style.color =
             "#e05265";
 
-        saveCategoryButton.disabled = false;
-
-        saveCategoryButton.textContent =
-            editingCategoryId
-                ? "حفظ التعديل"
-                : "حفظ التصنيف";
-
-        return;
     }
 
 
-    categoryFormMessage.textContent =
-        editingCategoryId
-            ? "تم تعديل التصنيف ✅"
-            : "تمت إضافة التصنيف ✅";
+    finally {
 
-    categoryFormMessage.style.color =
-        "#2e9d69";
+        saveCategoryButton.disabled =
+            false;
 
 
-    editingCategoryId = null;
+        saveCategoryButton.textContent =
+            "حفظ التصنيف";
 
-    categoryFormCard.style.display =
-        "none";
-
-
-    await loadAdminCategories();
-
-
-    saveCategoryButton.disabled = false;
-
-    saveCategoryButton.textContent =
-        "حفظ التصنيف";
+    }
 
 }
 
 
-/* تعديل */
+/* =========================================================
+   تعديل التصنيف
+   ========================================================= */
 
 async function editCategory(id) {
 
     const category =
         adminCategories.find(
-            item => item.id === id
+            item =>
+                item.id === id
         );
 
 
-    if (!category) return;
+    if (!category) {
+        return;
+    }
 
 
-    editingCategoryId = id;
+    editingCategoryId =
+        id;
 
 
-    document.getElementById("categoryName").value =
+    document.getElementById(
+        "categoryName"
+    ).value =
         category.name || "";
 
-    document.getElementById("categoryIcon").value =
-        category.icon || "";
+
+    categoryIconFile.value =
+        "";
+
+
+    showCategoryIcon(
+        category.icon
+    );
 
 
     saveCategoryButton.textContent =
         "حفظ التعديل";
+
+
+    categoryFormMessage.textContent =
+        "";
 
 
     categoryFormCard.style.display =
@@ -1572,17 +2118,22 @@ async function editCategory(id) {
 }
 
 
-/* حذف */
+/* =========================================================
+   حذف التصنيف + حذف الأيقونة
+   ========================================================= */
 
 async function deleteCategory(id) {
 
     const category =
         adminCategories.find(
-            item => item.id === id
+            item =>
+                item.id === id
         );
 
 
-    if (!category) return;
+    if (!category) {
+        return;
+    }
 
 
     const confirmed =
@@ -1591,32 +2142,70 @@ async function deleteCategory(id) {
         );
 
 
-    if (!confirmed) return;
-
-
-    const { error } =
-        await supabaseClient
-            .from("categories")
-            .delete()
-            .eq("id", id);
-
-
-    if (error) {
-
-        alert(
-            "حدث خطأ:\n" +
-            error.message
-        );
-
+    if (!confirmed) {
         return;
     }
 
 
-    await loadAdminCategories();
+    try {
 
-    alert("تم حذف التصنيف بنجاح ✅");
+        /* حذف التصنيف من قاعدة البيانات */
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("categories")
+                .delete()
+                .eq("id", id);
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        /* حذف صورة الأيقونة من Storage */
+
+        if (
+            category.icon &&
+            category.icon.startsWith("http")
+        ) {
+
+            await deleteCategoryIcon(
+                category.icon
+            );
+
+        }
+
+
+        await loadAdminCategories();
+
+
+        alert(
+            "تم حذف التصنيف والأيقونة بنجاح ✅"
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Delete Category Error:",
+            error
+        );
+
+
+        alert(
+            "حدث خطأ أثناء حذف التصنيف:\n" +
+            error.message
+        );
+
+    }
 
 }
+
+
 
 
 

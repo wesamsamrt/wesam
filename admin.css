@@ -1367,6 +1367,50 @@ body {
 
 }
 
+.category-upload-box{
+    width:100%;
+}
 
+.category-upload-button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:58px;
+    border:2px dashed #dfe3f0;
+    border-radius:14px;
+    background:#fafbff;
+    color:#5b4ee8;
+    font-size:14px;
+    font-weight:800;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.category-upload-button:hover{
+    border-color:#6557ed;
+    background:#f5f3ff;
+}
+
+.category-icon-preview{
+    margin-top:12px;
+    width:100%;
+    min-height:110px;
+    border:1px solid #edf0f5;
+    border-radius:14px;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    color:#999;
+    font-size:12px;
+}
+
+.category-icon-preview img{
+    width:80px;
+    height:80px;
+    object-fit:contain;
+}
 
 

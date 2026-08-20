@@ -460,11 +460,24 @@
             placeholder="اسم التصنيف"
         >
 
-        <input
-            id="categoryIcon"
-            type="text"
-            placeholder="الأيقونة مثال: 📱"
-        >
+        <div class="category-upload-box">
+
+    <label for="categoryIconFile" class="category-upload-button">
+        📷 اختيار صورة الأيقونة
+    </label>
+
+    <input
+        type="file"
+        id="categoryIconFile"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        hidden
+    >
+
+    <div id="categoryIconPreview" class="category-icon-preview">
+        <span>لم يتم اختيار أيقونة</span>
+    </div>
+
+</div>
 
         <div class="category-form-actions">
 
