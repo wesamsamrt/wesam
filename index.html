@@ -2059,6 +2059,34 @@ a{
     display:block;
 }
 
+
+/* =========================
+   البنر - يظهر كامل بالجوال
+========================= */
+
+.hero-banner {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 5 / 1;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* للجوال */
+@media (max-width: 768px) {
+    .hero-banner {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 5 / 1;
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+}
+
+
+
 </style>
 
 
