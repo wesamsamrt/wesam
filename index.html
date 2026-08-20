@@ -335,31 +335,22 @@ a{
 /* =========================================================
    HERO
 ========================================================= */
-
 .hero{
   height:292px;
   border-radius:17px;
   overflow:hidden;
   position:relative;
   color:#fff;
-  background:
-    radial-gradient(circle at 70% 65%,rgba(28,103,255,.38),transparent 28%),
-    linear-gradient(110deg,#021642 0%,#061b5c 48%,#00123c 100%);
+
+  background-image:url("hero-banner.png");
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+
   box-shadow:0 14px 36px rgba(10,31,82,.14);
 }
-
-.hero:before{
-  content:"";
-  position:absolute;
-  inset:0;
-  opacity:.5;
-  background:
-    repeating-radial-gradient(
-      ellipse at 48% 115%,
-      transparent 0 20px,
-      rgba(45,121,255,.14) 21px,
-      transparent 23px
-    );
+.hero-art{
+  display:none!important;
 }
 
 .hero-copy{
