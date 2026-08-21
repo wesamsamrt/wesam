@@ -1304,14 +1304,14 @@ if (compatibilityType === "general") {
 
         try {
 
-            for (const item of selectedItems) {
-
-                await addProduct(
-                    item.product,
-                    item.quantity
-                );
-
-            }
+           await Promise.all(
+    selectedItems.map(item =>
+        addProduct(
+            item.product,
+            item.quantity
+        )
+    )
+);
 
 
             alert(
