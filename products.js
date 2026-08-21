@@ -1966,17 +1966,14 @@ addButton.onclick = async function () {
            إضافة جميع المنتجات
         ============================================= */
 
-        for (
-            const item
-            of selectedItems
-        ) {
-
-            await addProduct(
-                item.product,
-                item.quantity
-            );
-
-        }
+        await Promise.all(
+    selectedItems.map(item =>
+        addProduct(
+            item.product,
+            item.quantity
+        )
+    )
+);
 
 
         alert(
