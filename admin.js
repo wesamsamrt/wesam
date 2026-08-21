@@ -677,6 +677,11 @@ const productFormMessage =
 addProductButton.addEventListener("click", function () {
 
     productFormCard.style.display = "block";
+    document.getElementById(
+    "productCompatibilityType"
+).value = "device";
+
+updateProductCompatibilityFields();
 
     productFormMessage.textContent = "";
 
@@ -707,7 +712,33 @@ function clearProductForm() {
     document.getElementById("productQuantity").value = "";
     document.getElementById("productPrice").value = "";
 
+const compatibilitySelect =
+    document.getElementById(
+        "productCompatibilityType"
+    );
 
+if (compatibilitySelect) {
+
+    compatibilitySelect.value =
+        "device";
+
+}
+
+
+const compatibleDevicesInput =
+    document.getElementById(
+        "compatibleDevices"
+    );
+
+if (compatibleDevicesInput) {
+
+    compatibleDevicesInput.value =
+        "";
+
+}
+
+
+updateProductCompatibilityFields();
     selectedProductImage = null;
 
 document.getElementById("productImage").value = "";
@@ -914,21 +945,85 @@ async function saveNewProduct() {
 
 
     if (
-        !category ||
-        !productType ||
-        !type ||
-        !company ||
-        !model
+    !category ||
+    !productType ||
+    !type
+) {
+
+    productFormMessage.textContent =
+        "فضلاً أكمل بيانات المنتج المطلوبة";
+
+    productFormMessage.style.color =
+        "#e05265";
+
+    return;
+}
+
+const compatibilityType =
+    document.getElementById(
+        "productCompatibilityType"
+    ).value;
+
+
+const company =
+    document.getElementById(
+        "productCompany"
+    ).value.trim();
+
+
+const model =
+    document.getElementById(
+        "productModel"
+    ).value.trim();
+
+
+/* =========================
+   التحقق حسب نوع التوافق
+========================= */
+
+if (
+    compatibilityType === "device" &&
+    (!company || !model)
+) {
+
+    productFormMessage.textContent =
+        "اكتب الشركة والموديل لهذا المنتج";
+
+    productFormMessage.style.color =
+        "#e05265";
+
+    return;
+}
+
+
+let compatibleDevicesArray = [];
+
+
+if (
+    compatibilityType === "multi"
+) {
+
+    compatibleDevicesArray =
+        compatibleDevices.value
+            .split("\n")
+            .map(item => item.trim())
+            .filter(Boolean);
+
+
+    if (
+        compatibleDevicesArray.length === 0
     ) {
 
         productFormMessage.textContent =
-            "فضلاً أكمل بيانات المنتج المطلوبة";
+            "أدخل جهازًا واحدًا على الأقل";
 
         productFormMessage.style.color =
             "#e05265";
 
         return;
     }
+
+}
 
 
     saveProductButton.disabled = true;
@@ -980,23 +1075,35 @@ catch (error) {
                 .from("products")
                 .update({
 
-                    category: category,
+    category: category,
 
-                    product_type: productType,
+    product_type: productType,
 
-                    type: type,
+    type: type,
 
-                    company: company,
+    company:
+        compatibilityType === "device"
+            ? company
+            : null,
 
-                    model: model,
+    model:
+        compatibilityType === "device"
+            ? model
+            : null,
 
-                    color: color,
+    color: color,
 
-                    quantity: quantity || 0,
+    quantity: quantity || 0,
 
-                    price: price || 0
+    price: price || 0,
 
-                })
+    compatibility_type:
+        compatibilityType,
+
+    compatible_devices:
+        compatibleDevicesArray
+
+})
                 .eq("id", editingProductId)
                 .select()
                 .single();
@@ -1008,27 +1115,39 @@ catch (error) {
         result =
             await supabaseClient
                 .from("products")
-                .insert({
+               .insert({
 
-                      category: category,
+    category: category,
 
-                    product_type: productType,
+    product_type: productType,
 
-                      type: type,
+    type: type,
 
-                 company: company,
+    company:
+        compatibilityType === "device"
+            ? company
+            : null,
 
-              model: model,
+    model:
+        compatibilityType === "device"
+            ? model
+            : null,
 
-                  color: color,
+    color: color,
 
-                 quantity: quantity || 0,
+    quantity: quantity || 0,
 
-                  price: price || 0,
+    price: price || 0,
 
-                 image: imageUrl
+    image: imageUrl,
 
-                    })
+    compatibility_type:
+        compatibilityType,
+
+    compatible_devices:
+        compatibleDevicesArray
+
+})
                 .select()
                 .single();
 
@@ -2352,7 +2471,7 @@ if (orders) {
 
         return;
     }
-
+................................................
 
     adminOrders.innerHTML = "";
 
@@ -5068,3 +5187,127 @@ function closeOrderProductPicker() {
 
 }
 
+/* =========================================================
+   توافق المنتج
+========================================================= */
+
+const productCompatibilityType =
+    document.getElementById(
+        "productCompatibilityType"
+    );
+
+const productCompanyGroup =
+    document.getElementById(
+        "productCompanyGroup"
+    );
+
+const productModelGroup =
+    document.getElementById(
+        "productModelGroup"
+    );
+
+const compatibleDevicesGroup =
+    document.getElementById(
+        "compatibleDevicesGroup"
+    );
+
+const compatibleDevices =
+    document.getElementById(
+        "compatibleDevices"
+    );
+
+
+function updateProductCompatibilityFields() {
+
+    if (!productCompatibilityType) {
+        return;
+    }
+
+    const type =
+        productCompatibilityType.value;
+
+
+    /* =========================
+       منتج عام
+    ========================= */
+
+    if (type === "general") {
+
+        productCompanyGroup.style.display =
+            "none";
+
+        productModelGroup.style.display =
+            "none";
+
+        compatibleDevicesGroup.style.display =
+            "none";
+
+        document.getElementById(
+            "productCompany"
+        ).value = "";
+
+        document.getElementById(
+            "productModel"
+        ).value = "";
+
+        compatibleDevices.value = "";
+
+    }
+
+
+    /* =========================
+       منتج مخصص لجهاز
+    ========================= */
+
+    else if (type === "device") {
+
+        productCompanyGroup.style.display =
+            "block";
+
+        productModelGroup.style.display =
+            "block";
+
+        compatibleDevicesGroup.style.display =
+            "none";
+
+        compatibleDevices.value = "";
+
+    }
+
+
+    /* =========================
+       عدة أجهزة
+    ========================= */
+
+    else if (type === "multi") {
+
+        productCompanyGroup.style.display =
+            "none";
+
+        productModelGroup.style.display =
+            "none";
+
+        compatibleDevicesGroup.style.display =
+            "block";
+
+        document.getElementById(
+            "productCompany"
+        ).value = "";
+
+        document.getElementById(
+            "productModel"
+        ).value = "";
+
+    }
+
+}
+
+
+if (productCompatibilityType) {
+
+    productCompatibilityType.addEventListener(
+        "change",
+        updateProductCompatibilityFields
+    );
+
+}

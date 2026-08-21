@@ -913,3 +913,64 @@ body.modal-open {
         font-size: 15px;
     }
 }
+
+
+.product-compatibility-wrapper {
+    margin-top: 8px;
+}
+
+.product-compatibility {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #777;
+    line-height: 1.7;
+}
+
+.product-compatibility.general {
+    color: #4935b5;
+    font-weight: 700;
+}
+
+
+.model-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin-top: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.model-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 1px solid #e5e5eb;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.model-option:has(input:checked) {
+    background: #f1efff;
+    border-color: #4935b5;
+    color: #4935b5;
+}
+
+.model-option input {
+    width: 20px;
+    height: 20px;
+    accent-color: #4935b5;
+}
+
+.model-empty {
+    padding: 16px;
+    text-align: center;
+    background: #fafafa;
+    border-radius: 14px;
+    color: #999;
+}

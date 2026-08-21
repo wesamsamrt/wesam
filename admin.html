@@ -738,7 +738,33 @@
 
 
     <div class="product-form-grid">
+    
 
+    <div class="form-group">
+
+    <label>
+        توافق المنتج
+    </label>
+
+    <select id="productCompatibilityType">
+
+        <option value="device">
+            مخصص لجهاز
+        </option>
+
+        <option value="general">
+            منتج عام
+        </option>
+
+        <option value="multi">
+            متوافق مع عدة أجهزة
+        </option>
+
+    </select>
+
+</div>
+
+        
         <div class="form-group">
             <label>التصنيف</label>
 
@@ -759,7 +785,27 @@
                 placeholder="مثال: حماية شاشة"
             >
         </div>
+<div
+    class="form-group"
+    id="compatibleDevicesGroup"
+    style="display:none;"
+>
 
+    <label>
+        الأجهزة المتوافقة
+    </label>
+
+    <textarea
+        id="compatibleDevices"
+        rows="4"
+        placeholder="اكتب كل جهاز في سطر مستقل&#10;مثال:&#10;iPhone 15&#10;iPhone 16&#10;Samsung S24"
+    ></textarea>
+
+    <small>
+        اكتب كل جهاز في سطر مستقل
+    </small>
+
+</div>
 
         <div class="form-group">
             <label>النوع</label>
@@ -772,26 +818,40 @@
         </div>
 
 
-        <div class="form-group">
-            <label>الشركة</label>
+       <div
+    class="form-group"
+    id="productCompanyGroup"
+>
 
-            <input
-                id="productCompany"
-                type="text"
-                placeholder="مثال: Apple"
-            >
-        </div>
+    <label>
+        الشركة
+    </label>
+
+    <input
+        id="productCompany"
+        type="text"
+        placeholder="مثال: Apple"
+    >
+
+</div>
 
 
-        <div class="form-group">
-            <label>الموديل</label>
+        <div
+    class="form-group"
+    id="productModelGroup"
+>
 
-            <input
-                id="productModel"
-                type="text"
-                placeholder="مثال: iPhone 15"
-            >
-        </div>
+    <label>
+        الموديل
+    </label>
+
+    <input
+        id="productModel"
+        type="text"
+        placeholder="مثال: iPhone 15"
+    >
+
+</div>
 
 
         <div class="form-group">

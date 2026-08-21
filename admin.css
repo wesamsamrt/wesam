@@ -2259,3 +2259,14 @@ body {
 }
 
 
+.product-compatibility {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #666;
+}
+
+.product-compatibility.general {
+    color: #6557ed;
+}
