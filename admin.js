@@ -965,17 +965,6 @@ const compatibilityType =
     ).value;
 
 
-const company =
-    document.getElementById(
-        "productCompany"
-    ).value.trim();
-
-
-const model =
-    document.getElementById(
-        "productModel"
-    ).value.trim();
-
 
 /* =========================
    التحقق حسب نوع التوافق
@@ -2471,7 +2460,7 @@ if (orders) {
 
         return;
     }
-................................................
+
 
     adminOrders.innerHTML = "";
 
