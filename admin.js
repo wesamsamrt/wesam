@@ -23,7 +23,7 @@ function showAdmin() {
     if (adminPage) {
         adminPage.style.display = "block";
     }
-    loadDashboardLatestOrders();
+    loadDashboardData();
 
 }
 
@@ -382,6 +382,123 @@ async function checkSession() {
 
 checkSession();
 
+/* =========================================================
+   بيانات لوحة التحكم الفعلية
+========================================================= */
+const formatAdminCurrency = value => `${Number(value || 0).toFixed(2)} ر.س`;
+let dashboardOrdersCache = [];
+
+async function loadDashboardData() {
+    const alerts = document.getElementById("dashboardOperationalAlerts");
+
+    try {
+        const [{ data: orders, error: ordersError }, { data: products, error: productsError }] = await Promise.all([
+            supabaseClient.from("orders").select("id, status, total, created_at, user_id").order("id", { ascending: false }),
+            supabaseClient.from("products").select("id, product_code, company, model, quantity, image")
+        ]);
+
+        if (ordersError) throw ordersError;
+        if (productsError) throw productsError;
+
+        const safeOrders = orders || [];
+        dashboardOrdersCache = safeOrders;
+        const safeProducts = products || [];
+        const nonCancelled = safeOrders.filter(order => order.status !== "ملغي");
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthOrders = nonCancelled.filter(order => new Date(order.created_at) >= monthStart);
+        const monthSales = monthOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+
+        document.getElementById("dashboardCustomersCount").textContent = new Set(safeOrders.map(order => order.user_id).filter(Boolean)).size;
+        document.getElementById("dashboardSalesTotal").textContent = formatAdminCurrency(nonCancelled.reduce((sum, order) => sum + Number(order.total || 0), 0));
+        document.getElementById("dashboardProductsCount").textContent = safeProducts.length;
+        document.getElementById("dashboardOrdersCount").textContent = safeOrders.length;
+        document.getElementById("dashboardSalesSummary").textContent = formatAdminCurrency(monthSales);
+
+        const lowStock = safeProducts.filter(product => Number(product.quantity || 0) <= 5);
+        const newOrders = safeOrders.filter(order => (order.status || "جديد") === "جديد");
+        if (alerts) {
+            alerts.innerHTML = `
+                <button type="button" class="dashboard-alert new-orders-alert" id="dashboardNewOrdersAlert">
+                    <strong>${newOrders.length}</strong><span>طلبات جديدة تحتاج متابعة</span>
+                </button>
+                <button type="button" class="dashboard-alert stock-alert" id="dashboardLowStockAlert">
+                    <strong>${lowStock.length}</strong><span>منتجات مخزونها 5 أو أقل</span>
+                </button>
+            `;
+            document.getElementById("dashboardNewOrdersAlert")?.addEventListener("click", () => {
+                ordersButton.click();
+                setTimeout(() => { if (adminOrderStatusFilter) adminOrderStatusFilter.value = "جديد"; renderAdminOrdersList(); }, 0);
+            });
+            document.getElementById("dashboardLowStockAlert")?.addEventListener("click", () => openLowStockInventory());
+        }
+
+        await loadDashboardLatestOrders();
+        await loadDashboardBestProducts(safeOrders);
+    } catch (error) {
+        console.error("Dashboard data error:", error);
+        if (alerts) alerts.innerHTML = '<div class="dashboard-alert-error">تعذر تحميل بعض بيانات لوحة التحكم.</div>';
+    }
+}
+
+async function loadDashboardBestProducts(orders) {
+    const container = document.getElementById("dashboardBestProducts");
+    if (!container) return;
+
+    const orderIds = orders.filter(order => order.status !== "ملغي").map(order => order.id);
+    if (!orderIds.length) {
+        container.innerHTML = '<div class="dashboard-empty">لا توجد مبيعات لعرض أفضل المنتجات.</div>';
+        return;
+    }
+
+    const { data: items, error } = await supabaseClient
+        .from("order_items")
+        .select("product_code, company, model, quantity, image")
+        .in("order_id", orderIds);
+    if (error) throw error;
+
+    const totals = new Map();
+    (items || []).forEach(item => {
+        const key = item.product_code || `${item.company || ""} ${item.model || ""}`.trim() || "منتج بدون كود";
+        const current = totals.get(key) || { ...item, quantity: 0 };
+        current.quantity += Number(item.quantity || 0);
+        totals.set(key, current);
+    });
+    const best = [...totals.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+    container.innerHTML = best.length ? best.map((item, index) => `
+        <div class="dashboard-best-product-row">
+            <span class="best-product-rank">${index + 1}</span>
+            <span class="best-product-name">${item.company || ""} ${item.model || item.product_code || "منتج"}</span>
+            <strong>${item.quantity} قطعة</strong>
+        </div>
+    `).join("") : '<div class="dashboard-empty">لا توجد منتجات مباعة حتى الآن.</div>';
+}
+
+function exportSalesReport() {
+    if (!dashboardOrdersCache.length) {
+        alert("لا توجد بيانات مبيعات لتصديرها بعد.");
+        return;
+    }
+
+    const rows = [["رقم الطلب", "الحالة", "التاريخ", "الإجمالي"]];
+    dashboardOrdersCache.forEach(order => rows.push([
+        order.id,
+        order.status || "جديد",
+        new Date(order.created_at).toLocaleString("ar-SA"),
+        Number(order.total || 0).toFixed(2)
+    ]));
+    const csv = "\uFEFF" + rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    link.download = `sales-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+document.getElementById("dashboardMonthLabel")?.addEventListener("click", loadDashboardData);
+document.getElementById("dashboardBestProductsButton")?.addEventListener("click", exportSalesReport);
+
 
 
 /* =========================================================
@@ -528,6 +645,17 @@ async function loadAdminProducts() {
 }
 
 
+async function openLowStockInventory() {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "block";
+    await loadAdminProducts();
+    adminProductSearch.value = "";
+    adminProductSearch.placeholder = "تُعرض المنتجات ذات المخزون المنخفض (5 أو أقل)";
+    renderAdminProducts(adminProductsData.filter(product => Number(product.quantity || 0) <= 5));
+}
+
 /* عرض المنتجات */
 
 function renderAdminProducts(products) {
@@ -650,6 +778,19 @@ adminProductSearch.addEventListener(
 
     }
 );
+
+document.getElementById("addProductDashboardButton")?.addEventListener("click", async () => {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "block";
+    await loadAdminProducts();
+    addProductButton.click();
+});
+
+document.getElementById("inventoryDashboardButton")?.addEventListener("click", openLowStockInventory);
+document.getElementById("newOrderDashboardButton")?.addEventListener("click", () => ordersButton.click());
+document.getElementById("reportsDashboardButton")?.addEventListener("click", exportSalesReport);
 
 
 
@@ -2338,6 +2479,43 @@ const backFromOrders =
 const adminOrders =
     document.getElementById("adminOrders");
 
+const adminOrderSearch = document.getElementById("adminOrderSearch");
+const adminOrderStatusFilter = document.getElementById("adminOrderStatusFilter");
+const refreshAdminOrders = document.getElementById("refreshAdminOrders");
+const ordersSummary = document.getElementById("ordersSummary");
+let adminOrdersData = [];
+
+function renderAdminOrdersList() {
+    const search = (adminOrderSearch?.value || "").trim().toLowerCase();
+    const status = adminOrderStatusFilter?.value || "";
+    const filteredOrders = adminOrdersData.filter(order => {
+        const searchable = [order.id, order.customer_name, order.customer_phone, order.driver_name, order.driver_number]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+        return (!search || searchable.includes(search)) && (!status || order.status === status);
+    });
+
+    adminOrders.innerHTML = "";
+    if (!filteredOrders.length) {
+        adminOrders.innerHTML = '<div class="message">لا توجد طلبات مطابقة للفلاتر الحالية.</div>';
+        return;
+    }
+
+    filteredOrders.forEach(order => renderAdminOrder(order, order.items));
+}
+
+function updateOrdersSummary() {
+    if (!ordersSummary) return;
+    const activeOrders = adminOrdersData.filter(order => !["تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
+    const total = adminOrdersData.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    ordersSummary.innerHTML = `<span><strong>${adminOrdersData.length}</strong> إجمالي الطلبات</span><span><strong>${activeOrders.length}</strong> قيد المتابعة</span><span><strong>${total.toFixed(2)}</strong> ر.س إجمالي المبيعات</span>`;
+}
+
+adminOrderSearch?.addEventListener("input", renderAdminOrdersList);
+adminOrderStatusFilter?.addEventListener("change", renderAdminOrdersList);
+refreshAdminOrders?.addEventListener("click", loadAdminOrders);
+
 /* =========================================================
    فتح صفحة الطلبات
 ========================================================= */
@@ -2416,19 +2594,6 @@ async function loadAdminOrders() {
         ascending: false
     });
 
-console.log("ORDERS FROM ADMIN:", orders);
-
-if (orders) {
-    orders.forEach(order => {
-        console.log(
-            "طلب #" + order.id,
-            "driver_name =", order.driver_name,
-            "driver_number =", order.driver_number
-        );
-    });
-}
-
-
     if (error) {
 
         console.error(error);
@@ -2444,13 +2609,10 @@ if (orders) {
     }
 
 
-    console.log(
-        "الطلبات التي وصلت للإدارة:",
-        orders
-    );
-
-
     if (!orders || orders.length === 0) {
+
+        adminOrdersData = [];
+        updateOrdersSummary();
 
         adminOrders.innerHTML = `
             <div class="message">
@@ -2462,14 +2624,32 @@ if (orders) {
     }
 
 
-    adminOrders.innerHTML = "";
+    // نجلب عناصر كل الطلبات بطلب واحد بدلاً من طلب منفصل لكل بطاقة.
+    const { data: allItems, error: itemsError } = await supabaseClient
+        .from("order_items")
+        .select("*")
+        .in("order_id", orders.map(order => order.id))
+        .order("id", { ascending: true });
 
-
-    for (const order of orders) {
-
-        await renderAdminOrder(order);
-
+    if (itemsError) {
+        console.error(itemsError);
+        adminOrders.innerHTML = '<div class="message error">حدث خطأ أثناء تحميل منتجات الطلبات.</div>';
+        return;
     }
+
+    const itemsByOrder = new Map();
+    (allItems || []).forEach(item => {
+        const items = itemsByOrder.get(item.order_id) || [];
+        items.push(item);
+        itemsByOrder.set(item.order_id, items);
+    });
+
+    adminOrdersData = orders.map(order => ({
+        ...order,
+        items: itemsByOrder.get(order.id) || []
+    }));
+    updateOrdersSummary();
+    renderAdminOrdersList();
 
 }
 
@@ -2656,28 +2836,7 @@ async function loadDashboardLatestOrders() {
 
 /* عرض طلب واحد */
 
-async function renderAdminOrder(order) {
-
-    const {
-        data: items,
-        error
-    } =
-        await supabaseClient
-            .from("order_items")
-            .select("*")
-            .eq("order_id", order.id)
-            .order("id", {
-                ascending: true
-            });
-
-
-    if (error) {
-
-        console.error(error);
-
-        return;
-
-    }
+function renderAdminOrder(order, items = []) {
 
 
     const card =

@@ -1,5 +1,67 @@
 let allProducts = [];
 
+// نحتفظ بالمستخدم والطلب المفتوح طوال الجلسة بدلاً من طلبهما من الخادم
+// مع كل ضغطة على زر الإضافة.
+let cachedCartUser = null;
+let cachedOpenOrder = null;
+
+async function getCartUser() {
+    if (cachedCartUser) {
+        return cachedCartUser;
+    }
+
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+
+    if (error || !user) {
+        throw new Error("LOGIN_REQUIRED");
+    }
+
+    cachedCartUser = user;
+    return user;
+}
+
+async function getOpenOrder(user) {
+    if (cachedOpenOrder && cachedOpenOrder.user_id === user.id) {
+        return cachedOpenOrder;
+    }
+
+    const { data: orders, error } = await supabaseClient
+        .from("orders")
+        .select("id, user_id")
+        .eq("user_id", user.id)
+        .eq("status", "جديد")
+        .order("id", { ascending: false })
+        .limit(1);
+
+    if (error) {
+        throw error;
+    }
+
+    if (orders && orders.length) {
+        cachedOpenOrder = orders[0];
+        return cachedOpenOrder;
+    }
+
+    const { data: order, error: createError } = await supabaseClient
+        .from("orders")
+        .insert({
+            user_id: user.id,
+            customer_name: user.user_metadata?.name || user.email || "عميل",
+            customer_phone: user.user_metadata?.phone || "",
+            status: "جديد",
+            total: 0
+        })
+        .select("id, user_id")
+        .single();
+
+    if (createError) {
+        throw createError;
+    }
+
+    cachedOpenOrder = order;
+    return cachedOpenOrder;
+}
+
 
 /* =========================================================
    تحميل المنتجات
@@ -673,6 +735,8 @@ function openProductModal(variants) {
                     <select
                         id="modelSelect"
                         class="product-select"
+                        multiple
+                        size="5"
                         disabled
                     >
 
@@ -681,6 +745,10 @@ function openProductModal(variants) {
                         </option>
 
                     </select>
+
+                    <small class="model-select-hint">
+                        اختر موديلًا أو أكثر، ثم اختر الألوان والكميات.
+                    </small>
 
 
                     <!-- الألوان والكميات -->
@@ -853,6 +921,23 @@ function openProductModal(variants) {
 
     const addButton =
         document.getElementById("confirmAddProduct");
+
+    function updateModelCheckmarks() {
+        Array.from(modelSelect.options).forEach(option => {
+            if (option.disabled || !option.value) return;
+            option.textContent = `${option.selected ? "✓ " : ""}${option.value}`;
+        });
+    }
+
+    // يجعل النقر على أي موديل يضيفه/يزيله مباشرة، دون الحاجة إلى زر Ctrl.
+    modelSelect.addEventListener("mousedown", function (event) {
+        const option = event.target.closest("option");
+        if (!option || option.disabled) return;
+
+        event.preventDefault();
+        option.selected = !option.selected;
+        modelSelect.dispatchEvent(new Event("change"));
+    });
 
 
     let selectedColorProducts = [];
@@ -1186,11 +1271,7 @@ if (compatibilityType === "general") {
         const company =
             this.value.trim();
 
-        modelSelect.innerHTML = `
-            <option value="">
-                اختر الموديل
-            </option>
-        `;
+        modelSelect.innerHTML = "";
 
         colorsContainer.innerHTML = "";
 
@@ -1250,8 +1331,16 @@ if (compatibilityType === "general") {
         });
 
 
-        modelSelect.disabled =
-            models.length === 0;
+        modelSelect.disabled = models.length === 0;
+
+        updateModelCheckmarks();
+
+        if (models.length) {
+            const hint = document.createElement("option");
+            hint.disabled = true;
+            hint.textContent = "يمكنك اختيار أكثر من موديل";
+            modelSelect.appendChild(hint);
+        }
 
     });
 
@@ -1262,11 +1351,14 @@ if (compatibilityType === "general") {
 
     modelSelect.addEventListener("change", function () {
 
+        updateModelCheckmarks();
+
         const company =
             companySelect.value.trim();
 
-        const model =
-            this.value.trim();
+        const selectedModels = Array.from(this.selectedOptions)
+            .map(option => option.value.trim())
+            .filter(Boolean);
 
 
         colorsContainer.innerHTML = "";
@@ -1279,7 +1371,7 @@ if (compatibilityType === "general") {
         selectedColorProducts = [];
 
 
-        if (!company || !model) {
+        if (!company || !selectedModels.length) {
             return;
         }
 
@@ -1299,11 +1391,13 @@ if (compatibilityType === "general") {
 
                     &&
 
-                    String(product.model || "")
-                        .trim()
-                        .toLowerCase()
-                    ===
-                    model.toLowerCase()
+                    selectedModels.some(model =>
+                        String(product.model || "")
+                            .trim()
+                            .toLowerCase()
+                        ===
+                        model.toLowerCase()
+                    )
 
                 );
 
@@ -1362,17 +1456,32 @@ if (compatibilityType === "general") {
         });
 
 
-        if (colorProducts.length === 0) {
+        // نعرض الألوان المشتركة بين جميع الموديلات فقط؛ بذلك تعني كمية اللون
+        // نفسها لكل موديل، ولا يُضاف لون غير متاح لأحد الموديلات المختارة.
+        const sharedColorProducts = colorProducts.filter(product => {
+            const colorKey = String(product.color || "").trim().toLowerCase() || "__NO_COLOR__";
+            const modelsWithColor = new Set(
+                modelProducts
+                    .filter(item =>
+                        (String(item.color || "").trim().toLowerCase() || "__NO_COLOR__") === colorKey
+                    )
+                    .map(item => String(item.model || "").trim().toLowerCase())
+            );
+            return modelsWithColor.size === selectedModels.length;
+        });
+
+        if (sharedColorProducts.length === 0) {
 
             stockSummary.textContent =
-                "لا توجد منتجات لهذا الموديل";
+                "لا توجد ألوان مشتركة بين الموديلات المختارة";
 
             return;
         }
 
 
-        selectedColorProducts =
-            colorProducts;
+        // نحتفظ بكل المنتجات المختارة، لا بموديل واحد فقط، حتى تُطبّق
+        // كمية كل لون على كل موديل قام العميل بتحديده.
+        selectedColorProducts = modelProducts;
 
 
         /* =================================================
@@ -1395,13 +1504,16 @@ if (compatibilityType === "general") {
            إنشاء صف لكل لون
         ================================================= */
 
-        colorProducts.forEach((product, index) => {
+        sharedColorProducts.forEach((product, index) => {
 
-            const available =
-                Math.max(
-                    0,
-                    Number(product.quantity) || 0
-                );
+            const colorKey = String(product.color || "").trim().toLowerCase() || "__NO_COLOR__";
+            const matchingProducts = modelProducts.filter(item =>
+                (String(item.color || "").trim().toLowerCase() || "__NO_COLOR__") === colorKey
+            );
+            // لا نسمح بكمية أكبر من مخزون أي موديل مختار لهذا اللون.
+            const available = Math.min(...matchingProducts.map(item =>
+                Math.max(0, Number(item.quantity) || 0)
+            ));
 
 
             const color =
@@ -1417,6 +1529,9 @@ if (compatibilityType === "general") {
 
             row.dataset.productId =
                 product.id;
+
+            row.dataset.colorKey = colorKey;
+            row.dataset.available = available;
 
 
             row.innerHTML = `
@@ -1597,12 +1712,9 @@ plus.addEventListener("pointerdown", function (e) {
                 );
 
 
-            const product =
-                selectedColorProducts.find(
-                    p =>
-                        String(p.id) ===
-                        String(row.dataset.productId)
-                );
+            const product = selectedColorProducts.find(
+                p => String(p.id) === String(row.dataset.productId)
+            );
 
 
             const quantity =
@@ -1613,15 +1725,9 @@ plus.addEventListener("pointerdown", function (e) {
                 quantity;
 
 
-            if (product) {
-
-                totalStock +=
-                    Math.max(
-                        0,
-                        Number(product.quantity) || 0
-                    );
-
-            }
+            totalStock += row.dataset.available
+                ? Number(row.dataset.available)
+                : Math.max(0, Number(product?.quantity) || 0);
 
         });
 
@@ -1659,193 +1765,51 @@ plus.addEventListener("pointerdown", function (e) {
          إضافة جميع الألوان للسلة
      ===================================================== */
 
-     addButton.onclick = async function () {
+    addButton.onclick = async function () {
+        const rows = colorsContainer.querySelectorAll(".color-quantity-row");
+        const selectedItems = [];
 
-        
+        rows.forEach(row => {
+            const quantity = parseInt(row.querySelector(".color-quantity-input").value) || 0;
+            const products = row.dataset.colorKey
+                ? selectedColorProducts.filter(product =>
+                    (String(product.color || "").trim().toLowerCase() || "__NO_COLOR__") === row.dataset.colorKey
+                )
+                : selectedColorProducts.filter(product =>
+                    String(product.id) === String(row.dataset.productId)
+                );
 
-     /* ==========================================
-       التأكد من تسجيل الدخول مرة واحدة فقط
-      ========================================== */
+            if (quantity > 0) {
+                products.forEach(product => selectedItems.push({ product, quantity }));
+            }
+        });
 
-      const {
-        data: { user },
-        error: userError
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-
-        alert("يجب تسجيل الدخول أولاً");
-
-        window.location.href = "login.html";
-
-        return;
-    }
-
-
-    /* ==========================================
-       جمع الألوان والكميات
-    ========================================== */
-
-    const rows =
-        colorsContainer.querySelectorAll(
-            ".color-quantity-row"
-        );
-
-    const selectedItems = [];
-
-
-    rows.forEach(row => {
-
-        const input =
-            row.querySelector(
-                ".color-quantity-input"
-            );
-
-        const quantity =
-            parseInt(input.value) || 0;
-
-
-        if (quantity <= 0) {
+        if (!selectedItems.length) {
+            alert("اختر كمية لون واحد على الأقل");
             return;
         }
 
-
-        const product =
-            selectedColorProducts.find(
-                p =>
-                    String(p.id) ===
-                    String(row.dataset.productId)
-            );
-
-
-        if (product) {
-
-            selectedItems.push({
-
-                product: product,
-
-                quantity: quantity
-
-            });
-
-        }
-
-     });
-
-
-    /* ==========================================
-       التأكد من اختيار لون
-    ========================================== */
-
-    if (selectedItems.length === 0) {
-
-        alert("اختر كمية لون واحد على الأقل");
-
-        return;
-    }
-
-
-    /* ==========================================
-       منع الضغط المتكرر
-    ========================================== */
-
-    addButton.disabled = true;
-
-    addButton.textContent =
-        "جاري الإضافة...";
-
-
-    try {
-
-        /* ==========================================
-           إضافة جميع الألوان
-           بدون أي alert من هنا
-        ========================================== */
+        addButton.disabled = true;
+        addButton.textContent = "جاري الإضافة...";
 
         try {
-
-    for (const item of selectedItems) {
-
-        await addProduct(
-            item.product,
-            item.quantity
-        );
-
-    }
-
-    
-
-} catch (error) {
-
-    console.error("خطأ إضافة الألوان:", error);
-
-    if (error.message === "LOGIN_REQUIRED") {
-
-        alert("يجب تسجيل الدخول أولاً");
-
-        window.location.href = "login.html";
-
-    } else {
-
-        alert("حدث خطأ أثناء إضافة المنتجات");
-
-    }
-
-}
-
-
-        /* ==========================================
-           رسالة واحدة فقط بعد انتهاء الجميع
-        ========================================== */
-
-        alert(
-            `تمت إضافة ${selectedItems.length} ${
-                selectedItems.length === 1
-                    ? "لون"
-                    : "ألوان"
-            } إلى السلة بنجاح`
-        );
-
-
-        /* ==========================================
-           تصفير الكميات
-        ========================================== */
-
-        rows.forEach(row => {
-
-            const input =
-                row.querySelector(
-                    ".color-quantity-input"
-                );
-
-            input.value = 0;
-
-        });
-
-
-        updateStockSummary();
-
-
-    } catch (error) {
-
-        console.error(
-            "خطأ إضافة الألوان:",
-            error
-        );
-
-        alert(
-            "حدث خطأ أثناء إضافة المنتجات"
-        );
-
-    }
-
-
-    addButton.disabled = false;
-
-    addButton.textContent =
-        "إضافة للسلة";
-
-};
+            await addProductsBatch(selectedItems);
+            alert("تمت إضافة المنتجات المختارة إلى السلة بنجاح");
+            rows.forEach(row => { row.querySelector(".color-quantity-input").value = 0; });
+            updateStockSummary();
+        } catch (error) {
+            console.error("خطأ إضافة المنتجات:", error);
+            if (error.message === "LOGIN_REQUIRED") {
+                alert("يجب تسجيل الدخول أولاً");
+                window.location.href = "login.html";
+            } else {
+                alert("حدث خطأ أثناء إضافة المنتجات");
+            }
+        } finally {
+            addButton.disabled = false;
+            addButton.textContent = "إضافة للسلة";
+        }
+    };
 
 
     /* =====================================================
@@ -2117,6 +2081,18 @@ function addProductModalStyles() {
         rgba(73,53,181,0.1);
 }
 
+#modelSelect[multiple] {
+    height: 150px;
+    padding: 8px;
+}
+
+.model-select-hint {
+    display: block;
+    margin-top: 6px;
+    color: #777;
+    font-size: 13px;
+}
+
 /* الألوان */
 
 .colors-title {
@@ -2322,7 +2298,213 @@ loadProducts();
 
 setupFilters();
 
+/* =========================================================
+   إضافة عدة منتجات للسلة دفعة واحدة
+========================================================= */
+async function addProductsBatch(items) {
 
+    if (!items || !items.length) {
+        return;
+    }
+
+    const user = await getCartUser();
+    const order = await getOpenOrder(user);
+
+
+    /* ==========================================
+       جلب المنتجات الموجودة في السلة مرة واحدة
+       بدل البحث عن كل منتج لوحده
+    ========================================== */
+
+    const productIds =
+        items.map(item =>
+            item.product.id
+        );
+
+
+    const {
+        data: existingItems,
+        error: existingItemsError
+    } = await supabaseClient
+        .from("order_items")
+        .select("id, product_id, quantity")
+        .eq("order_id", order.id)
+        .in("product_id", productIds);
+
+    if (existingItemsError) {
+        throw existingItemsError;
+    }
+
+
+    const existingMap = new Map();
+
+
+    (existingItems || []).forEach(item => {
+
+        existingMap.set(
+            String(item.product_id),
+            item
+        );
+
+    });
+
+
+    /* ==========================================
+       تجهيز التحديثات والإضافات
+    ========================================== */
+
+    const updates = [];
+    const inserts = [];
+
+
+    items.forEach(item => {
+
+        const product =
+            item.product;
+
+        const quantity =
+            Math.max(
+                1,
+                parseInt(item.quantity) || 1
+            );
+
+
+        const existingItem =
+            existingMap.get(
+                String(product.id)
+            );
+
+
+        /* المنتج موجود بالسلة */
+
+        if (existingItem) {
+
+            const newQuantity =
+                (Number(existingItem.quantity) || 0)
+                + quantity;
+
+
+            updates.push({
+
+                id:
+                    existingItem.id,
+
+                quantity:
+                    newQuantity,
+
+                product_code:
+                    product.product_code
+
+            });
+
+        }
+
+
+        /* المنتج غير موجود */
+
+        else {
+
+            inserts.push({
+
+                order_id:
+                    order.id,
+
+                product_id:
+                    product.id,
+
+                quantity:
+                    quantity,
+
+                product_code:
+                    product.product_code,
+
+                category: product.category,
+                product_type: product.product_type,
+                type: product.type,
+                company: product.company,
+                model: product.model,
+                color: product.color,
+                price: product.price,
+                image: product.image
+
+            });
+
+        }
+
+    });
+
+
+    /* ==========================================
+       تنفيذ الإضافات الجديدة دفعة واحدة
+    ========================================== */
+
+    if (inserts.length > 0) {
+
+        const {
+            error: insertError
+        } = await supabaseClient
+            .from("order_items")
+            .insert(inserts);
+
+        if (insertError) {
+            throw insertError;
+        }
+
+    }
+
+
+    /* ==========================================
+       تحديث المنتجات الموجودة
+    ========================================== */
+
+    /*
+       Supabase لا يدعم تحديث عدة صفوف
+       بقيم مختلفة في طلب update واحد بسهولة.
+
+       لذلك نستخدم Promise.all
+       حتى تحدث بالتوازي بدل الانتظار بالتسلسل.
+    */
+
+    if (updates.length > 0) {
+
+        await Promise.all(
+
+            updates.map(item =>
+
+                supabaseClient
+                    .from("order_items")
+                    .update({
+
+                        quantity:
+                            item.quantity,
+
+                        product_code:
+                            item.product_code
+
+                    })
+                    .eq(
+                        "id",
+                        item.id
+                    )
+
+                    .then(({ error }) => {
+
+                        if (error) {
+                            throw error;
+                        }
+
+                    })
+
+            )
+
+        );
+
+    }
+
+
+    return order;
+
+}
 /* =========================================================
    إضافة المنتج للسلة
 ========================================================= */
