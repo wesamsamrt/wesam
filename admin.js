@@ -23,7 +23,10 @@ function showAdmin() {
     if (adminPage) {
         adminPage.style.display = "block";
     }
-    loadDashboardData();
+    // تبقى لوحة التحكم الأساسية مستقلة عن أي إضافات إحصائية.
+    // بهذا لا يمنع خطأ في تقرير أو تنبيه بقية عناصر الإدارة من العمل.
+    loadDashboardLatestOrders();
+    setTimeout(() => loadDashboardData(), 0);
 
 }
 
@@ -434,7 +437,6 @@ async function loadDashboardData() {
             document.getElementById("dashboardLowStockAlert")?.addEventListener("click", () => openLowStockInventory());
         }
 
-        await loadDashboardLatestOrders();
         await loadDashboardBestProducts(safeOrders);
     } catch (error) {
         console.error("Dashboard data error:", error);
@@ -3755,7 +3757,7 @@ Object.entries(typeCodes).forEach(
 
             @page {
 
-                size: A4 landscape;
+                size: A4 portrait;
 
                 margin: 10mm;
 

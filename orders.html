@@ -175,6 +175,31 @@
             margin-bottom: 10px;
         }
 
+        .cart-tools { margin: 0 0 16px; background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 8px 25px rgba(50,50,100,.05); }
+        .cart-summary { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 13px; }
+        .cart-summary span { padding: 7px 10px; background: #f4f3ff; color: #5848d4; border-radius: 10px; font-size: 12px; font-weight: 700; }
+        .cart-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+        .cart-controls input, .cart-controls select, .cart-clear-button { min-height: 42px; border: 1px solid #e2e3ec; border-radius: 11px; padding: 0 12px; background: #fff; color: #36384c; font-family: inherit; }
+        .cart-controls input { flex: 1; min-width: 220px; }
+        .cart-clear-button { border: 0; background: #fff0f3; color: #e24b65; cursor: pointer; font-weight: 700; }
+        .cart-group { background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 25px rgba(50,50,100,.05); }
+        .cart-group + .cart-group { margin-top: 14px; }
+        .cart-group-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 17px; background: #f5f4ff; color: #4e40c7; font-weight: 800; font-size: 13px; }
+        .cart-group-title span { color: #77718e; font-size: 11px; }
+        .cart-group-items { display: grid; gap: 1px; }
+        .cart-group .order-card { border-radius: 0; box-shadow: none; border-bottom: 1px solid #f0f0f5; }
+        .cart-group .order-card:last-child { border-bottom: 0; }
+        .cart-empty-filter { padding: 35px 15px; background: #fff; border-radius: 18px; text-align: center; color: #858796; }
+        .cart-total-box { background: #25203f; color: #fff; border-radius: 20px; padding: 18px 20px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .cart-total-box strong:last-child { color: #d9d3ff; font-size: 21px; }
+
+        @media (max-width: 600px) {
+            .cart-controls input, .cart-controls select, .cart-clear-button { width: 100%; }
+            .order-card { align-items: flex-start; padding: 14px; }
+            .order-image { width: 60px; height: 60px; font-size: 28px; }
+            .order-info h3 { font-size: 14px; }
+        }
+
     </style>
 
 </head>
@@ -208,9 +233,18 @@
         id="orders"
     ></div>
 
-<button onclick="clearCart()">
-    🗑️ حذف جميع منتجات السلة
-</button>
+    <section class="cart-tools" id="cartTools" style="display:none;">
+        <div class="cart-summary" id="cartSummary"></div>
+        <div class="cart-controls">
+            <input id="cartSearch" type="search" placeholder="ابحث باسم المنتج أو الموديل أو اللون">
+            <select id="cartGroupBy" aria-label="تجميع المنتجات">
+                <option value="code">تجميع حسب كود المنتج</option>
+                <option value="company">تجميع حسب الشركة</option>
+                <option value="none">عرض كل منتج</option>
+            </select>
+            <button type="button" class="cart-clear-button" onclick="clearCart()">🗑️ إفراغ السلة</button>
+        </div>
+    </section>
 
 
 
@@ -404,6 +438,85 @@
 
 <script>
 
+let cartOrder = null;
+let cartItems = [];
+const quantitySaveTimers = new Map();
+
+function escapeCartHtml(value) {
+    return String(value || "").replace(/[&<>'"]/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+    }[char]));
+}
+
+function renderCartView() {
+    const container = document.getElementById("orders");
+    const tools = document.getElementById("cartTools");
+    const search = (document.getElementById("cartSearch")?.value || "").trim().toLowerCase();
+    const groupBy = document.getElementById("cartGroupBy")?.value || "code";
+    const visibleItems = cartItems.filter(item => [item.product_code, item.company, item.model, item.type, item.color]
+        .filter(Boolean).join(" ").toLowerCase().includes(search));
+    const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+    tools.style.display = "block";
+    document.getElementById("cartSummary").innerHTML = `
+        <span>${cartItems.length} صنف</span>
+        <span>${totalQuantity} قطعة</span>
+        <span>الإجمالي: ${Number(cartOrder.total || 0).toFixed(2)} ر.س</span>`;
+
+    if (!visibleItems.length) {
+        container.innerHTML = '<div class="cart-empty-filter">لا توجد منتجات مطابقة للبحث.</div>';
+        return;
+    }
+
+    const groups = new Map();
+    visibleItems.forEach(item => {
+        const key = groupBy === "none" ? `item-${item.id}` : groupBy === "company"
+            ? (item.company || "بدون شركة") : (item.product_code || "بدون كود");
+        const group = groups.get(key) || [];
+        group.push(item);
+        groups.set(key, group);
+    });
+
+    container.innerHTML = "";
+    groups.forEach((items, title) => {
+        const group = document.createElement("section");
+        group.className = "cart-group";
+        const groupQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        group.innerHTML = `<div class="cart-group-title"><strong>${escapeCartHtml(title)}</strong><span>${items.length} أصناف · ${groupQuantity} قطعة</span></div><div class="cart-group-items"></div>`;
+        const groupItems = group.querySelector(".cart-group-items");
+
+        items.forEach(item => {
+            const itemTotal = Number(item.price || 0) * Number(item.quantity || 0);
+            const card = document.createElement("article");
+            card.className = "order-card";
+            card.innerHTML = `
+                <div class="order-image">${item.image ? `<img src="${escapeCartHtml(item.image)}" alt="">` : "📱"}</div>
+                <div class="order-info">
+                    <h3>${escapeCartHtml(item.model || item.type || "منتج")}</h3>
+                    <p>${escapeCartHtml([item.company, item.type, item.color].filter(Boolean).join(" • "))}</p>
+                    <p>${item.product_code ? `كود المنتج: ${escapeCartHtml(item.product_code)}` : ""}</p>
+                    <div class="price">${itemTotal.toFixed(2)} ر.س</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                        <button onclick="changeQuantity(${item.id}, -1)" aria-label="تقليل الكمية" style="width:32px;height:32px;border:0;border-radius:10px;background:#eeeaff;color:#6557ed;font-size:18px;cursor:pointer;">−</button>
+                        <strong style="min-width:25px;text-align:center;">${item.quantity || 1}</strong>
+                        <button onclick="changeQuantity(${item.id}, 1)" aria-label="زيادة الكمية" style="width:32px;height:32px;border:0;border-radius:10px;background:#6557ed;color:#fff;font-size:18px;cursor:pointer;">+</button>
+                    </div>
+                </div>
+                <button class="delete-button" onclick="removeOrderItem(${item.id})" aria-label="حذف المنتج">🗑️</button>`;
+            groupItems.appendChild(card);
+        });
+        container.appendChild(group);
+    });
+
+    const total = document.createElement("div");
+    total.className = "cart-total-box";
+    total.innerHTML = `<strong>إجمالي الطلب</strong><strong>${Number(cartOrder.total || 0).toFixed(2)} ر.س</strong>`;
+    container.appendChild(total);
+}
+
+document.getElementById("cartSearch")?.addEventListener("input", renderCartView);
+document.getElementById("cartGroupBy")?.addEventListener("change", renderCartView);
+
 async function loadOrders() {
 
     const container = document.getElementById("orders");
@@ -500,6 +613,8 @@ async function loadOrders() {
 
     if (!orders || orders.length === 0) {
 
+        document.getElementById("cartTools").style.display = "none";
+
         container.innerHTML = `
             <div class="empty">
 
@@ -557,6 +672,8 @@ async function loadOrders() {
 
     if (!items || items.length === 0) {
 
+        document.getElementById("cartTools").style.display = "none";
+
         container.innerHTML = `
             <div class="empty">
 
@@ -578,6 +695,11 @@ async function loadOrders() {
         return;
     }
 
+
+    cartOrder = order;
+    cartItems = items;
+    renderCartView();
+    return;
 
     // =========================
     // عرض المنتجات
@@ -801,59 +923,42 @@ loadNotifications();
 // =========================
 
 async function changeQuantity(itemId, change) {
+    const item = cartItems.find(cartItem => Number(cartItem.id) === Number(itemId));
+    if (!item) return;
 
-    const {
-        data: item,
-        error
-    } = await supabaseClient
-        .from("order_items")
-        .select("*")
-        .eq("id", itemId)
-        .single();
-
-
-    if (error || !item) {
-
-        alert("حدث خطأ أثناء تعديل الكمية");
-
-        return;
-    }
-
-
-    const newQuantity =
-        (item.quantity || 1) + change;
-
-
+    const newQuantity = Number(item.quantity || 1) + change;
     if (newQuantity <= 0) {
-
+        clearTimeout(quantitySaveTimers.get(itemId));
+        quantitySaveTimers.delete(itemId);
         await removeOrderItem(itemId);
-
         return;
     }
 
+    // نُظهر التعديل فورًا؛ لا ننتظر الشبكة ولا نعيد تحميل السلة مع كل نقرة.
+    item.quantity = newQuantity;
+    cartOrder.total = cartItems.reduce((sum, cartItem) =>
+        sum + Number(cartItem.price || 0) * Number(cartItem.quantity || 0), 0
+    );
+    renderCartView();
 
-    const { error: updateError } =
-        await supabaseClient
-            .from("order_items")
-            .update({
-                quantity: newQuantity
-            })
-            .eq("id", itemId);
+    clearTimeout(quantitySaveTimers.get(itemId));
+    quantitySaveTimers.set(itemId, setTimeout(async () => {
+        quantitySaveTimers.delete(itemId);
+        const latestItem = cartItems.find(cartItem => Number(cartItem.id) === Number(itemId));
+        if (!latestItem || !cartOrder) return;
 
+        // نحفظ آخر كمية فقط بعد 600ms من آخر ضغطة.
+        const [{ error: itemError }, { error: orderError }] = await Promise.all([
+            supabaseClient.from("order_items").update({ quantity: latestItem.quantity }).eq("id", itemId),
+            supabaseClient.from("orders").update({ total: cartOrder.total }).eq("id", cartOrder.id)
+        ]);
 
-    if (updateError) {
-
-        console.error(updateError);
-
-        alert("حدث خطأ أثناء تعديل الكمية");
-
-        return;
-    }
-
-
-    await updateOrderTotal();
-
-    loadOrders();
+        if (itemError || orderError) {
+            console.error(itemError || orderError);
+            alert("تعذر حفظ تعديل الكمية. سيتم إعادة تحميل السلة.");
+            await loadOrders();
+        }
+    }, 600));
 }
 
 
