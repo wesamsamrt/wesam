@@ -419,6 +419,8 @@ const transferSourceWarehouse = document.getElementById("transferSourceWarehouse
 const transferDestinationWarehouse = document.getElementById("transferDestinationWarehouse");
 const transferProductSelect = document.getElementById("transferProductSelect");
 const transferProductSearch = document.getElementById("transferProductSearch");
+const transferSearchResults = document.getElementById("transferSearchResults");
+const transferSelectedProduct = document.getElementById("transferSelectedProduct");
 const transferQuantity = document.getElementById("transferQuantity");
 const transferNotes = document.getElementById("transferNotes");
 const transferDraftItems = document.getElementById("transferDraftItems");
@@ -428,6 +430,7 @@ let transferSourceProducts = [];
 let transferDraft = [];
 let transferMode = "request";
 let transfersCache = [];
+let selectedTransferProductId = null;
 
 const transferText = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
 
@@ -482,6 +485,8 @@ async function loadTransferSourceProducts() {
         const counterpart = destinationByInventoryKey.get(String(product.inventory_key));
         return { ...product, destination_quantity: Number(counterpart?.quantity || 0) };
     });
+    selectedTransferProductId = null;
+    renderSelectedTransferProduct();
     renderTransferProductOptions();
 }
 
@@ -491,11 +496,44 @@ function renderTransferProductOptions() {
         const values = [product.product_code, product.company, product.model, product.color, product.type, product.product_type].join(" ").toLowerCase();
         return !search || values.includes(search);
     });
-    transferProductSelect.innerHTML = '<option value="">اختر منتجًا للتحويل</option>' + products.map(product => {
-        const name = [product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`;
-        const details = [product.color, product.type, product.product_type].filter(Boolean).join(" · ");
-        return `<option value="${product.id}">${transferText(name)}${details ? ` — ${transferText(details)}` : ""} | المصدر: ${product.quantity || 0} | مخزني: ${product.destination_quantity}</option>`;
+    transferProductSelect.innerHTML = '<option value="">اختر منتجًا للتحويل</option>' + products.map(product => `<option value="${product.id}"></option>`).join("");
+    if (!search) {
+        transferSearchResults.innerHTML = '<span class="message">اكتب اسم المنتج أو كود المنتج لتظهر النتائج فورًا.</span>';
+        return;
+    }
+    if (!products.length) {
+        transferSearchResults.innerHTML = '<span class="message">لا توجد نتائج مطابقة في المخزن المصدر.</span>';
+        return;
+    }
+    transferSearchResults.innerHTML = products.map(product => {
+        const name = [product.company, product.model].filter(Boolean).join(" ") || "منتج بدون اسم";
+        const details = [product.product_code ? `الكود: ${product.product_code}` : "", product.color, product.type, product.product_type].filter(Boolean).join(" · ");
+        return `<button type="button" class="transfer-search-result ${String(product.id) === String(selectedTransferProductId) ? "active" : ""}" data-transfer-product-id="${product.id}"><span><strong>${transferText(name)}</strong><small>${transferText(details)}</small></span><span class="transfer-search-stock">المتاح: ${product.quantity || 0}</span></button>`;
     }).join("");
+    transferSearchResults.querySelectorAll("[data-transfer-product-id]").forEach(button => button.addEventListener("click", () => selectTransferProduct(button.dataset.transferProductId)));
+}
+
+function selectTransferProduct(id) {
+    const product = transferSourceProducts.find(item => String(item.id) === String(id));
+    if (!product) return;
+    selectedTransferProductId = product.id;
+    transferProductSelect.value = String(product.id);
+    renderTransferProductOptions();
+    renderSelectedTransferProduct();
+    transferQuantity.focus();
+}
+
+function renderSelectedTransferProduct() {
+    if (!transferSelectedProduct) return;
+    const product = transferSourceProducts.find(item => String(item.id) === String(selectedTransferProductId));
+    if (!product) {
+        transferSelectedProduct.className = "transfer-selected-product";
+        transferSelectedProduct.innerHTML = "<span>ابحث عن منتج ثم اختره لإظهار تفاصيله.</span>";
+        return;
+    }
+    const name = [product.company, product.model].filter(Boolean).join(" ") || "منتج بدون اسم";
+    transferSelectedProduct.className = "transfer-selected-product has-product";
+    transferSelectedProduct.innerHTML = `<strong>${transferText(name)}</strong><span>الكود: <b>${transferText(product.product_code || "—")}</b></span><span>نوع المنتج: <b>${transferText(product.product_type || "—")}</b></span><span>النوع: <b>${transferText(product.type || "—")}</b></span><span>الموديل: <b>${transferText(product.model || "—")}</b></span><span>اللون: <b>${transferText(product.color || "—")}</b></span><span class="stock">كمية المصدر: ${product.quantity || 0}</span><span class="stock">في مخزني: ${product.destination_quantity || 0}</span>`;
 }
 
 function configureTransferMode() {
@@ -520,7 +558,7 @@ document.querySelectorAll(".transfer-mode").forEach(button => button.addEventLis
 }));
 
 document.getElementById("addTransferItemButton")?.addEventListener("click", () => {
-    const product = transferSourceProducts.find(item => String(item.id) === transferProductSelect.value);
+    const product = transferSourceProducts.find(item => String(item.id) === String(selectedTransferProductId));
     const quantity = Number(transferQuantity.value);
     if (!product || !Number.isInteger(quantity) || quantity < 1) {
         setTransferMessage("اختر منتجًا وأدخل كمية صحيحة.", true);
@@ -548,6 +586,8 @@ document.getElementById("addTransferItemButton")?.addEventListener("click", () =
     }
     transferQuantity.value = "";
     transferProductSelect.value = "";
+    selectedTransferProductId = null;
+    renderSelectedTransferProduct();
     setTransferMessage("");
     renderTransferDraft();
 });
@@ -645,6 +685,13 @@ transfersButton?.addEventListener("click", async () => {
 });
 backFromTransfers?.addEventListener("click", () => { transfersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
 transferProductSearch?.addEventListener("input", renderTransferProductOptions);
+transferProductSearch?.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        const firstResult = transferSearchResults?.querySelector("[data-transfer-product-id]");
+        if (firstResult) selectTransferProduct(firstResult.dataset.transferProductId);
+    }
+});
 transferSourceWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
 transferDestinationWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
 document.getElementById("refreshTransfersButton")?.addEventListener("click", loadTransfers);

@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css"
+        href="admin.css?v=20260825-warehouse"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1169,11 +1169,13 @@
             <input id="transferNotes" type="text" placeholder="ملاحظات اختيارية">
         </div>
         <div class="transfer-form-row">
-            <input id="transferProductSearch" type="search" placeholder="ابحث بالاسم أو الموديل أو اللون أو النوع">
-            <select id="transferProductSelect" aria-label="اختر المنتج"><option value="">جاري تحميل منتجات المخزن...</option></select>
+            <input id="transferProductSearch" type="search" autocomplete="off" placeholder="ابحث باسم المنتج أو كود المنتج">
+            <select id="transferProductSelect" aria-label="المنتج المختار" style="display:none;"><option value="">جاري تحميل منتجات المخزن...</option></select>
             <input id="transferQuantity" type="number" min="1" placeholder="الكمية">
             <button type="button" id="addTransferItemButton">+ إضافة للطلب</button>
         </div>
+        <div class="transfer-search-results" id="transferSearchResults"></div>
+        <div class="transfer-selected-product" id="transferSelectedProduct"><span>ابحث عن منتج ثم اختره لإظهار تفاصيله.</span></div>
         <div class="transfer-draft-items" id="transferDraftItems"><span>لم تتم إضافة منتجات بعد.</span></div>
         <div class="transfer-create-actions"><button type="button" id="createTransferButton">إرسال طلب البضاعة</button><span id="transferFormMessage"></span></div>
     </div>
@@ -1367,7 +1369,7 @@
 </div>
 
 
-    <script src="admin.js"></script>
+    <script src="admin.js?v=20260825-warehouse"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
