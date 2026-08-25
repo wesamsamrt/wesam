@@ -87,14 +87,14 @@
             <div class="login-icon">🏬</div>
             <h1>اختر المخزن</h1>
             <p>سيتم عرض لوحة الإدارة والطلبات والمخزون الخاصة بالمخزن الذي تختاره.</p>
-            <div class="warehouse-login-options">
-                <button type="button" class="warehouse-login-option" data-warehouse-choice="الرياض">
-                    <strong>مخزن الرياض</strong><span>عرض إدارة ومخزون الرياض</span>
-                </button>
-                <button type="button" class="warehouse-login-option" data-warehouse-choice="جدة">
-                    <strong>مخزن جدة</strong><span>عرض إدارة ومخزون جدة</span>
-                </button>
+            <div class="warehouse-login-options" id="warehouseChoiceList">
+                جاري تحميل المخازن...
             </div>
+            <div class="add-warehouse-box">
+                <input id="newWarehouseName" type="text" maxlength="60" placeholder="اسم المخزن الجديد">
+                <button type="button" id="addWarehouseButton">+ إضافة مخزن</button>
+            </div>
+            <div class="warehouse-add-message" id="warehouseAddMessage"></div>
             <button type="button" class="warehouse-back-login" id="warehouseBackToLogin">تسجيل الخروج</button>
         </div>
     </section>
@@ -737,8 +737,7 @@
 
     <div class="warehouse-selector" role="group" aria-label="اختيار المخزن">
         <span class="warehouse-selector-label">عرض مخزون:</span>
-        <button type="button" class="warehouse-option active" data-warehouse="الرياض">مخزن الرياض</button>
-        <button type="button" class="warehouse-option" data-warehouse="جدة">مخزن جدة</button>
+        <div id="productWarehouseTabs"></div>
     </div>
 <div
     class="product-form-card"
@@ -791,10 +790,7 @@
 
         <div class="form-group">
             <label>المخزن</label>
-            <select id="productWarehouse">
-                <option value="الرياض">مخزن الرياض</option>
-                <option value="جدة">مخزن جدة</option>
-            </select>
+            <select id="productWarehouse"></select>
         </div>
 
 
@@ -1139,8 +1135,7 @@
         <div class="driver-warehouse-assignment">
             <input id="driverWarehouseNumber" type="text" inputmode="numeric" placeholder="رقم المندوب">
             <select id="driverWarehouseSelect" aria-label="مخزن المندوب">
-                <option value="الرياض">مخزن الرياض</option>
-                <option value="جدة">مخزن جدة</option>
+                <option value="">جاري تحميل المخازن...</option>
             </select>
             <button type="button" id="saveDriverWarehouseButton">ربط المندوب</button>
             <span id="driverWarehouseMessage"></span>
@@ -1168,9 +1163,9 @@
             <button type="button" class="transfer-mode" data-transfer-mode="send">إرسال بضاعة من مخزني</button>
         </div>
         <div class="transfer-form-row">
-            <label>من مخزن <select id="transferSourceWarehouse" disabled><option value="الرياض">الرياض</option><option value="جدة">جدة</option></select></label>
+            <label>من مخزن <select id="transferSourceWarehouse" disabled></select></label>
             <span class="transfer-arrow">←</span>
-            <label>إلى مخزن <select id="transferDestinationWarehouse" disabled><option value="جدة">جدة</option><option value="الرياض">الرياض</option></select></label>
+            <label>إلى مخزن <select id="transferDestinationWarehouse" disabled></select></label>
             <input id="transferNotes" type="text" placeholder="ملاحظات اختيارية">
         </div>
         <div class="transfer-form-row">

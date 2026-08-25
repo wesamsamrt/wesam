@@ -7,13 +7,60 @@ const loginMessage = document.getElementById("loginMessage");
 
 const logoutButton = document.getElementById("logoutButton");
 const warehouseLoginPage = document.getElementById("warehouseLoginPage");
-const warehouseChoiceButtons = document.querySelectorAll("[data-warehouse-choice]");
 let selectedWarehouse = null;
+let warehouses = [];
+let warehouseOptions = [];
+
+function warehouseOptionsHtml(selected = "") {
+    return warehouses.map(warehouse => `<option value="${transferText(warehouse.name)}" ${warehouse.name === selected ? "selected" : ""}>مخزن ${transferText(warehouse.name)}</option>`).join("");
+}
+
+function renderWarehouseControls() {
+    const choices = document.getElementById("warehouseChoiceList");
+    if (choices) {
+        choices.innerHTML = warehouses.length ? warehouses.map(warehouse => `<button type="button" class="warehouse-login-option" data-warehouse-choice="${transferText(warehouse.name)}"><strong>مخزن ${transferText(warehouse.name)}</strong><span>فتح لوحة الإدارة والمخزون</span></button>`).join("") : "لا توجد مخازن بعد.";
+        choices.querySelectorAll("[data-warehouse-choice]").forEach(button => button.addEventListener("click", () => { selectWarehouse(button.dataset.warehouseChoice); showAdmin(); }));
+    }
+    const productWarehouse = document.getElementById("productWarehouse");
+    const driverWarehouse = document.getElementById("driverWarehouseSelect");
+    const source = document.getElementById("transferSourceWarehouse");
+    const destination = document.getElementById("transferDestinationWarehouse");
+    if (productWarehouse) productWarehouse.innerHTML = warehouseOptionsHtml(selectedWarehouse);
+    if (driverWarehouse) driverWarehouse.innerHTML = warehouseOptionsHtml(selectedWarehouse);
+    if (source) source.innerHTML = warehouseOptionsHtml(source.value);
+    if (destination) destination.innerHTML = warehouseOptionsHtml(destination.value);
+
+    const tabs = document.getElementById("productWarehouseTabs");
+    if (tabs) {
+        tabs.innerHTML = warehouses.map(warehouse => `<button type="button" class="warehouse-option ${warehouse.name === selectedWarehouse ? "active" : ""}" data-warehouse="${transferText(warehouse.name)}">مخزن ${transferText(warehouse.name)}</button>`).join("");
+        warehouseOptions = [...tabs.querySelectorAll(".warehouse-option")];
+        warehouseOptions.forEach(button => button.addEventListener("click", () => {
+            selectWarehouse(button.dataset.warehouse);
+            adminProductSearch.value = "";
+            adminProductSearch.placeholder = `ابحث في منتجات مخزن ${selectedWarehouse}...`;
+            if (productsAdmin?.style.display !== "none") loadAdminProducts();
+            loadDashboardData();
+            loadDashboardLatestOrders();
+        }));
+    }
+}
+
+async function loadWarehouses() {
+    const choices = document.getElementById("warehouseChoiceList");
+    const { data, error } = await supabaseClient.from("warehouses").select("id, name").order("name");
+    if (error) {
+        if (choices) choices.innerHTML = `<div class="message error">تعذر تحميل المخازن: ${transferText(error.message)}</div>`;
+        return;
+    }
+    warehouses = data || [];
+    renderWarehouseControls();
+}
 
 function showWarehouseSelection() {
     loginPage.style.display = "none";
     adminPage.style.display = "none";
     warehouseLoginPage.style.display = "flex";
+    loadWarehouses();
 }
 
 function updateWarehouseLabel() {
@@ -29,6 +76,7 @@ function selectWarehouse(warehouse) {
         option.classList.toggle("active", option.dataset.warehouse === warehouse)
     );
     updateWarehouseLabel();
+    renderWarehouseControls();
 }
 
 
@@ -340,11 +388,17 @@ logoutButton.addEventListener(
     logout
 );
 
-warehouseChoiceButtons.forEach(button => {
-    button.addEventListener("click", () => {
-        selectWarehouse(button.dataset.warehouseChoice);
-        showAdmin();
-    });
+document.getElementById("addWarehouseButton")?.addEventListener("click", async () => {
+    const nameInput = document.getElementById("newWarehouseName");
+    const message = document.getElementById("warehouseAddMessage");
+    const name = nameInput.value.trim();
+    if (!name) { message.textContent = "اكتب اسم المخزن أولًا."; return; }
+    message.textContent = "جاري إضافة المخزن وتجهيز أصنافه...";
+    const { data, error } = await supabaseClient.rpc("add_warehouse", { p_name: name });
+    if (error) { message.textContent = `تعذر إضافة المخزن: ${error.message}`; return; }
+    nameInput.value = "";
+    message.textContent = `تمت إضافة مخزن ${data?.name || name} بنجاح.`;
+    await loadWarehouses();
 });
 
 document.getElementById("changeWarehouseButton")?.addEventListener("click", () => {
@@ -408,13 +462,13 @@ async function loadTransferSourceProducts() {
     const [{ data, error }, { data: destinationProducts, error: destinationError }] = await Promise.all([
         supabaseClient
         .from("products")
-        .select("id, product_code, company, model, color, type, product_type, quantity, copied_from_product_id")
+        .select("id, product_code, company, model, color, type, product_type, quantity, inventory_key")
         .eq("warehouse", transferSourceWarehouse.value)
         .gt("quantity", 0)
         .order("model"),
         supabaseClient
         .from("products")
-        .select("id, quantity, copied_from_product_id")
+        .select("id, quantity, inventory_key")
         .eq("warehouse", transferDestinationWarehouse.value)
     ]);
     if (error || destinationError) {
@@ -423,12 +477,9 @@ async function loadTransferSourceProducts() {
         setTransferMessage((error || destinationError).message, true);
         return;
     }
-    const destinationById = new Map((destinationProducts || []).map(product => [String(product.id), product]));
-    const destinationBySourceId = new Map((destinationProducts || []).filter(product => product.copied_from_product_id).map(product => [String(product.copied_from_product_id), product]));
+    const destinationByInventoryKey = new Map((destinationProducts || []).map(product => [String(product.inventory_key), product]));
     transferSourceProducts = (data || []).map(product => {
-        const counterpart = transferSourceWarehouse.value === "الرياض"
-            ? destinationBySourceId.get(String(product.id))
-            : destinationById.get(String(product.copied_from_product_id));
+        const counterpart = destinationByInventoryKey.get(String(product.inventory_key));
         return { ...product, destination_quantity: Number(counterpart?.quantity || 0) };
     });
     renderTransferProductOptions();
@@ -449,10 +500,13 @@ function renderTransferProductOptions() {
 
 function configureTransferMode() {
     if (!transferSourceWarehouse || !transferDestinationWarehouse) return;
-    const otherWarehouse = selectedWarehouse === "الرياض" ? "جدة" : "الرياض";
+    const otherWarehouse = warehouses.find(warehouse => warehouse.name !== selectedWarehouse)?.name;
+    if (!otherWarehouse) { setTransferMessage("أضف مخزنًا آخر أولًا لتتمكن من إنشاء التحويلات.", true); return; }
     const requesting = transferMode === "request";
     transferSourceWarehouse.value = requesting ? otherWarehouse : selectedWarehouse;
     transferDestinationWarehouse.value = requesting ? selectedWarehouse : otherWarehouse;
+    transferSourceWarehouse.disabled = !requesting;
+    transferDestinationWarehouse.disabled = requesting;
     document.getElementById("createTransferButton").textContent = requesting ? "إرسال طلب البضاعة" : "إنشاء تحويل للإرسال";
     transferDraft = [];
     renderTransferDraft();
@@ -589,6 +643,8 @@ transfersButton?.addEventListener("click", async () => {
 });
 backFromTransfers?.addEventListener("click", () => { transfersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
 transferProductSearch?.addEventListener("input", renderTransferProductOptions);
+transferSourceWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
+transferDestinationWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
 document.getElementById("refreshTransfersButton")?.addEventListener("click", loadTransfers);
 ["productsButton", "ordersButton", "categoriesButton", "dashboardButton"].forEach(id => {
     document.getElementById(id)?.addEventListener("click", () => {
@@ -826,30 +882,15 @@ const adminProductSearch =
 let adminProductsData = [];
 let selectedProductImage = null;
 
-const warehouseOptions = document.querySelectorAll(".warehouse-option");
-
 function getProductsForSelectedWarehouse() {
     return adminProductsData.filter(product =>
-        (product.warehouse || "الرياض") === selectedWarehouse
+        product.warehouse === selectedWarehouse
     );
 }
 
 function renderSelectedWarehouseProducts() {
     renderAdminProducts(getProductsForSelectedWarehouse());
 }
-
-warehouseOptions.forEach(button => {
-    button.addEventListener("click", () => {
-        selectWarehouse(button.dataset.warehouse);
-        adminProductSearch.value = "";
-        adminProductSearch.placeholder = `ابحث في منتجات مخزن ${selectedWarehouse}...`;
-        if (productsAdmin.style.display !== "none") {
-            loadAdminProducts();
-        }
-        loadDashboardData();
-        loadDashboardLatestOrders();
-    });
-});
 
 const productImage =
     document.getElementById("productImage");
@@ -1719,7 +1760,7 @@ async function editProduct(id) {
         product.quantity ?? 0;
 
     document.getElementById("productWarehouse").value =
-        product.warehouse || "الرياض";
+        product.warehouse || selectedWarehouse;
 
     document.getElementById("productPrice").value =
         product.price ?? 0;
@@ -3481,8 +3522,7 @@ Object.entries(typeCodes).forEach(
                 aria-label="نقل الطلب إلى مخزن آخر"
                 onchange="moveOrderToWarehouse(${order.id}, this.value)"
             >
-                <option value="الرياض" ${order.warehouse === "الرياض" ? "selected" : ""}>مخزن الرياض</option>
-                <option value="جدة" ${order.warehouse === "جدة" ? "selected" : ""}>مخزن جدة</option>
+                ${warehouseOptionsHtml(order.warehouse)}
             </select>
 
         </div>
