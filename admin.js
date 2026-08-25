@@ -590,7 +590,7 @@ async function loadTransfers() {
     const ids = visibleTransfers.map(item => item.id);
     const { data: items, error: itemsError } = ids.length ? await supabaseClient
         .from("warehouse_transfer_items")
-        .select("transfer_id, product_name, product_code, company, model, color, product_type, type, quantity")
+        .select("transfer_id, product_name, product_code, company, model, color, product_type, type, image, price, quantity")
         .in("transfer_id", ids) : { data: [], error: null };
     if (itemsError) { transfersList.innerHTML = `<div class="message error">تعذر تحميل عناصر التحويلات: ${itemsError.message}</div>`; return; }
     const itemsByTransfer = new Map();
@@ -604,9 +604,11 @@ async function loadTransfers() {
         const canReceive = isDestination && transfer.status === "in_transit";
         const canCancel = ["draft", "requested", "in_transit"].includes(transfer.status);
         const direction = isDestination ? `وارد إلى مخزن ${selectedWarehouse}` : `صادر من مخزن ${selectedWarehouse}`;
+        const referenceTotal = transferItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
         return `<article class="transfer-card">
             <div class="transfer-card-top"><div><h4>تحويل #${transfer.id}: ${transfer.source_warehouse} إلى ${transfer.destination_warehouse}</h4><p class="transfer-card-meta"><span class="transfer-direction">${direction}</span> ${new Date(transfer.created_at).toLocaleString("ar-SA")}${transfer.notes ? ` · ${transferText(transfer.notes)}` : ""}</p></div><span class="transfer-status ${transfer.status}">${transferStatusLabel(transfer.status)}</span></div>
-            <div class="transfer-items-summary">${transferItems.map(item => `<div><strong>${transferText(item.product_name)}</strong> — ${item.quantity} قطعة <small>${[item.color, item.type, item.product_type].filter(Boolean).map(transferText).join(" · ")}</small></div>`).join("") || "لا توجد عناصر"}</div>
+            <div class="transfer-invoice-items">${transferItems.map(item => `<div class="transfer-invoice-item"><div class="transfer-invoice-image">${item.image ? `<img src="${transferText(item.image)}" alt="${transferText(item.product_name)}">` : "📦"}</div><div class="transfer-invoice-info"><strong>${transferText(item.model || item.product_name)}</strong><small>${[item.company, item.product_code].filter(Boolean).map(transferText).join(" · ")}</small><small>${[item.color, item.type, item.product_type].filter(Boolean).map(transferText).join(" · ") || "بدون تفاصيل إضافية"}</small><small class="transfer-invoice-quantity">الكمية: ${item.quantity} قطعة</small></div><div class="transfer-invoice-price">${Number(item.price || 0).toFixed(2)} ر.س</div></div>`).join("") || "لا توجد عناصر"}</div>
+            <div class="transfer-total"><span>إجمالي القيمة المرجعية</span><strong>${referenceTotal.toFixed(2)} ر.س</strong></div>
             <div class="transfer-card-bottom"><span class="transfer-card-meta">${transfer.dispatched_at ? `تم الشحن: ${new Date(transfer.dispatched_at).toLocaleString("ar-SA")}` : "لم يتم الشحن"}</span><div class="transfer-actions">${canDispatch ? `<button class="transfer-action" onclick="changeTransferStatus(${transfer.id}, 'dispatch')">${transfer.status === "requested" ? "قبول وإرسال" : "شحن التحويل"}</button>` : ""}${canReceive ? `<button class="transfer-action receive" onclick="changeTransferStatus(${transfer.id}, 'receive')">تأكيد الاستلام</button>` : ""}${canCancel ? `<button class="transfer-action cancel" onclick="changeTransferStatus(${transfer.id}, 'cancel')">إلغاء</button>` : ""}<button class="transfer-action print" onclick="printTransfer(${transfer.id})">🖨️ طباعة</button></div></div>
         </article>`;
     }).join("");

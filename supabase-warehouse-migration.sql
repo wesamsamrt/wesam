@@ -17,9 +17,7 @@ alter column warehouse set not null;
 alter table public.products
 drop constraint if exists products_warehouse_check;
 
-alter table public.products
-add constraint products_warehouse_check
-check (warehouse in ('الرياض', 'جدة'));
+-- لا نضع قيدًا ثابتًا هنا؛ المخازن تُدار من جدول warehouses لاحقًا.
 
 create index if not exists products_warehouse_idx
 on public.products (warehouse);
@@ -48,9 +46,7 @@ alter column warehouse set not null;
 alter table public.orders
 drop constraint if exists orders_warehouse_check;
 
-alter table public.orders
-add constraint orders_warehouse_check
-check (warehouse in ('الرياض', 'جدة'));
+-- لا نضع قيدًا ثابتًا هنا؛ المخازن تُدار من جدول warehouses لاحقًا.
 
 create index if not exists orders_warehouse_idx
 on public.orders (warehouse);
@@ -71,9 +67,7 @@ alter column warehouse set not null;
 alter table public.drivers
 drop constraint if exists drivers_warehouse_check;
 
-alter table public.drivers
-add constraint drivers_warehouse_check
-check (warehouse in ('الرياض', 'جدة'));
+-- لا نضع قيدًا ثابتًا هنا؛ المخازن تُدار من جدول warehouses لاحقًا.
 
 create index if not exists drivers_warehouse_idx
 on public.drivers (warehouse);
@@ -173,6 +167,21 @@ alter table public.warehouse_transfer_items add column if not exists model text;
 alter table public.warehouse_transfer_items add column if not exists color text;
 alter table public.warehouse_transfer_items add column if not exists product_type text;
 alter table public.warehouse_transfer_items add column if not exists type text;
+alter table public.warehouse_transfer_items add column if not exists image text;
+alter table public.warehouse_transfer_items add column if not exists price numeric;
+
+update public.warehouse_transfer_items transfer_item
+set image = product.image,
+    price = product.price,
+    product_code = coalesce(transfer_item.product_code, product.product_code),
+    company = coalesce(transfer_item.company, product.company),
+    model = coalesce(transfer_item.model, product.model),
+    color = coalesce(transfer_item.color, product.color),
+    product_type = coalesce(transfer_item.product_type, product.product_type),
+    type = coalesce(transfer_item.type, product.type)
+from public.products product
+where product.id = transfer_item.source_product_id
+  and (transfer_item.image is null or transfer_item.price is null);
 
 create index if not exists warehouse_transfers_created_at_idx on public.warehouse_transfers(created_at desc);
 create index if not exists warehouse_transfer_items_transfer_idx on public.warehouse_transfer_items(transfer_id);
@@ -466,11 +475,46 @@ begin
         select id into destination_product_id from public.products where warehouse = p_destination_warehouse and inventory_key = source_product.inventory_key limit 1;
         if destination_product_id is null then raise exception 'لا توجد نسخة مطابقة للمنتج % في المخزن الوجهة', coalesce(source_product.model, source_product.product_code, source_product.id::text); end if;
         product_label := trim(concat_ws(' ', source_product.company, source_product.model, source_product.product_code));
-        insert into public.warehouse_transfer_items(transfer_id, source_product_id, destination_product_id, product_name, quantity, product_code, company, model, color, product_type, type)
-        values (new_transfer_id, source_product.id, destination_product_id, coalesce(nullif(product_label, ''), 'منتج #' || source_product.id), requested_quantity, source_product.product_code, source_product.company, source_product.model, source_product.color, source_product.product_type, source_product.type);
+        insert into public.warehouse_transfer_items(transfer_id, source_product_id, destination_product_id, product_name, quantity, product_code, company, model, color, product_type, type, image, price)
+        values (new_transfer_id, source_product.id, destination_product_id, coalesce(nullif(product_label, ''), 'منتج #' || source_product.id), requested_quantity, source_product.product_code, source_product.company, source_product.model, source_product.color, source_product.product_type, source_product.type, source_product.image, source_product.price);
     end loop;
     return new_transfer_id;
 end;
 $$;
 
 grant execute on function public.add_warehouse(text) to authenticated;
+
+-- ربط المندوب بأي مخزن موجود، وليس بالرياض أو جدة فقط.
+create or replace function public.assign_driver_warehouse(
+    p_driver_number text,
+    p_warehouse text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    selected_driver public.drivers%rowtype;
+    updated_orders integer;
+begin
+    if auth.uid() is null or not exists (select 1 from public.admins where id = auth.uid()) then
+        raise exception 'غير مصرح لك بتغيير مخزن المندوب';
+    end if;
+    if not exists (select 1 from public.warehouses where name = trim(p_warehouse)) then
+        raise exception 'المخزن المختار غير موجود';
+    end if;
+
+    select * into selected_driver
+    from public.drivers
+    where driver_number::text = trim(p_driver_number)
+    limit 1;
+    if not found then raise exception 'رقم المندوب غير موجود'; end if;
+
+    update public.drivers set warehouse = trim(p_warehouse) where id = selected_driver.id;
+    update public.orders set warehouse = trim(p_warehouse) where driver_number::text = trim(p_driver_number);
+    get diagnostics updated_orders = row_count;
+
+    return jsonb_build_object('driver_name', selected_driver.name, 'warehouse', trim(p_warehouse), 'orders_updated', updated_orders);
+end;
+$$;
