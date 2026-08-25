@@ -364,6 +364,7 @@ const backFromTransfers = document.getElementById("backFromTransfers");
 const transferSourceWarehouse = document.getElementById("transferSourceWarehouse");
 const transferDestinationWarehouse = document.getElementById("transferDestinationWarehouse");
 const transferProductSelect = document.getElementById("transferProductSelect");
+const transferProductSearch = document.getElementById("transferProductSearch");
 const transferQuantity = document.getElementById("transferQuantity");
 const transferNotes = document.getElementById("transferNotes");
 const transferDraftItems = document.getElementById("transferDraftItems");
@@ -371,6 +372,10 @@ const transferFormMessage = document.getElementById("transferFormMessage");
 const transfersList = document.getElementById("transfersList");
 let transferSourceProducts = [];
 let transferDraft = [];
+let transferMode = "request";
+let transfersCache = [];
+
+const transferText = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
 
 function setTransferMessage(message, error = false) {
     if (!transferFormMessage) return;
@@ -386,7 +391,7 @@ function renderTransferDraft() {
     }
     transferDraftItems.innerHTML = transferDraft.map((item, index) => `
         <div class="transfer-draft-item">
-            <span>${item.name} — <strong>${item.quantity} قطعة</strong></span>
+            <span>${transferText(item.name)} — <strong>${item.quantity} قطعة</strong><small> · المصدر: ${item.source_quantity} · في مخزني: ${item.destination_quantity}</small></span>
             <button type="button" onclick="removeTransferDraftItem(${index})">إزالة</button>
         </div>
     `).join("");
@@ -400,32 +405,65 @@ window.removeTransferDraftItem = function (index) {
 async function loadTransferSourceProducts() {
     if (!transferSourceWarehouse || !transferProductSelect) return;
     transferProductSelect.innerHTML = "<option value=\"\">جاري تحميل منتجات المخزن...</option>";
-    const { data, error } = await supabaseClient
+    const [{ data, error }, { data: destinationProducts, error: destinationError }] = await Promise.all([
+        supabaseClient
         .from("products")
-        .select("id, product_code, company, model, quantity")
+        .select("id, product_code, company, model, color, type, product_type, quantity, copied_from_product_id")
         .eq("warehouse", transferSourceWarehouse.value)
         .gt("quantity", 0)
-        .order("model");
-    if (error) {
+        .order("model"),
+        supabaseClient
+        .from("products")
+        .select("id, quantity, copied_from_product_id")
+        .eq("warehouse", transferDestinationWarehouse.value)
+    ]);
+    if (error || destinationError) {
         console.error("Load transfer source products error:", error);
         transferProductSelect.innerHTML = "<option value=\"\">تعذر تحميل المنتجات</option>";
-        setTransferMessage(error.message, true);
+        setTransferMessage((error || destinationError).message, true);
         return;
     }
-    transferSourceProducts = data || [];
-    transferProductSelect.innerHTML = '<option value="">اختر منتجًا للتحويل</option>' + transferSourceProducts.map(product => {
+    const destinationById = new Map((destinationProducts || []).map(product => [String(product.id), product]));
+    const destinationBySourceId = new Map((destinationProducts || []).filter(product => product.copied_from_product_id).map(product => [String(product.copied_from_product_id), product]));
+    transferSourceProducts = (data || []).map(product => {
+        const counterpart = transferSourceWarehouse.value === "الرياض"
+            ? destinationBySourceId.get(String(product.id))
+            : destinationById.get(String(product.copied_from_product_id));
+        return { ...product, destination_quantity: Number(counterpart?.quantity || 0) };
+    });
+    renderTransferProductOptions();
+}
+
+function renderTransferProductOptions() {
+    const search = (transferProductSearch?.value || "").toLowerCase().trim();
+    const products = transferSourceProducts.filter(product => {
+        const values = [product.product_code, product.company, product.model, product.color, product.type, product.product_type].join(" ").toLowerCase();
+        return !search || values.includes(search);
+    });
+    transferProductSelect.innerHTML = '<option value="">اختر منتجًا للتحويل</option>' + products.map(product => {
         const name = [product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`;
-        return `<option value="${product.id}">${name} — المتاح: ${product.quantity || 0}</option>`;
+        const details = [product.color, product.type, product.product_type].filter(Boolean).join(" · ");
+        return `<option value="${product.id}">${transferText(name)}${details ? ` — ${transferText(details)}` : ""} | المصدر: ${product.quantity || 0} | مخزني: ${product.destination_quantity}</option>`;
     }).join("");
 }
 
-function switchTransferDestination() {
+function configureTransferMode() {
     if (!transferSourceWarehouse || !transferDestinationWarehouse) return;
-    transferDestinationWarehouse.value = transferSourceWarehouse.value === "الرياض" ? "جدة" : "الرياض";
+    const otherWarehouse = selectedWarehouse === "الرياض" ? "جدة" : "الرياض";
+    const requesting = transferMode === "request";
+    transferSourceWarehouse.value = requesting ? otherWarehouse : selectedWarehouse;
+    transferDestinationWarehouse.value = requesting ? selectedWarehouse : otherWarehouse;
+    document.getElementById("createTransferButton").textContent = requesting ? "إرسال طلب البضاعة" : "إنشاء تحويل للإرسال";
     transferDraft = [];
     renderTransferDraft();
     loadTransferSourceProducts();
 }
+
+document.querySelectorAll(".transfer-mode").forEach(button => button.addEventListener("click", () => {
+    transferMode = button.dataset.transferMode;
+    document.querySelectorAll(".transfer-mode").forEach(item => item.classList.toggle("active", item === button));
+    configureTransferMode();
+}));
 
 document.getElementById("addTransferItemButton")?.addEventListener("click", () => {
     const product = transferSourceProducts.find(item => String(item.id) === transferProductSelect.value);
@@ -449,7 +487,9 @@ document.getElementById("addTransferItemButton")?.addEventListener("click", () =
         transferDraft.push({
             product_id: product.id,
             quantity,
-            name: [product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`
+            name: [[product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`, product.color, product.type, product.product_type].filter(Boolean).join(" · "),
+            source_quantity: product.quantity || 0,
+            destination_quantity: product.destination_quantity || 0
         });
     }
     transferQuantity.value = "";
@@ -468,18 +508,19 @@ document.getElementById("createTransferButton")?.addEventListener("click", async
         p_source_warehouse: source,
         p_destination_warehouse: destination,
         p_notes: transferNotes.value.trim() || null,
-        p_items: transferDraft.map(({ product_id, quantity }) => ({ product_id, quantity }))
+        p_items: transferDraft.map(({ product_id, quantity }) => ({ product_id, quantity })),
+        p_creation_mode: transferMode
     });
     if (error) { setTransferMessage(`تعذر إنشاء التحويل: ${error.message}`, true); return; }
     transferDraft = [];
     transferNotes.value = "";
     renderTransferDraft();
-    setTransferMessage(`تم إنشاء التحويل #${data} كمسودة.`);
+    setTransferMessage(transferMode === "request" ? `تم إرسال طلب البضاعة #${data} إلى مخزن ${source}.` : `تم إنشاء التحويل #${data} كمسودة.`);
     loadTransfers();
 });
 
 function transferStatusLabel(status) {
-    return ({ draft: "مسودة", in_transit: "قيد النقل", received: "تم الاستلام", cancelled: "ملغي" })[status] || status;
+    return ({ requested: "بانتظار موافقة المصدر", draft: "مسودة", in_transit: "قيد النقل", received: "تم الاستلام", cancelled: "ملغي" })[status] || status;
 }
 
 async function loadTransfers() {
@@ -487,27 +528,32 @@ async function loadTransfers() {
     transfersList.innerHTML = '<div class="message">جاري تحميل التحويلات...</div>';
     const { data: transfers, error } = await supabaseClient
         .from("warehouse_transfers")
-        .select("id, source_warehouse, destination_warehouse, status, notes, created_at, dispatched_at, received_at")
+        .select("id, source_warehouse, destination_warehouse, status, notes, created_at, dispatched_at, received_at, requested_by_warehouse")
         .order("id", { ascending: false });
     if (error) { transfersList.innerHTML = `<div class="message error">تعذر تحميل التحويلات: ${error.message}</div>`; return; }
-    const ids = (transfers || []).map(item => item.id);
+    const visibleTransfers = (transfers || []).filter(item => [item.source_warehouse, item.destination_warehouse].includes(selectedWarehouse));
+    transfersCache = visibleTransfers;
+    const ids = visibleTransfers.map(item => item.id);
     const { data: items, error: itemsError } = ids.length ? await supabaseClient
         .from("warehouse_transfer_items")
-        .select("transfer_id, product_name, quantity")
+        .select("transfer_id, product_name, product_code, company, model, color, product_type, type, quantity")
         .in("transfer_id", ids) : { data: [], error: null };
     if (itemsError) { transfersList.innerHTML = `<div class="message error">تعذر تحميل عناصر التحويلات: ${itemsError.message}</div>`; return; }
     const itemsByTransfer = new Map();
     (items || []).forEach(item => itemsByTransfer.set(item.transfer_id, [...(itemsByTransfer.get(item.transfer_id) || []), item]));
-    if (!transfers?.length) { transfersList.innerHTML = '<div class="message">لا توجد تحويلات حتى الآن.</div>'; return; }
-    transfersList.innerHTML = transfers.map(transfer => {
+    if (!visibleTransfers.length) { transfersList.innerHTML = '<div class="message">لا توجد تحويلات واردة أو صادرة لمخزن ' + selectedWarehouse + ' حتى الآن.</div>'; return; }
+    transfersList.innerHTML = visibleTransfers.map(transfer => {
         const transferItems = itemsByTransfer.get(transfer.id) || [];
-        const canDispatch = transfer.status === "draft";
-        const canReceive = transfer.status === "in_transit";
-        const canCancel = ["draft", "in_transit"].includes(transfer.status);
+        const isSource = transfer.source_warehouse === selectedWarehouse;
+        const isDestination = transfer.destination_warehouse === selectedWarehouse;
+        const canDispatch = isSource && ["draft", "requested"].includes(transfer.status);
+        const canReceive = isDestination && transfer.status === "in_transit";
+        const canCancel = ["draft", "requested", "in_transit"].includes(transfer.status);
+        const direction = isDestination ? `وارد إلى مخزن ${selectedWarehouse}` : `صادر من مخزن ${selectedWarehouse}`;
         return `<article class="transfer-card">
-            <div class="transfer-card-top"><div><h4>تحويل #${transfer.id}: ${transfer.source_warehouse} إلى ${transfer.destination_warehouse}</h4><p class="transfer-card-meta">${new Date(transfer.created_at).toLocaleString("ar-SA")}${transfer.notes ? ` · ${transfer.notes}` : ""}</p></div><span class="transfer-status ${transfer.status}">${transferStatusLabel(transfer.status)}</span></div>
-            <div class="transfer-items-summary">${transferItems.map(item => `${item.product_name} (${item.quantity} قطعة)`).join(" · ") || "لا توجد عناصر"}</div>
-            <div class="transfer-card-bottom"><span class="transfer-card-meta">${transfer.dispatched_at ? `تم الشحن: ${new Date(transfer.dispatched_at).toLocaleString("ar-SA")}` : "لم يتم الشحن"}</span><div class="transfer-actions">${canDispatch ? `<button class="transfer-action" onclick="changeTransferStatus(${transfer.id}, 'dispatch')">شحن التحويل</button>` : ""}${canReceive ? `<button class="transfer-action receive" onclick="changeTransferStatus(${transfer.id}, 'receive')">تأكيد الاستلام</button>` : ""}${canCancel ? `<button class="transfer-action cancel" onclick="changeTransferStatus(${transfer.id}, 'cancel')">إلغاء</button>` : ""}</div></div>
+            <div class="transfer-card-top"><div><h4>تحويل #${transfer.id}: ${transfer.source_warehouse} إلى ${transfer.destination_warehouse}</h4><p class="transfer-card-meta"><span class="transfer-direction">${direction}</span> ${new Date(transfer.created_at).toLocaleString("ar-SA")}${transfer.notes ? ` · ${transferText(transfer.notes)}` : ""}</p></div><span class="transfer-status ${transfer.status}">${transferStatusLabel(transfer.status)}</span></div>
+            <div class="transfer-items-summary">${transferItems.map(item => `<div><strong>${transferText(item.product_name)}</strong> — ${item.quantity} قطعة <small>${[item.color, item.type, item.product_type].filter(Boolean).map(transferText).join(" · ")}</small></div>`).join("") || "لا توجد عناصر"}</div>
+            <div class="transfer-card-bottom"><span class="transfer-card-meta">${transfer.dispatched_at ? `تم الشحن: ${new Date(transfer.dispatched_at).toLocaleString("ar-SA")}` : "لم يتم الشحن"}</span><div class="transfer-actions">${canDispatch ? `<button class="transfer-action" onclick="changeTransferStatus(${transfer.id}, 'dispatch')">${transfer.status === "requested" ? "قبول وإرسال" : "شحن التحويل"}</button>` : ""}${canReceive ? `<button class="transfer-action receive" onclick="changeTransferStatus(${transfer.id}, 'receive')">تأكيد الاستلام</button>` : ""}${canCancel ? `<button class="transfer-action cancel" onclick="changeTransferStatus(${transfer.id}, 'cancel')">إلغاء</button>` : ""}<button class="transfer-action print" onclick="printTransfer(${transfer.id})">🖨️ طباعة</button></div></div>
         </article>`;
     }).join("");
 }
@@ -520,18 +566,29 @@ window.changeTransferStatus = async function (transferId, action) {
     await Promise.all([loadTransfers(), loadTransferSourceProducts(), loadDashboardData(), loadDashboardLatestOrders()]);
 };
 
+window.printTransfer = function (transferId) {
+    const transfer = transfersCache.find(item => Number(item.id) === Number(transferId));
+    if (!transfer) return;
+    const card = [...document.querySelectorAll(".transfer-card")].find(item => item.textContent.includes(`تحويل #${transferId}:`));
+    const printWindow = window.open("", "_blank", "width=850,height=700");
+    if (!printWindow) { alert("السماح بالنوافذ المنبثقة مطلوب للطباعة."); return; }
+    printWindow.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تحويل #${transfer.id}</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#171827}h1{color:#5144d8}.transfer-card{border:1px solid #ddd;border-radius:14px;padding:20px}.transfer-card-bottom,.transfer-actions{display:none}.transfer-card-top{border-bottom:1px solid #ddd;padding-bottom:12px}.transfer-items-summary div{padding:9px 0;border-bottom:1px solid #eee}small{color:#666}</style></head><body><h1>فاتورة تحويل مخزون</h1>${card?.outerHTML || ""}<script>window.onload=()=>window.print()<\/script></body></html>`);
+    printWindow.document.close();
+};
+
 transfersButton?.addEventListener("click", async () => {
     document.getElementById("adminPage").style.display = "none";
     document.getElementById("productsAdmin").style.display = "none";
     document.getElementById("ordersAdmin").style.display = "none";
     document.getElementById("categoriesAdmin").style.display = "none";
     transfersAdmin.style.display = "block";
-    transferSourceWarehouse.value = selectedWarehouse || "الرياض";
-    switchTransferDestination();
+    transferMode = "request";
+    document.querySelectorAll(".transfer-mode").forEach(item => item.classList.toggle("active", item.dataset.transferMode === "request"));
+    configureTransferMode();
     await loadTransfers();
 });
 backFromTransfers?.addEventListener("click", () => { transfersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
-transferSourceWarehouse?.addEventListener("change", switchTransferDestination);
+transferProductSearch?.addEventListener("input", renderTransferProductOptions);
 document.getElementById("refreshTransfersButton")?.addEventListener("click", loadTransfers);
 ["productsButton", "ordersButton", "categoriesButton", "dashboardButton"].forEach(id => {
     document.getElementById(id)?.addEventListener("click", () => {
