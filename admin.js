@@ -51,6 +51,9 @@ function showAdmin() {
 
     warehouseLoginPage.style.display = "none";
 
+    const transfersPage = document.getElementById("transfersAdmin");
+    if (transfersPage) transfersPage.style.display = "none";
+
     if (adminPage) {
         adminPage.style.display = "block";
     }
@@ -351,6 +354,190 @@ document.getElementById("changeWarehouseButton")?.addEventListener("click", () =
 });
 
 document.getElementById("warehouseBackToLogin")?.addEventListener("click", logout);
+
+/* =========================================================
+   تحويلات المخزون بين المستودعات
+========================================================= */
+const transfersButton = document.getElementById("transfersButton");
+const transfersAdmin = document.getElementById("transfersAdmin");
+const backFromTransfers = document.getElementById("backFromTransfers");
+const transferSourceWarehouse = document.getElementById("transferSourceWarehouse");
+const transferDestinationWarehouse = document.getElementById("transferDestinationWarehouse");
+const transferProductSelect = document.getElementById("transferProductSelect");
+const transferQuantity = document.getElementById("transferQuantity");
+const transferNotes = document.getElementById("transferNotes");
+const transferDraftItems = document.getElementById("transferDraftItems");
+const transferFormMessage = document.getElementById("transferFormMessage");
+const transfersList = document.getElementById("transfersList");
+let transferSourceProducts = [];
+let transferDraft = [];
+
+function setTransferMessage(message, error = false) {
+    if (!transferFormMessage) return;
+    transferFormMessage.textContent = message;
+    transferFormMessage.style.color = error ? "#c14359" : "#2e9d69";
+}
+
+function renderTransferDraft() {
+    if (!transferDraftItems) return;
+    if (!transferDraft.length) {
+        transferDraftItems.innerHTML = "<span>لم تتم إضافة منتجات بعد.</span>";
+        return;
+    }
+    transferDraftItems.innerHTML = transferDraft.map((item, index) => `
+        <div class="transfer-draft-item">
+            <span>${item.name} — <strong>${item.quantity} قطعة</strong></span>
+            <button type="button" onclick="removeTransferDraftItem(${index})">إزالة</button>
+        </div>
+    `).join("");
+}
+
+window.removeTransferDraftItem = function (index) {
+    transferDraft.splice(index, 1);
+    renderTransferDraft();
+};
+
+async function loadTransferSourceProducts() {
+    if (!transferSourceWarehouse || !transferProductSelect) return;
+    transferProductSelect.innerHTML = "<option value=\"\">جاري تحميل منتجات المخزن...</option>";
+    const { data, error } = await supabaseClient
+        .from("products")
+        .select("id, product_code, company, model, quantity")
+        .eq("warehouse", transferSourceWarehouse.value)
+        .gt("quantity", 0)
+        .order("model");
+    if (error) {
+        console.error("Load transfer source products error:", error);
+        transferProductSelect.innerHTML = "<option value=\"\">تعذر تحميل المنتجات</option>";
+        setTransferMessage(error.message, true);
+        return;
+    }
+    transferSourceProducts = data || [];
+    transferProductSelect.innerHTML = '<option value="">اختر منتجًا للتحويل</option>' + transferSourceProducts.map(product => {
+        const name = [product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`;
+        return `<option value="${product.id}">${name} — المتاح: ${product.quantity || 0}</option>`;
+    }).join("");
+}
+
+function switchTransferDestination() {
+    if (!transferSourceWarehouse || !transferDestinationWarehouse) return;
+    transferDestinationWarehouse.value = transferSourceWarehouse.value === "الرياض" ? "جدة" : "الرياض";
+    transferDraft = [];
+    renderTransferDraft();
+    loadTransferSourceProducts();
+}
+
+document.getElementById("addTransferItemButton")?.addEventListener("click", () => {
+    const product = transferSourceProducts.find(item => String(item.id) === transferProductSelect.value);
+    const quantity = Number(transferQuantity.value);
+    if (!product || !Number.isInteger(quantity) || quantity < 1) {
+        setTransferMessage("اختر منتجًا وأدخل كمية صحيحة.", true);
+        return;
+    }
+    if (quantity > Number(product.quantity || 0)) {
+        setTransferMessage(`الكمية المتاحة لهذا المنتج هي ${product.quantity || 0} فقط.`, true);
+        return;
+    }
+    const existing = transferDraft.find(item => item.product_id === product.id);
+    if (existing) {
+        if (existing.quantity + quantity > Number(product.quantity || 0)) {
+            setTransferMessage(`إجمالي الكمية يتجاوز المتاح (${product.quantity || 0}).`, true);
+            return;
+        }
+        existing.quantity += quantity;
+    } else {
+        transferDraft.push({
+            product_id: product.id,
+            quantity,
+            name: [product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`
+        });
+    }
+    transferQuantity.value = "";
+    transferProductSelect.value = "";
+    setTransferMessage("");
+    renderTransferDraft();
+});
+
+document.getElementById("createTransferButton")?.addEventListener("click", async () => {
+    const source = transferSourceWarehouse.value;
+    const destination = transferDestinationWarehouse.value;
+    if (source === destination) { setTransferMessage("يجب أن يختلف مخزن الوجهة عن المصدر.", true); return; }
+    if (!transferDraft.length) { setTransferMessage("أضف منتجًا واحدًا على الأقل للتحويل.", true); return; }
+    setTransferMessage("جاري إنشاء التحويل...");
+    const { data, error } = await supabaseClient.rpc("create_warehouse_transfer", {
+        p_source_warehouse: source,
+        p_destination_warehouse: destination,
+        p_notes: transferNotes.value.trim() || null,
+        p_items: transferDraft.map(({ product_id, quantity }) => ({ product_id, quantity }))
+    });
+    if (error) { setTransferMessage(`تعذر إنشاء التحويل: ${error.message}`, true); return; }
+    transferDraft = [];
+    transferNotes.value = "";
+    renderTransferDraft();
+    setTransferMessage(`تم إنشاء التحويل #${data} كمسودة.`);
+    loadTransfers();
+});
+
+function transferStatusLabel(status) {
+    return ({ draft: "مسودة", in_transit: "قيد النقل", received: "تم الاستلام", cancelled: "ملغي" })[status] || status;
+}
+
+async function loadTransfers() {
+    if (!transfersList) return;
+    transfersList.innerHTML = '<div class="message">جاري تحميل التحويلات...</div>';
+    const { data: transfers, error } = await supabaseClient
+        .from("warehouse_transfers")
+        .select("id, source_warehouse, destination_warehouse, status, notes, created_at, dispatched_at, received_at")
+        .order("id", { ascending: false });
+    if (error) { transfersList.innerHTML = `<div class="message error">تعذر تحميل التحويلات: ${error.message}</div>`; return; }
+    const ids = (transfers || []).map(item => item.id);
+    const { data: items, error: itemsError } = ids.length ? await supabaseClient
+        .from("warehouse_transfer_items")
+        .select("transfer_id, product_name, quantity")
+        .in("transfer_id", ids) : { data: [], error: null };
+    if (itemsError) { transfersList.innerHTML = `<div class="message error">تعذر تحميل عناصر التحويلات: ${itemsError.message}</div>`; return; }
+    const itemsByTransfer = new Map();
+    (items || []).forEach(item => itemsByTransfer.set(item.transfer_id, [...(itemsByTransfer.get(item.transfer_id) || []), item]));
+    if (!transfers?.length) { transfersList.innerHTML = '<div class="message">لا توجد تحويلات حتى الآن.</div>'; return; }
+    transfersList.innerHTML = transfers.map(transfer => {
+        const transferItems = itemsByTransfer.get(transfer.id) || [];
+        const canDispatch = transfer.status === "draft";
+        const canReceive = transfer.status === "in_transit";
+        const canCancel = ["draft", "in_transit"].includes(transfer.status);
+        return `<article class="transfer-card">
+            <div class="transfer-card-top"><div><h4>تحويل #${transfer.id}: ${transfer.source_warehouse} إلى ${transfer.destination_warehouse}</h4><p class="transfer-card-meta">${new Date(transfer.created_at).toLocaleString("ar-SA")}${transfer.notes ? ` · ${transfer.notes}` : ""}</p></div><span class="transfer-status ${transfer.status}">${transferStatusLabel(transfer.status)}</span></div>
+            <div class="transfer-items-summary">${transferItems.map(item => `${item.product_name} (${item.quantity} قطعة)`).join(" · ") || "لا توجد عناصر"}</div>
+            <div class="transfer-card-bottom"><span class="transfer-card-meta">${transfer.dispatched_at ? `تم الشحن: ${new Date(transfer.dispatched_at).toLocaleString("ar-SA")}` : "لم يتم الشحن"}</span><div class="transfer-actions">${canDispatch ? `<button class="transfer-action" onclick="changeTransferStatus(${transfer.id}, 'dispatch')">شحن التحويل</button>` : ""}${canReceive ? `<button class="transfer-action receive" onclick="changeTransferStatus(${transfer.id}, 'receive')">تأكيد الاستلام</button>` : ""}${canCancel ? `<button class="transfer-action cancel" onclick="changeTransferStatus(${transfer.id}, 'cancel')">إلغاء</button>` : ""}</div></div>
+        </article>`;
+    }).join("");
+}
+
+window.changeTransferStatus = async function (transferId, action) {
+    const descriptions = { dispatch: "شحن التحويل؟ سيتم خصم الكمية من المخزن المصدر.", receive: "تأكيد استلام التحويل؟ ستضاف الكمية إلى المخزن الوجهة.", cancel: "إلغاء التحويل؟ ستعاد الكميات للمصدر إذا كان التحويل قيد النقل." };
+    if (!confirm(descriptions[action])) return;
+    const { error } = await supabaseClient.rpc("process_warehouse_transfer", { p_transfer_id: transferId, p_action: action });
+    if (error) { alert(`تعذر تنفيذ العملية: ${error.message}`); return; }
+    await Promise.all([loadTransfers(), loadTransferSourceProducts(), loadDashboardData(), loadDashboardLatestOrders()]);
+};
+
+transfersButton?.addEventListener("click", async () => {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    transfersAdmin.style.display = "block";
+    transferSourceWarehouse.value = selectedWarehouse || "الرياض";
+    switchTransferDestination();
+    await loadTransfers();
+});
+backFromTransfers?.addEventListener("click", () => { transfersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+transferSourceWarehouse?.addEventListener("change", switchTransferDestination);
+document.getElementById("refreshTransfersButton")?.addEventListener("click", loadTransfers);
+["productsButton", "ordersButton", "categoriesButton", "dashboardButton"].forEach(id => {
+    document.getElementById(id)?.addEventListener("click", () => {
+        if (transfersAdmin) transfersAdmin.style.display = "none";
+    });
+});
 
 
 /* =========================

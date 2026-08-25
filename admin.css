@@ -860,6 +860,21 @@ body {
     gap: 18px;
 }
 
+.transfers-admin { width: min(1100px, calc(100% - 32px)); margin: 30px auto; }
+.transfer-create-card, .transfer-card { background: #fff; border: 1px solid #eef0f6; border-radius: 20px; padding: 20px; box-shadow: 0 6px 20px rgba(50,50,100,.04); }
+.transfer-create-card h3, .transfers-list-header h3 { font-size: 17px; margin-bottom: 14px; }
+.transfer-form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.transfer-form-row label { display: flex; align-items: center; gap: 7px; color: #646477; font-size: 12px; font-weight: 700; }
+.transfer-form-row select, .transfer-form-row input { min-height: 40px; border: 1px solid #e3e5ef; border-radius: 10px; background: #fff; padding: 0 12px; font-family: inherit; color: #34364b; }
+.transfer-form-row #transferProductSelect { flex: 1 1 300px; }.transfer-form-row #transferQuantity { width: 120px; }.transfer-form-row #transferNotes { flex: 1 1 200px; }
+.transfer-form-row button, .transfer-create-actions button, .transfers-list-header button, .transfer-action { min-height: 40px; border: 0; border-radius: 10px; padding: 0 14px; background: #6557ed; color: #fff; font-family: inherit; font-weight: 700; cursor: pointer; }
+.transfer-draft-items { display: grid; gap: 8px; padding: 12px; background: #f8f9fd; border-radius: 13px; min-height: 48px; }.transfer-draft-items > span { color: #858796; font-size: 12px; }
+.transfer-draft-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }.transfer-draft-item button { border: 0; background: none; color: #e05265; font-family: inherit; cursor: pointer; }
+.transfer-create-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }.transfer-create-actions span { color: #74788b; font-size: 11px; }
+.transfers-list-header { display: flex; justify-content: space-between; align-items: center; margin: 24px 0 12px; }.transfers-list-header h3 { margin: 0; }.transfers-list-header button { background: #eeecff; color: #5144d8; }
+.transfers-list { display: grid; gap: 12px; }.transfer-card-top, .transfer-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }.transfer-card-top h4 { font-size: 15px; }.transfer-card-meta { color: #858796; font-size: 11px; margin-top: 4px; }.transfer-status { padding: 6px 10px; border-radius: 9px; font-size: 11px; font-weight: 800; background: #eeeaff; color: #5144d8; }.transfer-status.in_transit { background: #fff2dc; color: #b26b13; }.transfer-status.received { background: #e5f8ef; color: #258356; }.transfer-status.cancelled { background: #fff0f2; color: #c14359; }.transfer-items-summary { margin: 15px 0; padding: 10px; background: #f8f9fd; border-radius: 12px; font-size: 12px; color: #55576a; }.transfer-card-bottom { border-top: 1px solid #eef0f6; padding-top: 12px; }.transfer-actions { display: flex; gap: 7px; flex-wrap: wrap; }.transfer-action.receive { background: #2e9d69; }.transfer-action.cancel { background: #fff0f2; color: #c14359; }
+@media (max-width: 600px) { .transfer-form-row > * { width: 100% !important; }.transfer-arrow { text-align: center; }.transfer-create-actions { align-items: flex-start; flex-direction: column; } }
+
 .admin-order-card {
     background: white;
     border-radius: 24px;

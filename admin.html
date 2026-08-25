@@ -171,9 +171,10 @@
 
             <button
                 class="admin-nav-item"
+                id="transfersButton"
             >
-                <span>📦</span>
-                <strong>المخزون</strong>
+                <span>⇄</span>
+                <strong>التحويلات</strong>
             </button>
 
 
@@ -1151,6 +1152,34 @@
         id="adminOrders"
     ></div>
 
+</section>
+
+
+<section class="transfers-admin" id="transfersAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromTransfers">← رجوع</button>
+        <div><h2>تحويلات المخزون</h2><p>حوّل المنتجات بين مخزني الرياض وجدة مع متابعة حالة كل تحويل.</p></div>
+    </div>
+
+    <div class="transfer-create-card">
+        <h3>إنشاء تحويل جديد</h3>
+        <div class="transfer-form-row">
+            <label>من مخزن <select id="transferSourceWarehouse"><option value="الرياض">الرياض</option><option value="جدة">جدة</option></select></label>
+            <span class="transfer-arrow">←</span>
+            <label>إلى مخزن <select id="transferDestinationWarehouse"><option value="جدة">جدة</option><option value="الرياض">الرياض</option></select></label>
+            <input id="transferNotes" type="text" placeholder="ملاحظات اختيارية">
+        </div>
+        <div class="transfer-form-row">
+            <select id="transferProductSelect" aria-label="اختر المنتج"><option value="">جاري تحميل منتجات المخزن...</option></select>
+            <input id="transferQuantity" type="number" min="1" placeholder="الكمية">
+            <button type="button" id="addTransferItemButton">+ إضافة للطلب</button>
+        </div>
+        <div class="transfer-draft-items" id="transferDraftItems"><span>لم تتم إضافة منتجات بعد.</span></div>
+        <div class="transfer-create-actions"><button type="button" id="createTransferButton">إنشاء تحويل كمسودة</button><span id="transferFormMessage"></span></div>
+    </div>
+
+    <div class="transfers-list-header"><h3>سجل التحويلات</h3><button type="button" id="refreshTransfersButton">↻ تحديث</button></div>
+    <div class="transfers-list" id="transfersList"><div class="message">جاري تحميل التحويلات...</div></div>
 </section>
 
 
