@@ -1184,6 +1184,26 @@
     <div class="transfers-list" id="transfersList"><div class="message">جاري تحميل التحويلات...</div></div>
 </section>
 
+<div class="transfer-variant-modal" id="transferVariantModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="transferVariantTitle">
+    <div class="transfer-variant-dialog">
+        <button type="button" class="transfer-variant-close" id="closeTransferVariantModal" aria-label="إغلاق">×</button>
+        <div class="login-icon">📱</div>
+        <p id="transferVariantCode" class="transfer-variant-code"></p>
+        <h2 id="transferVariantTitle">اختيار المنتج</h2>
+        <p id="transferVariantName" class="transfer-variant-name"></p>
+        <div class="form-group">
+            <label for="transferVariantModel">الموديل</label>
+            <select id="transferVariantModel"></select>
+        </div>
+        <div class="form-group">
+            <label for="transferVariantColor">اللون</label>
+            <select id="transferVariantColor"></select>
+        </div>
+        <div class="transfer-variant-stock" id="transferVariantStock"></div>
+        <button type="button" class="transfer-variant-confirm" id="confirmTransferVariant">اختيار هذه النسخة</button>
+    </div>
+</div>
+
 
 
 <!-- =========================================================

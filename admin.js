@@ -11,10 +11,12 @@ let selectedWarehouse = null;
 let warehouses = [];
 let warehouseOptions = [];
 
+// ينشئ خيارات HTML لقوائم اختيار المخازن ويحدد المخزن المختار عند الحاجة.
 function warehouseOptionsHtml(selected = "") {
     return warehouses.map(warehouse => `<option value="${transferText(warehouse.name)}" ${warehouse.name === selected ? "selected" : ""}>مخزن ${transferText(warehouse.name)}</option>`).join("");
 }
 
+// يحدّث جميع عناصر واجهة المخازن: شاشة الاختيار، التبويبات، وقوائم المنتجات والمناديب والتحويلات.
 function renderWarehouseControls() {
     const choices = document.getElementById("warehouseChoiceList");
     if (choices) {
@@ -45,6 +47,7 @@ function renderWarehouseControls() {
     }
 }
 
+// يجلب قائمة المخازن المسجلة من قاعدة البيانات ثم يعرضها في الواجهة.
 async function loadWarehouses() {
     const choices = document.getElementById("warehouseChoiceList");
     const { data, error } = await supabaseClient.from("warehouses").select("id, name").order("name");
@@ -56,6 +59,7 @@ async function loadWarehouses() {
     renderWarehouseControls();
 }
 
+// يخفي صفحات الإدارة ويعرض شاشة اختيار المخزن بعد التحقق من دخول المدير.
 function showWarehouseSelection() {
     loginPage.style.display = "none";
     adminPage.style.display = "none";
@@ -63,6 +67,7 @@ function showWarehouseSelection() {
     loadWarehouses();
 }
 
+// يعرض اسم المخزن الحالي في القائمة الجانبية وفي عنوان لوحة التحكم.
 function updateWarehouseLabel() {
     const label = document.getElementById("selectedWarehouseLabel");
     if (label) label.textContent = selectedWarehouse ? `مخزن ${selectedWarehouse}` : "—";
@@ -70,6 +75,7 @@ function updateWarehouseLabel() {
     if (dashboardName) dashboardName.textContent = selectedWarehouse ? `مخزن ${selectedWarehouse}` : "وسام سمارت";
 }
 
+// يحفظ المخزن المختار ويحدّث عناصر الواجهة المرتبطة به.
 function selectWarehouse(warehouse) {
     selectedWarehouse = warehouse;
     warehouseOptions?.forEach(option =>
@@ -83,6 +89,7 @@ function selectWarehouse(warehouse) {
 /* =========================
    إظهار لوحة الإدارة
 ========================= */
+// يفتح لوحة الإدارة للمخزن المحدد ويبدأ تحميل بياناتها.
 function showAdmin() {
 
     const loginPage = document.getElementById("loginPage");
@@ -117,6 +124,7 @@ function showAdmin() {
 /* =========================
    إظهار تسجيل الدخول
 ========================= */
+// يعيد المستخدم إلى شاشة تسجيل الدخول ويخفي صفحات الإدارة والمخازن.
 function showLogin() {
 
     const loginPage =
@@ -144,6 +152,7 @@ function showLogin() {
    التحقق هل المستخدم أدمن
 ========================= */
 
+// يتحقق من أن المستخدم الحالي موجود ضمن جدول مديري النظام.
 async function isAdmin() {
 
     const {
@@ -191,6 +200,7 @@ async function isAdmin() {
    تسجيل الدخول للإدارة
 ========================= */
 
+// يسجّل دخول المدير بكلمة المرور ثم ينقله إلى اختيار المخزن.
 async function login() {
 
     const password =
@@ -338,6 +348,7 @@ async function login() {
    تسجيل الخروج
 ========================= */
 
+// ينهي جلسة المدير الحالية ويمسح المخزن المختار من الذاكرة.
 async function logout() {
 
     await supabaseClient.auth.signOut();
@@ -421,6 +432,12 @@ const transferProductSelect = document.getElementById("transferProductSelect");
 const transferProductSearch = document.getElementById("transferProductSearch");
 const transferSearchResults = document.getElementById("transferSearchResults");
 const transferSelectedProduct = document.getElementById("transferSelectedProduct");
+const transferVariantModal = document.getElementById("transferVariantModal");
+const transferVariantCode = document.getElementById("transferVariantCode");
+const transferVariantName = document.getElementById("transferVariantName");
+const transferVariantModel = document.getElementById("transferVariantModel");
+const transferVariantColor = document.getElementById("transferVariantColor");
+const transferVariantStock = document.getElementById("transferVariantStock");
 const transferQuantity = document.getElementById("transferQuantity");
 const transferNotes = document.getElementById("transferNotes");
 const transferDraftItems = document.getElementById("transferDraftItems");
@@ -431,15 +448,18 @@ let transferDraft = [];
 let transferMode = "request";
 let transfersCache = [];
 let selectedTransferProductId = null;
+let selectedTransferProductGroup = [];
 
 const transferText = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
 
+// يعرض رسالة نجاح أو خطأ أسفل نموذج إنشاء التحويل.
 function setTransferMessage(message, error = false) {
     if (!transferFormMessage) return;
     transferFormMessage.textContent = message;
     transferFormMessage.style.color = error ? "#c14359" : "#2e9d69";
 }
 
+// يعرض المنتجات والكميات التي أضيفت مؤقتًا إلى طلب التحويل قبل حفظه.
 function renderTransferDraft() {
     if (!transferDraftItems) return;
     if (!transferDraft.length) {
@@ -454,11 +474,13 @@ function renderTransferDraft() {
     `).join("");
 }
 
+// يحذف منتجًا من قائمة التحويل المؤقتة بحسب ترتيبه في القائمة.
 window.removeTransferDraftItem = function (index) {
     transferDraft.splice(index, 1);
     renderTransferDraft();
 };
 
+// يجلب أصناف المخزن المصدر ويقارن كمياتها بكميات المخزن الوجهة.
 async function loadTransferSourceProducts() {
     if (!transferSourceWarehouse || !transferProductSelect) return;
     transferProductSelect.innerHTML = "<option value=\"\">جاري تحميل منتجات المخزن...</option>";
@@ -490,31 +512,42 @@ async function loadTransferSourceProducts() {
     renderTransferProductOptions();
 }
 
+// يفلتر أصناف المخزن المصدر ويجمع النسخ المتشابهة تحت نتيجة واحدة لكل كود منتج.
 function renderTransferProductOptions() {
     const search = (transferProductSearch?.value || "").toLowerCase().trim();
     const products = transferSourceProducts.filter(product => {
         const values = [product.product_code, product.company, product.model, product.color, product.type, product.product_type].join(" ").toLowerCase();
         return !search || values.includes(search);
     });
+    const groupedProducts = new Map();
+    products.forEach(product => {
+        const key = String(product.product_code || product.inventory_key || product.id);
+        const current = groupedProducts.get(key) || [];
+        current.push(product);
+        groupedProducts.set(key, current);
+    });
     transferProductSelect.innerHTML = '<option value="">اختر منتجًا للتحويل</option>' + products.map(product => `<option value="${product.id}"></option>`).join("");
     if (!search) {
         transferSearchResults.innerHTML = '<span class="message">اكتب اسم المنتج أو كود المنتج لتظهر النتائج فورًا.</span>';
         return;
     }
-    if (!products.length) {
+    if (!groupedProducts.size) {
         transferSearchResults.innerHTML = '<span class="message">لا توجد نتائج مطابقة في المخزن المصدر.</span>';
         return;
     }
-    transferSearchResults.innerHTML = products.map(product => {
-        const name = [product.company, product.model].filter(Boolean).join(" ") || "منتج بدون اسم";
-        const details = [product.product_code ? `الكود: ${product.product_code}` : "", product.color, product.type, product.product_type].filter(Boolean).join(" · ");
-        return `<button type="button" class="transfer-search-result ${String(product.id) === String(selectedTransferProductId) ? "active" : ""}" data-transfer-product-id="${product.id}"><span><strong>${transferText(name)}</strong><small>${transferText(details)}</small></span><span class="transfer-search-stock">المتاح: ${product.quantity || 0}</span></button>`;
+    transferSearchResults.innerHTML = [...groupedProducts.entries()].map(([key, variants]) => {
+        const product = variants[0];
+        const name = [product.company, product.product_type, product.type].filter(Boolean).join(" ") || "منتج بدون اسم";
+        const totalQuantity = variants.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const details = [product.product_code ? `الكود: ${product.product_code}` : "", `${variants.length} نسخة`].filter(Boolean).join(" · ");
+        return `<button type="button" class="transfer-search-result" data-transfer-product-group="${transferText(key)}"><span><strong>${transferText(name)}</strong><small>${transferText(details)}</small></span><span class="transfer-search-stock">المتاح: ${totalQuantity}</span></button>`;
     }).join("");
-    transferSearchResults.querySelectorAll("[data-transfer-product-id]").forEach(button => button.addEventListener("click", () => selectTransferProduct(button.dataset.transferProductId)));
+    transferSearchResults.querySelectorAll("[data-transfer-product-group]").forEach(button => button.addEventListener("click", () => openTransferVariantModal(button.dataset.transferProductGroup)));
 }
 
+// يحدد نسخة المنتج النهائية بعد اختيار الموديل واللون ويجهزها للإضافة للتحويل.
 function selectTransferProduct(id) {
-    const product = transferSourceProducts.find(item => String(item.id) === String(id));
+    const product = selectedTransferProductGroup.find(item => String(item.id) === String(id)) || transferSourceProducts.find(item => String(item.id) === String(id));
     if (!product) return;
     selectedTransferProductId = product.id;
     transferProductSelect.value = String(product.id);
@@ -523,6 +556,44 @@ function selectTransferProduct(id) {
     transferQuantity.focus();
 }
 
+// يفتح نافذة اختيار الموديل واللون لنتيجة بحث مجمعة تحت كود منتج واحد.
+function openTransferVariantModal(groupKey) {
+    selectedTransferProductGroup = transferSourceProducts.filter(product => String(product.product_code || product.inventory_key || product.id) === String(groupKey));
+    if (!selectedTransferProductGroup.length) return;
+    const first = selectedTransferProductGroup[0];
+    transferVariantCode.textContent = `كود المنتج: ${first.product_code || "—"}`;
+    transferVariantName.textContent = [first.company, first.product_type, first.type].filter(Boolean).join(" · ") || "اختر النسخة المطلوبة";
+    const models = [...new Set(selectedTransferProductGroup.map(product => product.model || "بدون موديل"))];
+    transferVariantModel.innerHTML = models.map(model => `<option value="${transferText(model)}">${transferText(model)}</option>`).join("");
+    updateTransferVariantColors();
+    transferVariantModal.style.display = "grid";
+}
+
+// يحدّث قائمة الألوان لتشمل ألوان الموديل المختار فقط ثم يعرض الكمية المتاحة.
+function updateTransferVariantColors() {
+    const selectedModel = transferVariantModel.value;
+    const variants = selectedTransferProductGroup.filter(product => (product.model || "بدون موديل") === selectedModel);
+    const colors = [...new Set(variants.map(product => product.color || "بدون لون"))];
+    transferVariantColor.innerHTML = colors.map(color => `<option value="${transferText(color)}">${transferText(color)}</option>`).join("");
+    updateTransferVariantStock();
+}
+
+// يعرض كمية النسخة التي حُددت بالجمع بين الموديل واللون في نافذة الاختيار.
+function updateTransferVariantStock() {
+    const product = selectedTransferProductGroup.find(item =>
+        (item.model || "بدون موديل") === transferVariantModel.value &&
+        (item.color || "بدون لون") === transferVariantColor.value
+    );
+    transferVariantStock.textContent = product ? `المتاح في المصدر: ${product.quantity || 0} · الموجود في مخزني: ${product.destination_quantity || 0}` : "هذه النسخة غير متاحة.";
+}
+
+// يغلق نافذة اختيار نسخ المنتج ويعيدها إلى حالة غير ظاهرة.
+function closeTransferVariantModal() {
+    transferVariantModal.style.display = "none";
+    selectedTransferProductGroup = [];
+}
+
+// يعرض بطاقة تفاصيل المنتج المحدد: الكود والاسم والنوع والموديل واللون والكميات.
 function renderSelectedTransferProduct() {
     if (!transferSelectedProduct) return;
     const product = transferSourceProducts.find(item => String(item.id) === String(selectedTransferProductId));
@@ -536,6 +607,7 @@ function renderSelectedTransferProduct() {
     transferSelectedProduct.innerHTML = `<strong>${transferText(name)}</strong><span>الكود: <b>${transferText(product.product_code || "—")}</b></span><span>نوع المنتج: <b>${transferText(product.product_type || "—")}</b></span><span>النوع: <b>${transferText(product.type || "—")}</b></span><span>الموديل: <b>${transferText(product.model || "—")}</b></span><span>اللون: <b>${transferText(product.color || "—")}</b></span><span class="stock">كمية المصدر: ${product.quantity || 0}</span><span class="stock">في مخزني: ${product.destination_quantity || 0}</span>`;
 }
 
+// يضبط مسار التحويل حسب الوضع: طلب بضاعة إلى مخزني أو إرسال بضاعة من مخزني.
 function configureTransferMode() {
     if (!transferSourceWarehouse || !transferDestinationWarehouse) return;
     const otherWarehouse = warehouses.find(warehouse => warehouse.name !== selectedWarehouse)?.name;
@@ -613,10 +685,12 @@ document.getElementById("createTransferButton")?.addEventListener("click", async
     loadTransfers();
 });
 
+// يحول رمز حالة التحويل المخزن في قاعدة البيانات إلى نص عربي مفهوم.
 function transferStatusLabel(status) {
     return ({ requested: "بانتظار موافقة المصدر", draft: "مسودة", in_transit: "قيد النقل", received: "تم الاستلام", cancelled: "ملغي" })[status] || status;
 }
 
+// يجلب التحويلات الواردة والصادرة للمخزن الحالي ويعرضها كبطاقات وفواتير.
 async function loadTransfers() {
     if (!transfersList) return;
     transfersList.innerHTML = '<div class="message">جاري تحميل التحويلات...</div>';
@@ -654,6 +728,7 @@ async function loadTransfers() {
     }).join("");
 }
 
+// ينفذ شحن التحويل أو استلامه أو إلغاءه بعد طلب تأكيد من المدير.
 window.changeTransferStatus = async function (transferId, action) {
     const descriptions = { dispatch: "شحن التحويل؟ سيتم خصم الكمية من المخزن المصدر.", receive: "تأكيد استلام التحويل؟ ستضاف الكمية إلى المخزن الوجهة.", cancel: "إلغاء التحويل؟ ستعاد الكميات للمصدر إذا كان التحويل قيد النقل." };
     if (!confirm(descriptions[action])) return;
@@ -662,6 +737,7 @@ window.changeTransferStatus = async function (transferId, action) {
     await Promise.all([loadTransfers(), loadTransferSourceProducts(), loadDashboardData(), loadDashboardLatestOrders()]);
 };
 
+// يفتح نسخة قابلة للطباعة من فاتورة التحويل المحدد.
 window.printTransfer = function (transferId) {
     const transfer = transfersCache.find(item => Number(item.id) === Number(transferId));
     if (!transfer) return;
@@ -688,9 +764,24 @@ transferProductSearch?.addEventListener("input", renderTransferProductOptions);
 transferProductSearch?.addEventListener("keydown", event => {
     if (event.key === "Enter") {
         event.preventDefault();
-        const firstResult = transferSearchResults?.querySelector("[data-transfer-product-id]");
-        if (firstResult) selectTransferProduct(firstResult.dataset.transferProductId);
+        const firstResult = transferSearchResults?.querySelector("[data-transfer-product-group]");
+        if (firstResult) openTransferVariantModal(firstResult.dataset.transferProductGroup);
     }
+});
+transferVariantModel?.addEventListener("change", updateTransferVariantColors);
+transferVariantColor?.addEventListener("change", updateTransferVariantStock);
+document.getElementById("closeTransferVariantModal")?.addEventListener("click", closeTransferVariantModal);
+document.getElementById("confirmTransferVariant")?.addEventListener("click", () => {
+    const product = selectedTransferProductGroup.find(item =>
+        (item.model || "بدون موديل") === transferVariantModel.value &&
+        (item.color || "بدون لون") === transferVariantColor.value
+    );
+    if (!product) { setTransferMessage("اختر موديلًا ولونًا صالحين.", true); return; }
+    selectTransferProduct(product.id);
+    closeTransferVariantModal();
+});
+transferVariantModal?.addEventListener("click", event => {
+    if (event.target === transferVariantModal) closeTransferVariantModal();
 });
 transferSourceWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
 transferDestinationWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
@@ -716,6 +807,7 @@ const ADMIN_EMAIL = "zzzzxxccvvbbnnmm12345a@wesamsa.com";
    التحقق من حساب الإدارة
 ========================= */
 
+// يفحص الجلسة عند فتح الصفحة ويقرر عرض تسجيل الدخول أو اختيار المخزن.
 async function checkSession() {
 
     const {
@@ -793,6 +885,7 @@ checkSession();
 const formatAdminCurrency = value => `${Number(value || 0).toFixed(2)} ر.س`;
 let dashboardOrdersCache = [];
 
+// يجلب ويعرض إحصاءات لوحة التحكم الخاصة بالمخزن المختار فقط.
 async function loadDashboardData() {
     const alerts = document.getElementById("dashboardOperationalAlerts");
 
@@ -846,6 +939,7 @@ async function loadDashboardData() {
     }
 }
 
+// يحسب المنتجات الأكثر مبيعًا اعتمادًا على طلبات المخزن المعروضة.
 async function loadDashboardBestProducts(orders) {
     const container = document.getElementById("dashboardBestProducts");
     if (!container) return;
@@ -879,6 +973,7 @@ async function loadDashboardBestProducts(orders) {
     `).join("") : '<div class="dashboard-empty">لا توجد منتجات مباعة حتى الآن.</div>';
 }
 
+// ينشئ ملف CSV لتقرير مبيعات المخزن الحالي ويبدأ تنزيله.
 function exportSalesReport() {
     if (!dashboardOrdersCache.length) {
         alert("لا توجد بيانات مبيعات لتصديرها بعد.");
@@ -931,12 +1026,14 @@ const adminProductSearch =
 let adminProductsData = [];
 let selectedProductImage = null;
 
+// يرجع المنتجات التابعة للمخزن الذي اختاره المدير فقط.
 function getProductsForSelectedWarehouse() {
     return adminProductsData.filter(product =>
         product.warehouse === selectedWarehouse
     );
 }
 
+// يعرض قائمة منتجات المخزن الحالي في صفحة إدارة المنتجات.
 function renderSelectedWarehouseProducts() {
     renderAdminProducts(getProductsForSelectedWarehouse());
 }
@@ -974,6 +1071,7 @@ backToDashboard.addEventListener("click", function () {
 });
 
 /* تحميل المنتجات */
+// يجلب جميع منتجات المخزن الحالي على دفعات لتجنب حد النتائج في قاعدة البيانات.
 async function loadAdminProducts() {
 
     adminProducts.innerHTML = `
@@ -1060,6 +1158,7 @@ async function loadAdminProducts() {
 }
 
 
+// يفتح المنتجات ويعرض فقط الأصناف التي وصلت كميتها إلى الحد المنخفض.
 async function openLowStockInventory() {
     document.getElementById("adminPage").style.display = "none";
     document.getElementById("categoriesAdmin").style.display = "none";
@@ -1073,6 +1172,7 @@ async function openLowStockInventory() {
 
 /* عرض المنتجات */
 
+// يرسم بطاقات المنتجات التي تم تمريرها داخل صفحة الإدارة.
 function renderAdminProducts(products) {
 
     adminProducts.innerHTML = "";
@@ -2914,6 +3014,7 @@ const driverWarehouseSelect = document.getElementById("driverWarehouseSelect");
 const driverWarehouseMessage = document.getElementById("driverWarehouseMessage");
 let adminOrdersData = [];
 
+// يربط رقم مندوب بمخزن وينقل طلباته الحالية إلى المخزن نفسه.
 async function assignDriverWarehouse() {
     const driverNumber = driverWarehouseNumber?.value.trim();
     const warehouse = driverWarehouseSelect?.value;
@@ -2941,6 +3042,7 @@ async function assignDriverWarehouse() {
     loadDashboardLatestOrders();
 }
 
+// يفلتر ويرسم طلبات المخزن الحالي وفق البحث وحالة الطلب.
 function renderAdminOrdersList() {
     const search = (adminOrderSearch?.value || "").trim().toLowerCase();
     const status = adminOrderStatusFilter?.value || "";
@@ -2961,6 +3063,7 @@ function renderAdminOrdersList() {
     filteredOrders.forEach(order => renderAdminOrder(order, order.items));
 }
 
+// يحسب ملخص عدد الطلبات والمبيعات والطلبات قيد المتابعة للمخزن الحالي.
 function updateOrdersSummary() {
     if (!ordersSummary) return;
     const activeOrders = adminOrdersData.filter(order => !["تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
@@ -3019,6 +3122,7 @@ backFromOrders.addEventListener("click", function () {
 
 /* تحميل الطلبات */
 
+// يجلب طلبات المخزن الحالي وعناصرها ثم يجهزها للعرض في الإدارة.
 async function loadAdminOrders() {
 
     adminOrders.innerHTML = `
@@ -3148,6 +3252,7 @@ if (dashboardOrdersButton) {
    آخر الطلبات في الصفحة الرئيسية
 ========================================================= */
 
+// يعرض أحدث طلبات المخزن الحالي في لوحة التحكم الرئيسية.
 async function loadDashboardLatestOrders() {
 
     const container =
