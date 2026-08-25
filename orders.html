@@ -1102,7 +1102,7 @@ if (!customerName) {
             error: driverError
         } = await supabaseClient
             .from("drivers")
-            .select("id, driver_number, name")
+            .select("id, driver_number, name, warehouse")
             .eq("driver_number", driverNumber)
             .maybeSingle();
 
@@ -1266,6 +1266,9 @@ if (!customerName) {
 
         driver_name:
             driver.name,
+
+        warehouse:
+            driver.warehouse || "الرياض",
 
         customer_name:
             customerName,

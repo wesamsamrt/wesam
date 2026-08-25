@@ -6,6 +6,30 @@ const loginButton = document.getElementById("loginButton");
 const loginMessage = document.getElementById("loginMessage");
 
 const logoutButton = document.getElementById("logoutButton");
+const warehouseLoginPage = document.getElementById("warehouseLoginPage");
+const warehouseChoiceButtons = document.querySelectorAll("[data-warehouse-choice]");
+let selectedWarehouse = null;
+
+function showWarehouseSelection() {
+    loginPage.style.display = "none";
+    adminPage.style.display = "none";
+    warehouseLoginPage.style.display = "flex";
+}
+
+function updateWarehouseLabel() {
+    const label = document.getElementById("selectedWarehouseLabel");
+    if (label) label.textContent = selectedWarehouse ? `مخزن ${selectedWarehouse}` : "—";
+    const dashboardName = document.getElementById("dashboardWarehouseName");
+    if (dashboardName) dashboardName.textContent = selectedWarehouse ? `مخزن ${selectedWarehouse}` : "وسام سمارت";
+}
+
+function selectWarehouse(warehouse) {
+    selectedWarehouse = warehouse;
+    warehouseOptions?.forEach(option =>
+        option.classList.toggle("active", option.dataset.warehouse === warehouse)
+    );
+    updateWarehouseLabel();
+}
 
 
 /* =========================
@@ -16,15 +40,23 @@ function showAdmin() {
     const loginPage = document.getElementById("loginPage");
     const adminPage = document.getElementById("adminPage");
 
+    if (!selectedWarehouse) {
+        showWarehouseSelection();
+        return;
+    }
+
     if (loginPage) {
         loginPage.style.display = "none";
     }
+
+    warehouseLoginPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
     }
     // تبقى لوحة التحكم الأساسية مستقلة عن أي إضافات إحصائية.
     // بهذا لا يمنع خطأ في تقرير أو تنبيه بقية عناصر الإدارة من العمل.
+    updateWarehouseLabel();
     loadDashboardLatestOrders();
     setTimeout(() => loadDashboardData(), 0);
 
@@ -48,6 +80,10 @@ function showLogin() {
 
     if (adminPage) {
         adminPage.style.display = "none";
+    }
+
+    if (warehouseLoginPage) {
+        warehouseLoginPage.style.display = "none";
     }
 
 }
@@ -257,6 +293,8 @@ async function logout() {
 
     showLogin();
 
+    selectedWarehouse = null;
+
     adminCode.value = "";
 
 }
@@ -298,6 +336,21 @@ logoutButton.addEventListener(
     "click",
     logout
 );
+
+warehouseChoiceButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        selectWarehouse(button.dataset.warehouseChoice);
+        showAdmin();
+    });
+});
+
+document.getElementById("changeWarehouseButton")?.addEventListener("click", () => {
+    document.getElementById("productsAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    showWarehouseSelection();
+});
+
+document.getElementById("warehouseBackToLogin")?.addEventListener("click", logout);
 
 
 /* =========================
@@ -396,8 +449,8 @@ async function loadDashboardData() {
 
     try {
         const [{ data: orders, error: ordersError }, { data: products, error: productsError }] = await Promise.all([
-            supabaseClient.from("orders").select("id, status, total, created_at, user_id").order("id", { ascending: false }),
-            supabaseClient.from("products").select("id, product_code, company, model, quantity, image")
+            supabaseClient.from("orders").select("id, status, total, created_at, user_id").eq("warehouse", selectedWarehouse).order("id", { ascending: false }),
+            supabaseClient.from("products").select("id, product_code, company, model, quantity, image").eq("warehouse", selectedWarehouse)
         ]);
 
         if (ordersError) throw ordersError;
@@ -529,6 +582,31 @@ const adminProductSearch =
 let adminProductsData = [];
 let selectedProductImage = null;
 
+const warehouseOptions = document.querySelectorAll(".warehouse-option");
+
+function getProductsForSelectedWarehouse() {
+    return adminProductsData.filter(product =>
+        (product.warehouse || "الرياض") === selectedWarehouse
+    );
+}
+
+function renderSelectedWarehouseProducts() {
+    renderAdminProducts(getProductsForSelectedWarehouse());
+}
+
+warehouseOptions.forEach(button => {
+    button.addEventListener("click", () => {
+        selectWarehouse(button.dataset.warehouse);
+        adminProductSearch.value = "";
+        adminProductSearch.placeholder = `ابحث في منتجات مخزن ${selectedWarehouse}...`;
+        if (productsAdmin.style.display !== "none") {
+            loadAdminProducts();
+        }
+        loadDashboardData();
+        loadDashboardLatestOrders();
+    });
+});
+
 const productImage =
     document.getElementById("productImage");
 
@@ -584,6 +662,7 @@ async function loadAdminProducts() {
             } = await supabaseClient
                 .from("products")
                 .select("*")
+                .eq("warehouse", selectedWarehouse)
                 .order("id", {
                     ascending: false
                 })
@@ -623,7 +702,7 @@ async function loadAdminProducts() {
             adminProductsData.length
         );
 
-        renderAdminProducts(adminProductsData);
+        renderSelectedWarehouseProducts();
 
     }
 
@@ -655,7 +734,7 @@ async function openLowStockInventory() {
     await loadAdminProducts();
     adminProductSearch.value = "";
     adminProductSearch.placeholder = "تُعرض المنتجات ذات المخزون المنخفض (5 أو أقل)";
-    renderAdminProducts(adminProductsData.filter(product => Number(product.quantity || 0) <= 5));
+    renderAdminProducts(getProductsForSelectedWarehouse().filter(product => Number(product.quantity || 0) <= 5));
 }
 
 /* عرض المنتجات */
@@ -757,7 +836,7 @@ adminProductSearch.addEventListener(
 
 
         const filtered =
-            adminProductsData.filter(product => {
+            getProductsForSelectedWarehouse().filter(product => {
 
                const text = `
 
@@ -820,6 +899,7 @@ const productFormMessage =
 addProductButton.addEventListener("click", function () {
 
     productFormCard.style.display = "block";
+    document.getElementById("productWarehouse").value = selectedWarehouse;
     document.getElementById(
     "productCompatibilityType"
 ).value = "device";
@@ -853,6 +933,7 @@ function clearProductForm() {
     document.getElementById("productModel").value = "";
     document.getElementById("productColor").value = "";
     document.getElementById("productQuantity").value = "";
+    document.getElementById("productWarehouse").value = selectedWarehouse;
     document.getElementById("productPrice").value = "";
 
 const compatibilitySelect =
@@ -1078,6 +1159,8 @@ async function saveNewProduct() {
             document.getElementById("productQuantity").value
         );
 
+    const warehouse = document.getElementById("productWarehouse").value;
+
     const price =
         Number(
             document.getElementById("productPrice").value
@@ -1227,6 +1310,8 @@ catch (error) {
 
     quantity: quantity || 0,
 
+    warehouse: warehouse,
+
     price: price || 0,
 
     compatibility_type:
@@ -1268,6 +1353,8 @@ catch (error) {
     color: color,
 
     quantity: quantity || 0,
+
+    warehouse: warehouse,
 
     price: price || 0,
 
@@ -1386,6 +1473,9 @@ async function editProduct(id) {
 
     document.getElementById("productQuantity").value =
         product.quantity ?? 0;
+
+    document.getElementById("productWarehouse").value =
+        product.warehouse || "الرياض";
 
     document.getElementById("productPrice").value =
         product.price ?? 0;
@@ -2485,7 +2575,37 @@ const adminOrderSearch = document.getElementById("adminOrderSearch");
 const adminOrderStatusFilter = document.getElementById("adminOrderStatusFilter");
 const refreshAdminOrders = document.getElementById("refreshAdminOrders");
 const ordersSummary = document.getElementById("ordersSummary");
+const driverWarehouseNumber = document.getElementById("driverWarehouseNumber");
+const driverWarehouseSelect = document.getElementById("driverWarehouseSelect");
+const driverWarehouseMessage = document.getElementById("driverWarehouseMessage");
 let adminOrdersData = [];
+
+async function assignDriverWarehouse() {
+    const driverNumber = driverWarehouseNumber?.value.trim();
+    const warehouse = driverWarehouseSelect?.value;
+
+    if (!driverNumber || !warehouse) {
+        driverWarehouseMessage.textContent = "أدخل رقم المندوب واختر المخزن.";
+        return;
+    }
+
+    driverWarehouseMessage.textContent = "جاري الربط...";
+    const { data, error } = await supabaseClient.rpc("assign_driver_warehouse", {
+        p_driver_number: driverNumber,
+        p_warehouse: warehouse
+    });
+
+    if (error) {
+        console.error("Assign driver warehouse error:", error);
+        driverWarehouseMessage.textContent = `تعذر الربط: ${error.message}`;
+        return;
+    }
+
+    driverWarehouseMessage.textContent = `تم ربط ${data?.driver_name || "المندوب"} بمخزن ${warehouse} ونقل ${data?.orders_updated || 0} من طلباته الحالية.`;
+    loadAdminOrders();
+    loadDashboardData();
+    loadDashboardLatestOrders();
+}
 
 function renderAdminOrdersList() {
     const search = (adminOrderSearch?.value || "").trim().toLowerCase();
@@ -2517,6 +2637,7 @@ function updateOrdersSummary() {
 adminOrderSearch?.addEventListener("input", renderAdminOrdersList);
 adminOrderStatusFilter?.addEventListener("change", renderAdminOrdersList);
 refreshAdminOrders?.addEventListener("click", loadAdminOrders);
+document.getElementById("saveDriverWarehouseButton")?.addEventListener("click", assignDriverWarehouse);
 
 /* =========================================================
    فتح صفحة الطلبات
@@ -2590,8 +2711,10 @@ async function loadAdminOrders() {
     created_at,
     user_id,
     driver_name,
-    driver_number
+    driver_number,
+    warehouse
 `)
+    .eq("warehouse", selectedWarehouse)
     .order("id", {
         ascending: false
     });
@@ -2724,6 +2847,7 @@ async function loadDashboardLatestOrders() {
                 total,
                 created_at
             `)
+            .eq("warehouse", selectedWarehouse)
             .order("id", {
                 ascending: false
             })
@@ -3108,6 +3232,15 @@ Object.entries(typeCodes).forEach(
 
             </select>
 
+            <select
+                class="order-status-select"
+                aria-label="نقل الطلب إلى مخزن آخر"
+                onchange="moveOrderToWarehouse(${order.id}, this.value)"
+            >
+                <option value="الرياض" ${order.warehouse === "الرياض" ? "selected" : ""}>مخزن الرياض</option>
+                <option value="جدة" ${order.warehouse === "جدة" ? "selected" : ""}>مخزن جدة</option>
+            </select>
+
         </div>
 
 
@@ -3279,6 +3412,26 @@ async function updateOrderStatus(orderId, newStatus) {
 
     }
 
+}
+
+async function moveOrderToWarehouse(orderId, warehouse) {
+    if (warehouse === selectedWarehouse) return;
+
+    const { error } = await supabaseClient
+        .from("orders")
+        .update({ warehouse })
+        .eq("id", orderId);
+
+    if (error) {
+        console.error("Move order warehouse error:", error);
+        alert("تعذر نقل الطلب إلى المخزن المحدد: " + error.message);
+        await loadAdminOrders();
+        return;
+    }
+
+    await loadAdminOrders();
+    loadDashboardData();
+    loadDashboardLatestOrders();
 }
 
 
@@ -4526,6 +4679,16 @@ async function saveOrderEdit() {
                 "editOrderDriverNumber"
             ).value.trim();
 
+        let driverWarehouse = selectedWarehouse;
+        if (driverNumber) {
+            const { data: driver } = await supabaseClient
+                .from("drivers")
+                .select("warehouse")
+                .eq("driver_number", driverNumber)
+                .maybeSingle();
+            driverWarehouse = driver?.warehouse || selectedWarehouse;
+        }
+
 
         /* =========================
            حساب الإجمالي
@@ -4556,6 +4719,9 @@ async function saveOrderEdit() {
 
                 driver_number:
                     driverNumber,
+
+                warehouse:
+                    driverWarehouse,
 
                 total:
                     total

@@ -82,6 +82,23 @@
 
     </div>
 
+    <section class="warehouse-login-page" id="warehouseLoginPage" style="display:none;">
+        <div class="warehouse-login-card">
+            <div class="login-icon">🏬</div>
+            <h1>اختر المخزن</h1>
+            <p>سيتم عرض لوحة الإدارة والطلبات والمخزون الخاصة بالمخزن الذي تختاره.</p>
+            <div class="warehouse-login-options">
+                <button type="button" class="warehouse-login-option" data-warehouse-choice="الرياض">
+                    <strong>مخزن الرياض</strong><span>عرض إدارة ومخزون الرياض</span>
+                </button>
+                <button type="button" class="warehouse-login-option" data-warehouse-choice="جدة">
+                    <strong>مخزن جدة</strong><span>عرض إدارة ومخزون جدة</span>
+                </button>
+            </div>
+            <button type="button" class="warehouse-back-login" id="warehouseBackToLogin">تسجيل الخروج</button>
+        </div>
+    </section>
+
 
     <!-- لوحة الإدارة -->
 
@@ -188,6 +205,10 @@
 
         <div class="admin-sidebar-bottom">
 
+            <button id="changeWarehouseButton" class="change-warehouse-button" type="button">
+                المخزن: <span id="selectedWarehouseLabel">—</span>
+            </button>
+
            
 
 
@@ -281,7 +302,7 @@
                 <div class="dashboard-hero-content">
 
                     <span class="hero-small">
-                        👋 مرحباً بك في وسام سمارت
+                        👋 مرحباً بك في <span id="dashboardWarehouseName">وسام سمارت</span>
                     </span>
 
                     <h1>
@@ -710,6 +731,14 @@
             + إضافة منتج
 
         </button>
+
+    </div>
+
+    <div class="warehouse-selector" role="group" aria-label="اختيار المخزن">
+        <span class="warehouse-selector-label">عرض مخزون:</span>
+        <button type="button" class="warehouse-option active" data-warehouse="الرياض">مخزن الرياض</button>
+        <button type="button" class="warehouse-option" data-warehouse="جدة">مخزن جدة</button>
+    </div>
 <div
     class="product-form-card"
     id="productFormCard"
@@ -757,6 +786,14 @@
                 type="text"
                 placeholder="مثال: حمايات"
             >
+        </div>
+
+        <div class="form-group">
+            <label>المخزن</label>
+            <select id="productWarehouse">
+                <option value="الرياض">مخزن الرياض</option>
+                <option value="جدة">مخزن جدة</option>
+            </select>
         </div>
 
 
@@ -1096,6 +1133,16 @@
             <button type="button" class="refresh-orders-button" id="refreshAdminOrders">
                 ↻ تحديث
             </button>
+        </div>
+
+        <div class="driver-warehouse-assignment">
+            <input id="driverWarehouseNumber" type="text" inputmode="numeric" placeholder="رقم المندوب">
+            <select id="driverWarehouseSelect" aria-label="مخزن المندوب">
+                <option value="الرياض">مخزن الرياض</option>
+                <option value="جدة">مخزن جدة</option>
+            </select>
+            <button type="button" id="saveDriverWarehouseButton">ربط المندوب</button>
+            <span id="driverWarehouseMessage"></span>
         </div>
     </div>
 
