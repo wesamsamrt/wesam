@@ -2,6 +2,7 @@ const loginPage = document.getElementById("loginPage");
 const adminPage = document.getElementById("adminPage");
 
 const adminCode = document.getElementById("adminCode");
+const adminEmail = document.getElementById("adminEmail");
 const loginButton = document.getElementById("loginButton");
 const loginMessage = document.getElementById("loginMessage");
 
@@ -174,7 +175,7 @@ function showLogin() {
    التحقق هل المستخدم أدمن
 ========================= */
 
-// يتحقق من أن المستخدم الحالي موجود ضمن جدول مديري النظام.
+// يتحقق من أن المستخدم الحالي لديه حساب إدارة نشط وصلاحيات مفعّلة.
 async function isAdmin() {
 
     const {
@@ -216,13 +217,15 @@ async function isAdmin() {
     if (!data) return false;
 
     const { data: access, error: accessError } = await supabaseClient.rpc("get_my_team_access");
-    if (!accessError && access) {
-        currentTeamAccess = access;
-        return !!access.is_active;
+
+    if (accessError || !access) {
+        console.error("Team access check error:", accessError);
+        currentTeamAccess = null;
+        return false;
     }
 
-    // توافق مؤقت مع النسخ القديمة قبل تشغيل ملف تحديث الصلاحيات في Supabase.
-    return true;
+    currentTeamAccess = access;
+    return !!access.is_active;
 
 }
 
@@ -234,14 +237,13 @@ async function isAdmin() {
 // يسجّل دخول المدير بكلمة المرور ثم ينقله إلى اختيار المخزن.
 async function login() {
 
-    const password =
-        adminCode.value.trim();
+    const password = adminCode.value.trim();
+    const email = adminEmail.value.trim().toLowerCase();
 
-
-    if (!password) {
+    if (!email || !password) {
 
         loginMessage.textContent =
-            "اكتب كلمة المرور";
+            "اكتب البريد الإلكتروني وكلمة المرور";
 
         loginMessage.style.color =
             "#e05265";
@@ -255,10 +257,6 @@ async function login() {
 
     loginButton.textContent =
         "جاري التحقق...";
-
-
-    const email =
-        "procurement@wesamsa.com";
 
 
     try {
@@ -389,6 +387,7 @@ async function logout() {
     selectedWarehouse = null;
     currentTeamAccess = null;
 
+    adminEmail.value = "";
     adminCode.value = "";
 
 }
@@ -430,6 +429,11 @@ logoutButton.addEventListener(
     "click",
     logout
 );
+
+// يتيح تسجيل الدخول من حقل البريد عند الضغط على Enter.
+adminEmail?.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") login();
+});
 
 document.getElementById("addWarehouseButton")?.addEventListener("click", async () => {
     const nameInput = document.getElementById("newWarehouseName");
@@ -934,13 +938,6 @@ document.getElementById("refreshAccountsButton")?.addEventListener("click", () =
    التحقق عند فتح الصفحة
 ========================= */
 /* =========================
-   حساب الإدارة المسموح
-========================= */
-
-const ADMIN_EMAIL = "zzzzxxccvvbbnnmm12345a@wesamsa.com";
-
-
-/* =========================
    التحقق من حساب الإدارة
 ========================= */
 
@@ -965,49 +962,16 @@ async function checkSession() {
     }
 
 
-    /* إيميل المستخدم */
+    // لا يسمح بالدخول إلا للحسابات النشطة التي أضافها المالك في قسم الحسابات والصلاحيات.
+    const admin = await isAdmin();
 
-    const userEmail =
-        (session.user.email || "")
-            .trim()
-            .toLowerCase();
-
-
-    /* =========================
-       التحقق من أنه الأدمن
-    ========================= */
-
-    if (userEmail !== ADMIN_EMAIL.toLowerCase()) {
-
-        console.log(
-            "محاولة دخول غير مصرح بها:",
-            userEmail
-        );
-
-
-        /* تسجيل خروج الحساب */
-
+    if (!admin) {
         await supabaseClient.auth.signOut();
-
-
         showLogin();
-
-
-        loginMessage.textContent =
-            "هذا الحساب ليس لديه صلاحية دخول لوحة الإدارة";
-
-        loginMessage.style.color =
-            "#e05265";
-
-
+        loginMessage.textContent = "هذا الحساب ليس لديه صلاحية دخول لوحة الإدارة";
+        loginMessage.style.color = "#e05265";
         return;
-
     }
-
-
-    /* =========================
-       الحساب صحيح
-    ========================= */
 
     showAdmin();
 
