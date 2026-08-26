@@ -15,3 +15,9 @@ self.addEventListener("fetch", event => {
         })
     );
 });
+
+// يفتح لوحة الإدارة عند الضغط على إشعار طلب جديد.
+self.addEventListener("notificationclick", event => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow(event.notification.data?.url || "./admin.html"));
+});

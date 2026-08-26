@@ -12,6 +12,56 @@ let selectedWarehouse = null;
 let warehouses = [];
 let warehouseOptions = [];
 let currentTeamAccess = null;
+let warehouseNotificationsChannel = null;
+
+// يسجل عامل الخدمة ويستمع فوراً لإشعارات الطلبات الخاصة بالحساب الحالي.
+async function setupWarehouseOrderNotifications() {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+
+    try {
+        await navigator.serviceWorker.register("./service-worker.js");
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session?.user?.id || warehouseNotificationsChannel) return;
+
+        warehouseNotificationsChannel = supabaseClient
+            .channel(`warehouse-order-notifications-${session.user.id}`)
+            .on("postgres_changes", {
+                event: "INSERT",
+                schema: "public",
+                table: "notifications",
+                filter: `user_id=eq.${session.user.id}`
+            }, async payload => {
+                // لا نعرض تنبيهاً نظامياً عندما تكون لوحة الإدارة أمام المستخدم بالفعل.
+                if (!document.hidden || Notification.permission !== "granted") return;
+                const notice = payload.new;
+                const registration = await navigator.serviceWorker.ready;
+                await registration.showNotification(notice.title || "طلب جديد 🔔", {
+                    body: notice.message || "لديك طلب جديد يحتاج متابعة.",
+                    tag: `warehouse-order-${notice.order_id || notice.id}`,
+                    renotify: true,
+                    data: { url: "./admin.html" }
+                });
+            })
+            .subscribe();
+    } catch (error) {
+        console.warn("تعذر تفعيل إشعارات الطلبات:", error);
+    }
+}
+
+// يطلب إذن إشعارات المتصفح من الموظف ثم يبدأ استقبال تنبيهات مخزنه.
+async function enableWarehouseOrderNotifications() {
+    if (!("Notification" in window)) {
+        alert("هذا المتصفح لا يدعم إشعارات النظام.");
+        return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+        alert("لم يتم السماح بالإشعارات. فعّلها من إعدادات المتصفح لاحقًا.");
+        return;
+    }
+    await setupWarehouseOrderNotifications();
+    alert("تم تفعيل إشعارات الطلبات لهذا المتصفح.");
+}
 
 // يطبق صلاحيات الأقسام المحفوظة على عناصر التنقل في لوحة الإدارة.
 function applyTeamAccessToInterface() {
@@ -166,6 +216,7 @@ function showAdmin() {
     // بهذا لا يمنع خطأ في تقرير أو تنبيه بقية عناصر الإدارة من العمل.
     updateWarehouseLabel();
     applyTeamAccessToInterface();
+    setupWarehouseOrderNotifications();
     loadDashboardLatestOrders();
     setTimeout(() => loadDashboardData(), 0);
 
@@ -410,6 +461,11 @@ async function logout() {
 
     await supabaseClient.auth.signOut();
 
+    if (warehouseNotificationsChannel) {
+        await supabaseClient.removeChannel(warehouseNotificationsChannel);
+        warehouseNotificationsChannel = null;
+    }
+
     showLogin();
 
     selectedWarehouse = null;
@@ -457,6 +513,8 @@ logoutButton.addEventListener(
     "click",
     logout
 );
+
+document.getElementById("enableWarehouseNotifications")?.addEventListener("click", enableWarehouseOrderNotifications);
 
 // يتيح تسجيل الدخول من حقل البريد عند الضغط على Enter.
 adminEmail?.addEventListener("keydown", function(event) {
