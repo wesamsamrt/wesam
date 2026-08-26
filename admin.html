@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260826-storage-locations"
+        href="admin.css?v=20260826-sales"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -166,6 +166,11 @@
                 <strong>الطلبات</strong>
             </button>
 
+            <button class="admin-nav-item" id="salesButton">
+                <span>📈</span>
+                <strong>المبيعات</strong>
+            </button>
+
 
             <button
                 class="admin-nav-item"
@@ -191,14 +196,6 @@
             >
                 <span>👥</span>
                 <strong>الحسابات والصلاحيات</strong>
-            </button>
-
-
-            <button
-                class="admin-nav-item"
-            >
-                <span>◷</span>
-                <strong>التقارير</strong>
             </button>
 
 
@@ -1193,6 +1190,7 @@
                 <label><input type="checkbox" value="dashboard" checked> الرئيسية</label>
                 <label><input type="checkbox" value="products"> المنتجات</label>
                 <label><input type="checkbox" value="orders"> الطلبات</label>
+                <label><input type="checkbox" value="sales"> المبيعات</label>
                 <label><input type="checkbox" value="transfers"> التحويلات</label>
                 <label><input type="checkbox" value="accounts"> الحسابات</label>
             </div></div>
@@ -1205,6 +1203,30 @@
 
     <div class="accounts-list-header"><h3>سجل تغييرات الصلاحيات</h3></div>
     <div class="accounts-audit-list" id="accountsAuditList"><div class="message">جاري تحميل السجل...</div></div>
+</section>
+
+<section class="sales-admin" id="salesAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromSales">← رجوع</button>
+        <div><h2>مبيعات مخزن <span id="salesWarehouseName">—</span></h2><p>تقارير المبيعات الفعلية للمخزن المختار فقط.</p></div>
+    </div>
+
+    <div class="sales-filters">
+        <label>من <input id="salesDateFrom" type="date"></label>
+        <label>إلى <input id="salesDateTo" type="date"></label>
+        <label>المندوب <select id="salesDriverFilter"><option value="">كل المناديب</option></select></label>
+        <button type="button" id="applySalesFilters">تحديث التقرير</button>
+        <button type="button" id="exportSalesReportButton">⇩ تصدير CSV</button>
+    </div>
+
+    <div class="sales-metrics" id="salesMetrics">جاري تحميل المبيعات...</div>
+
+    <div class="sales-report-grid">
+        <article class="sales-report-card"><h3>أفضل المنتجات مبيعاً</h3><div id="salesBestProducts"></div></article>
+        <article class="sales-report-card"><h3>المبيعات حسب المندوب</h3><div id="salesDrivers"></div></article>
+    </div>
+
+    <article class="sales-report-card sales-orders-card"><h3>آخر المبيعات</h3><div id="salesRecentOrders"></div></article>
 </section>
 
 
@@ -1447,7 +1469,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260826-warehouse-notifications"></script>
+    <script src="admin.js?v=20260826-sales-restock"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

@@ -72,6 +72,7 @@ function applyTeamAccessToInterface() {
         dashboardButton: "dashboard",
         productsButton: "products",
         ordersButton: "orders",
+        salesButton: "sales",
         transfersButton: "transfers",
         accountsButton: "accounts"
     };
@@ -208,6 +209,8 @@ function showAdmin() {
     if (transfersPage) transfersPage.style.display = "none";
     const accountsPage = document.getElementById("accountsAdmin");
     if (accountsPage) accountsPage.style.display = "none";
+    const salesPage = document.getElementById("salesAdmin");
+    if (salesPage) salesPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
@@ -967,7 +970,7 @@ async function loadAccounts() {
     accountsList.innerHTML = accounts.map(account => {
         const permissions = account.permissions || {};
         const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
-        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", sales: "المبيعات", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
         return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
     }).join("");
 }
@@ -1184,6 +1187,125 @@ function exportSalesReport() {
 
 document.getElementById("dashboardMonthLabel")?.addEventListener("click", loadDashboardData);
 document.getElementById("dashboardBestProductsButton")?.addEventListener("click", exportSalesReport);
+
+/* =========================================================
+   قسم المبيعات
+========================================================= */
+const salesButton = document.getElementById("salesButton");
+const salesAdmin = document.getElementById("salesAdmin");
+const salesDateFrom = document.getElementById("salesDateFrom");
+const salesDateTo = document.getElementById("salesDateTo");
+const salesDriverFilter = document.getElementById("salesDriverFilter");
+let salesOrdersCache = [];
+
+// يحدد أول يوم من الشهر وتاريخه الحالي كفترة مبدئية لتقرير المبيعات.
+function setDefaultSalesDates() {
+    if (!salesDateFrom?.value) {
+        const now = new Date();
+        salesDateFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    }
+    if (!salesDateTo?.value) salesDateTo.value = new Date().toISOString().slice(0, 10);
+}
+
+// يجلب ويعرض تقرير المبيعات للمخزن الحالي ضمن التاريخ والمندوب المختارين.
+async function loadSalesReport() {
+    if (!salesAdmin || !selectedWarehouse) return;
+    setDefaultSalesDates();
+    document.getElementById("salesWarehouseName").textContent = selectedWarehouse;
+    const metrics = document.getElementById("salesMetrics");
+    metrics.innerHTML = "جاري تحميل تقرير المبيعات...";
+
+    const { data, error } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
+    if (error) {
+        metrics.innerHTML = `<div class="message error">تعذر تحميل المبيعات: ${transferText(error.message)}</div>`;
+        return;
+    }
+
+    const from = salesDateFrom.value ? new Date(`${salesDateFrom.value}T00:00:00`) : null;
+    const to = salesDateTo.value ? new Date(`${salesDateTo.value}T23:59:59.999`) : null;
+    // تعد المبيعات فقط بعد شحن الطلب أو تأكيد استلامه؛ الطلبات المعلقة لا تدخل في الإيراد.
+    const allSales = (Array.isArray(data) ? data : []).filter(order => ["تم شحن الطلب", "تم استلام طلبك"].includes(order.status));
+    const drivers = [...new Set(allSales.map(order => order.driver_name || order.driver_number).filter(Boolean))].sort();
+    const selectedDriver = salesDriverFilter.value;
+    salesDriverFilter.innerHTML = `<option value="">كل المناديب</option>${drivers.map(driver => `<option value="${transferText(driver)}" ${driver === selectedDriver ? "selected" : ""}>${transferText(driver)}</option>`).join("")}`;
+
+    salesOrdersCache = allSales.filter(order => {
+        const date = new Date(order.created_at);
+        const driver = order.driver_name || order.driver_number || "";
+        return (!from || date >= from) && (!to || date <= to) && (!salesDriverFilter.value || driver === salesDriverFilter.value);
+    });
+
+    const revenue = salesOrdersCache.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const average = salesOrdersCache.length ? revenue / salesOrdersCache.length : 0;
+    const delivered = salesOrdersCache.filter(order => order.status === "تم استلام طلبك").length;
+    metrics.innerHTML = `
+        <div class="sales-metric"><span>إجمالي المبيعات</span><strong>${formatAdminCurrency(revenue)}</strong></div>
+        <div class="sales-metric"><span>الطلبات المباعة</span><strong>${salesOrdersCache.length}</strong></div>
+        <div class="sales-metric"><span>متوسط الطلب</span><strong>${formatAdminCurrency(average)}</strong></div>
+        <div class="sales-metric"><span>طلبات مكتملة</span><strong>${delivered}</strong></div>`;
+
+    const productTotals = new Map();
+    const driverTotals = new Map();
+    salesOrdersCache.forEach(order => {
+        const driver = order.driver_name || order.driver_number || "بدون مندوب";
+        const driverStat = driverTotals.get(driver) || { orders: 0, revenue: 0 };
+        driverStat.orders += 1;
+        driverStat.revenue += Number(order.total || 0);
+        driverTotals.set(driver, driverStat);
+        (order.items || []).forEach(item => {
+            const key = item.product_code || `${item.company || ""} ${item.model || ""}`.trim() || "منتج بدون كود";
+            const stat = productTotals.get(key) || { quantity: 0, revenue: 0 };
+            stat.quantity += Number(item.quantity || 0);
+            stat.revenue += Number(item.quantity || 0) * Number(item.price || 0);
+            productTotals.set(key, stat);
+        });
+    });
+
+    const renderRows = (entries, formatter, empty) => entries.length ? entries.map(formatter).join("") : `<div class="dashboard-empty">${empty}</div>`;
+    document.getElementById("salesBestProducts").innerHTML = renderRows(
+        [...productTotals.entries()].sort((a, b) => b[1].quantity - a[1].quantity).slice(0, 8),
+        ([name, stat]) => `<div class="sales-report-row"><span>${transferText(name)}<br><small>${stat.quantity} قطعة</small></span><strong>${formatAdminCurrency(stat.revenue)}</strong></div>`,
+        "لا توجد مبيعات ضمن الفترة المحددة."
+    );
+    document.getElementById("salesDrivers").innerHTML = renderRows(
+        [...driverTotals.entries()].sort((a, b) => b[1].revenue - a[1].revenue),
+        ([name, stat]) => `<div class="sales-report-row"><span>${transferText(name)}<br><small>${stat.orders} طلبات</small></span><strong>${formatAdminCurrency(stat.revenue)}</strong></div>`,
+        "لا توجد مبيعات مرتبطة بمناديب."
+    );
+    document.getElementById("salesRecentOrders").innerHTML = renderRows(
+        [...salesOrdersCache].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 12),
+        order => `<div class="sales-report-row"><span>طلب #${order.id} · ${transferText(order.driver_name || "بدون مندوب")}<br><small>${new Date(order.created_at).toLocaleString("ar-SA")} · ${transferText(order.status || "—")}</small></span><strong>${formatAdminCurrency(order.total)}</strong></div>`,
+        "لا توجد مبيعات ضمن الفترة المحددة."
+    );
+}
+
+// يصدر المبيعات التي تظهر في التقرير الحالي بصيغة CSV.
+function exportFilteredSalesReport() {
+    if (!salesOrdersCache.length) { alert("لا توجد مبيعات لتصديرها ضمن الفترة المحددة."); return; }
+    const rows = [["رقم الطلب", "التاريخ", "المندوب", "الحالة", "الإجمالي"]];
+    salesOrdersCache.forEach(order => rows.push([order.id, new Date(order.created_at).toLocaleString("ar-SA"), order.driver_name || order.driver_number || "", order.status || "", Number(order.total || 0).toFixed(2)]));
+    const csv = "\uFEFF" + rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    link.download = `sales-${selectedWarehouse}-${salesDateFrom.value}-${salesDateTo.value}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+salesButton?.addEventListener("click", async () => {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    if (transfersAdmin) transfersAdmin.style.display = "none";
+    if (accountsAdmin) accountsAdmin.style.display = "none";
+    salesAdmin.style.display = "block";
+    await loadSalesReport();
+});
+document.getElementById("backFromSales")?.addEventListener("click", () => { salesAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+document.getElementById("applySalesFilters")?.addEventListener("click", loadSalesReport);
+document.getElementById("exportSalesReportButton")?.addEventListener("click", exportFilteredSalesReport);
+["productsButton", "ordersButton", "categoriesButton", "dashboardButton", "transfersButton", "accountsButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => { if (salesAdmin) salesAdmin.style.display = "none"; }));
 
 
 

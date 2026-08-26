@@ -509,6 +509,22 @@ body {
     margin-top: 6px;
 }
 
+.sales-filters, .sales-metrics, .sales-report-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.sales-filters { background: #fff; padding: 16px; border-radius: 18px; margin-bottom: 16px; align-items: end; box-shadow: 0 6px 20px rgba(50, 50, 100, .05); }
+.sales-filters label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.sales-filters input, .sales-filters select, .sales-filters button { min-height: 40px; border: 1px solid #e1dfff; border-radius: 10px; padding: 0 10px; font-family: inherit; }
+.sales-filters button { background: var(--purple); color: #fff; border: 0; font-weight: 800; cursor: pointer; }
+.sales-metrics { margin-bottom: 16px; }
+.sales-metrics .sales-metric { flex: 1; min-width: 145px; background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 6px 20px rgba(50, 50, 100, .05); }
+.sales-metric span, .sales-report-card small { color: var(--muted); font-size: 11px; }
+.sales-metric strong { display: block; color: var(--purple); font-size: 20px; margin-top: 5px; }
+.sales-report-grid { align-items: stretch; }
+.sales-report-card { flex: 1; min-width: 290px; background: #fff; border-radius: 18px; padding: 17px; box-shadow: 0 6px 20px rgba(50, 50, 100, .05); }
+.sales-report-card h3 { margin: 0 0 12px; font-size: 15px; }
+.sales-report-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f5; font-size: 13px; }
+.sales-report-row:last-child { border-bottom: 0; }
+.sales-orders-card { margin-top: 16px; }
+
 .admin-product-price {
     font-weight: 800;
     font-size: 14px;
