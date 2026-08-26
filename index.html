@@ -2098,7 +2098,7 @@ a{
       <a href="#offers">العروض</a>
       <a href="orders.html">الطلبات</a>
       <a href="orders.html">تتبع الطلب</a>
-      <a href="admin.html" class="admin-button">
+      <a href="admin.html" class="admin-button" style="display:none">
     ⚙️ الإدارة
 </a>
     </nav>
@@ -2121,7 +2121,7 @@ a{
         🔔<span id="notificationBadge" class="notification">0</span>
       </button>
       <button id="logoutButton" class="icon-button" onclick="logout()" title="تسجيل الخروج" style="display:none">🚪</button>
-      <a href="admin.html" class="admin-button">⚙️ الإدارة</a>
+      <a href="admin.html" class="admin-button" style="display:none">⚙️ الإدارة</a>
     </div>
   </div>
 </header>
@@ -3620,6 +3620,36 @@ async function searchProducts(value) {
         }
 
 
+        /* =====================================================
+           ADMIN ACCESS LINK
+        ===================================================== */
+
+        // يظهر رابط الإدارة فقط للحساب النشط المضاف في إدارة الحسابات والصلاحيات.
+        async function updateAdminLinkVisibility() {
+
+            const adminLinks = document.querySelectorAll(".admin-button");
+
+            adminLinks.forEach(link => {
+                link.style.display = "none";
+            });
+
+            const {
+                data: { session }
+            } = await supabaseClient.auth.getSession();
+
+            if (!session?.user) return;
+
+            const { data: access, error } = await supabaseClient.rpc("get_my_team_access");
+
+            if (error || !access?.is_active) return;
+
+            adminLinks.forEach(link => {
+                link.style.display = "inline-flex";
+            });
+
+        }
+
+
 
         /* =====================================================
            LOGOUT
@@ -3663,6 +3693,8 @@ async function searchProducts(value) {
         loadCategories();
 
         checkLoginStatus();
+
+        updateAdminLinkVisibility();
 
         loadNotificationCount();
 
