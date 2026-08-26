@@ -31,6 +31,19 @@ function applyTeamAccessToInterface() {
     });
 }
 
+// يرجع أسماء المخازن المسموح للحساب الحالي برؤيتها؛ المدير العام يرى الجميع.
+function getPermittedWarehouseNames() {
+    if (currentTeamAccess?.role === "owner") return null;
+    const permitted = currentTeamAccess?.permissions?.warehouses;
+    return Array.isArray(permitted) && permitted.length ? permitted : null;
+}
+
+// يتحقق أن المخزن مطلوب العرض داخل نطاق صلاحية الحساب الحالي.
+function canAccessWarehouse(warehouseName) {
+    const permitted = getPermittedWarehouseNames();
+    return !permitted || permitted.includes(warehouseName);
+}
+
 // ينشئ خيارات HTML لقوائم اختيار المخازن ويحدد المخزن المختار عند الحاجة.
 function warehouseOptionsHtml(selected = "") {
     return warehouses.map(warehouse => `<option value="${transferText(warehouse.name)}" ${warehouse.name === selected ? "selected" : ""}>مخزن ${transferText(warehouse.name)}</option>`).join("");
@@ -43,6 +56,12 @@ function renderWarehouseControls() {
         choices.innerHTML = warehouses.length ? warehouses.map(warehouse => `<button type="button" class="warehouse-login-option" data-warehouse-choice="${transferText(warehouse.name)}"><strong>مخزن ${transferText(warehouse.name)}</strong><span>فتح لوحة الإدارة والمخزون</span></button>`).join("") : "لا توجد مخازن بعد.";
         choices.querySelectorAll("[data-warehouse-choice]").forEach(button => button.addEventListener("click", () => { selectWarehouse(button.dataset.warehouseChoice); showAdmin(); }));
     }
+    // إنشاء المخازن متاح للمدير العام فقط حتى لا يوسّع الموظف نطاق عمله بنفسه.
+    const addWarehouseBox = document.querySelector(".add-warehouse-box");
+    const warehouseAddMessage = document.getElementById("warehouseAddMessage");
+    const canManageWarehouses = currentTeamAccess?.role === "owner";
+    if (addWarehouseBox) addWarehouseBox.style.display = canManageWarehouses ? "" : "none";
+    if (warehouseAddMessage && !canManageWarehouses) warehouseAddMessage.textContent = "";
     const productWarehouse = document.getElementById("productWarehouse");
     const driverWarehouse = document.getElementById("driverWarehouseSelect");
     const source = document.getElementById("transferSourceWarehouse");
@@ -75,7 +94,12 @@ async function loadWarehouses() {
         if (choices) choices.innerHTML = `<div class="message error">تعذر تحميل المخازن: ${transferText(error.message)}</div>`;
         return;
     }
-    warehouses = data || [];
+    // لا نضع في الواجهة إلا المخازن المحددة للحساب، أما عدم تحديد مخزن فيعني جميع المخازن.
+    warehouses = (data || []).filter(warehouse => canAccessWarehouse(warehouse.name));
+
+    if (selectedWarehouse && !canAccessWarehouse(selectedWarehouse)) {
+        selectedWarehouse = null;
+    }
     renderWarehouseControls();
 }
 
@@ -97,6 +121,10 @@ function updateWarehouseLabel() {
 
 // يحفظ المخزن المختار ويحدّث عناصر الواجهة المرتبطة به.
 function selectWarehouse(warehouse) {
+    if (!canAccessWarehouse(warehouse)) {
+        console.warn("محاولة فتح مخزن خارج صلاحيات الحساب:", warehouse);
+        return;
+    }
     selectedWarehouse = warehouse;
     warehouseOptions?.forEach(option =>
         option.classList.toggle("active", option.dataset.warehouse === warehouse)
