@@ -3808,24 +3808,8 @@ async function updateOrderStatus(orderId, newStatus) {
         // 1 - جلب الطلب
         // =========================
 
-        const {
-            data: order,
-            error: orderError
-        } = await supabaseClient
-            .from("orders")
-            .select("id, user_id, status")
-            .eq("id", orderId)
-            .single();
-
-
-        if (orderError || !order) {
-
-            console.error(orderError);
-
-            alert("لم يتم العثور على الطلب");
-
-            return;
-        }
+        const order = adminOrdersData.find(item => String(item.id) === String(orderId));
+        if (!order) { alert("لم يتم العثور على الطلب ضمن مخزن حسابك."); return; }
 
 
         // =========================
@@ -3843,14 +3827,10 @@ async function updateOrderStatus(orderId, newStatus) {
         // 3 - تحديث حالة الطلب
         // =========================
 
-        const {
-            error: updateError
-        } = await supabaseClient
-            .from("orders")
-            .update({
-                status: newStatus
-            })
-            .eq("id", orderId);
+        const { error: updateError } = await supabaseClient.rpc("update_warehouse_order_status", {
+            p_order_id: orderId,
+            p_status: newStatus
+        });
 
 
         if (updateError) {
@@ -3865,51 +3845,7 @@ async function updateOrderStatus(orderId, newStatus) {
             return;
         }
 
-
-        // =========================
-        // 4 - إنشاء إشعار للمستخدم
-        // =========================
-
-        if (order.user_id) {
-
-            const {
-                error: notificationError
-            } = await supabaseClient
-                .from("notifications")
-                .insert({
-
-                    user_id: order.user_id,
-
-                    order_id: order.id,
-
-                    title: "تحديث حالة الطلب 🔔",
-
-                    message:
-                        `تم تحديث حالة طلبك #${order.id} إلى "${newStatus}"`
-
-                });
-
-
-            if (notificationError) {
-
-                console.error(
-                    "خطأ في إنشاء الإشعار:",
-                    notificationError
-                );
-
-                alert(
-                    "تم تحديث حالة الطلب، لكن حدث خطأ في إرسال الإشعار."
-                );
-
-                return;
-            }
-
-        }
-
-
-        // =========================
-        // 5 - نجاح
-        // =========================
+        // تنشئ دالة الحفظ إشعار العميل وتقيّد التحديث بالمخزن المصرح به.
 
         alert(
             `تم تحديث الطلب #${order.id} إلى "${newStatus}" ✅`
@@ -4733,55 +4669,22 @@ async function editOrder(orderId) {
            جلب الطلب
         ========================= */
 
-        const {
-            data: order,
-            error: orderError
-        } = await supabaseClient
-            .from("orders")
-            .select("*")
-            .eq("id", orderId)
-            .single();
-
-
-        if (orderError || !order) {
-
-            console.error(orderError);
-
-            alert("لم يتم العثور على الطلب");
-
-            return;
-
-        }
-
-
-        /* =========================
-           جلب منتجات الطلب
-        ========================= */
-
-        const {
-            data: items,
-            error: itemsError
-        } = await supabaseClient
-            .from("order_items")
-            .select("*")
-            .eq("order_id", orderId)
-            .order("id", {
-                ascending: true
+        // نفتح الطلب من البيانات المحمّلة بصلاحية المخزن بدل استعلام مباشر قد تمنعه RLS.
+        let order = adminOrdersData.find(item => String(item.id) === String(orderId));
+        if (!order) {
+            const { data, error } = await supabaseClient.rpc("list_warehouse_orders", {
+                p_warehouse: selectedWarehouse
             });
-
-
-        if (itemsError) {
-
-            console.error(itemsError);
-
-            alert(
-                "حدث خطأ أثناء تحميل منتجات الطلب:\n" +
-                itemsError.message
-            );
-
-            return;
-
+            if (error) throw error;
+            order = (Array.isArray(data) ? data : []).find(item => String(item.id) === String(orderId));
         }
+
+        if (!order) {
+            alert("لم يتم العثور على الطلب ضمن مخزن حسابك.");
+            return;
+        }
+
+        const items = order.items || [];
 
 
         /* =========================
@@ -5175,15 +5078,8 @@ async function saveOrderEdit() {
                 "editOrderDriverNumber"
             ).value.trim();
 
-        let driverWarehouse = selectedWarehouse;
-        if (driverNumber) {
-            const { data: driver } = await supabaseClient
-                .from("drivers")
-                .select("warehouse")
-                .eq("driver_number", driverNumber)
-                .maybeSingle();
-            driverWarehouse = driver?.warehouse || selectedWarehouse;
-        }
+        // يبقى الطلب داخل المخزن المفتوح للحساب؛ لا يجوز للمستخدم المقيّد نقله لمخزن آخر.
+        const driverWarehouse = selectedWarehouse;
 
 
         /* =========================
@@ -5192,6 +5088,42 @@ async function saveOrderEdit() {
 
         const total =
             calculateEditOrderTotal();
+
+        // تحفظ الدالة الطلب وعناصره معًا وتتأكد من صلاحية الحساب على المخزن.
+        const { error: saveError } = await supabaseClient.rpc("save_warehouse_order", {
+            p_order_id: editingOrderId,
+            p_order: {
+                customer_name: customerName,
+                customer_phone: customerPhone,
+                driver_name: driverName,
+                driver_number: driverNumber,
+                warehouse: driverWarehouse,
+                total
+            },
+            p_items: editingOrderItems.map(item => ({
+                product_id: item.product_id || null,
+                product_code: item.product_code || null,
+                category: item.category || null,
+                product_type: item.product_type || null,
+                type: item.type || null,
+                company: item.company || null,
+                model: item.model || null,
+                color: item.color || null,
+                quantity: Math.max(1, Number(item.quantity) || 1),
+                price: Math.max(0, Number(item.price) || 0),
+                image: item.image || null
+            }))
+        });
+
+        if (saveError) throw saveError;
+
+        editOrderMessage.textContent = "تم حفظ تعديل الطلب بنجاح ✅";
+        editOrderMessage.style.color = "#2e9d69";
+        setTimeout(async function () {
+            closeEditOrder();
+            await loadAdminOrders();
+        }, 700);
+        return;
 
 
         /* =========================
