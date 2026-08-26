@@ -48,8 +48,12 @@ begin
             to_jsonb(order_row) || jsonb_build_object(
                 'items',
                 coalesce((
-                    select jsonb_agg(to_jsonb(item_row) order by item_row.id)
+                    select jsonb_agg(
+                        to_jsonb(item_row) || jsonb_build_object('storage_location', product.storage_location)
+                        order by item_row.id
+                    )
                     from public.order_items item_row
+                    left join public.products product on product.id = item_row.product_id
                     where item_row.order_id = order_row.id
                 ), '[]'::jsonb)
             )

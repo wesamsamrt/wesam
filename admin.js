@@ -1019,15 +1019,16 @@ async function loadDashboardData() {
     const alerts = document.getElementById("dashboardOperationalAlerts");
 
     try {
-        const [{ data: orders, error: ordersError }, { data: products, error: productsError }] = await Promise.all([
-            supabaseClient.from("orders").select("id, status, total, created_at, user_id").eq("warehouse", selectedWarehouse).order("id", { ascending: false }),
+        const [{ data: ordersResult, error: ordersError }, { data: products, error: productsError }] = await Promise.all([
+            supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
             supabaseClient.from("products").select("id, product_code, company, model, quantity, image").eq("warehouse", selectedWarehouse)
         ]);
 
         if (ordersError) throw ordersError;
-        if (productsError) throw productsError;
+        if (productsError) console.warn("Dashboard products error:", productsError);
 
-        const safeOrders = orders || [];
+        // تأتي الطلبات عبر دالة تتحقق من صلاحية الحساب والمخزن حتى تظهر الإحصاءات للحسابات المقيّدة.
+        const safeOrders = Array.isArray(ordersResult) ? ordersResult : [];
         dashboardOrdersCache = safeOrders;
         const safeProducts = products || [];
         const nonCancelled = safeOrders.filter(order => order.status !== "ملغي");
@@ -1044,11 +1045,11 @@ async function loadDashboardData() {
         document.getElementById("dashboardSalesSummary").textContent = formatAdminCurrency(monthSales);
 
         const lowStock = safeProducts.filter(product => Number(product.quantity || 0) <= 5);
-        const newOrders = safeOrders.filter(order => (order.status || "جديد") === "جديد");
+        const followUpOrders = safeOrders.filter(order => !["تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
         if (alerts) {
             alerts.innerHTML = `
                 <button type="button" class="dashboard-alert new-orders-alert" id="dashboardNewOrdersAlert">
-                    <strong>${newOrders.length}</strong><span>طلبات جديدة تحتاج متابعة</span>
+                    <strong>${followUpOrders.length}</strong><span>طلبات تحتاج متابعة</span>
                 </button>
                 <button type="button" class="dashboard-alert stock-alert" id="dashboardLowStockAlert">
                     <strong>${lowStock.length}</strong><span>منتجات مخزونها 5 أو أقل</span>
@@ -1056,7 +1057,7 @@ async function loadDashboardData() {
             `;
             document.getElementById("dashboardNewOrdersAlert")?.addEventListener("click", () => {
                 ordersButton.click();
-                setTimeout(() => { if (adminOrderStatusFilter) adminOrderStatusFilter.value = "جديد"; renderAdminOrdersList(); }, 0);
+                setTimeout(() => { if (adminOrderStatusFilter) adminOrderStatusFilter.value = ""; renderAdminOrdersList(); }, 0);
             });
             document.getElementById("dashboardLowStockAlert")?.addEventListener("click", () => openLowStockInventory());
         }
@@ -1079,11 +1080,10 @@ async function loadDashboardBestProducts(orders) {
         return;
     }
 
-    const { data: items, error } = await supabaseClient
-        .from("order_items")
-        .select("product_code, company, model, quantity, image")
-        .in("order_id", orderIds);
-    if (error) throw error;
+    // عناصر الطلبات تعود مع الطلب من الدالة المصرح بها، فلا يتعطل التقرير بسبب RLS.
+    const items = orders
+        .filter(order => order.status !== "ملغي")
+        .flatMap(order => Array.isArray(order.items) ? order.items : []);
 
     const totals = new Map();
     (items || []).forEach(item => {
@@ -4037,11 +4037,11 @@ Object.entries(typeCodes).forEach(
                         </td>
 
                         <td>
-                            ${quantity}
+                            ${item.storage_location || "غير محدد"}
                         </td>
 
                         <td>
-                            ${price.toFixed(2)} ر.س
+                            ${quantity}
                         </td>
 
                         <td>
@@ -4530,11 +4530,11 @@ Object.entries(typeCodes).forEach(
                 </th>
 
                 <th>
-                    الكمية
+                    موقع القطعة
                 </th>
 
                 <th>
-                    السعر
+                    الكمية
                 </th>
 
                 <th>
