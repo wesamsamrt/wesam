@@ -338,6 +338,11 @@ function renderProducts(products) {
 
     container.innerHTML = "";
 
+    const countElement = document.getElementById("productsCount");
+    if (countElement) {
+        countElement.textContent = `${products?.length || 0} منتج متاح`;
+    }
+
     if (!products || products.length === 0) {
 
         container.innerHTML = `
@@ -396,6 +401,8 @@ Object.keys(groups).forEach(groupKey => {
 
             <div class="product-image">
 
+                <button class="favorite-button" type="button" aria-label="إضافة للمفضلة">♡</button>
+
                 ${
                     firstProduct.image
                     ?
@@ -410,9 +417,10 @@ Object.keys(groups).forEach(groupKey => {
             </div>
 
 
-            <div class="product-type">
-    ${type}
-</div>
+            <div class="product-meta-row">
+                <div class="product-type">${type}</div>
+                <span class="availability-badge">متوفر</span>
+            </div>
 
 <h3>
     ${type}
@@ -421,12 +429,7 @@ Object.keys(groups).forEach(groupKey => {
 ${
     productCode
     ?
-    `<div style="
-        margin-top:6px;
-        font-size:14px;
-        font-weight:bold;
-        color:#4935b5;
-    ">
+    `<div class="product-code">
         كود المنتج: ${escapeHtml(productCode)}
     </div>`
     :
@@ -454,7 +457,8 @@ ${
                     class="add-button product-select-button"
                     type="button"
                 >
-                    +
+                    <span>أضف للسلة</span>
+                    <b aria-hidden="true">＋</b>
                 </button>
 
             </div>
@@ -468,10 +472,9 @@ ${
         card.addEventListener("click", function(e) {
 
             // إذا ضغط على الزر + لا نفتح المودال مرتين
-            if (
-                e.target.classList.contains("add-button")
-            ) {
+            if (e.target.closest(".add-button, .favorite-button")) {
                 e.stopPropagation();
+                if (e.target.closest(".favorite-button")) return;
             }
 
             openProductModal(variants);
@@ -484,6 +487,13 @@ ${
 
         const addButton =
             card.querySelector(".add-button");
+
+        const favoriteButton = card.querySelector(".favorite-button");
+        favoriteButton?.addEventListener("click", function(e) {
+            e.stopPropagation();
+            this.classList.toggle("active");
+            this.textContent = this.classList.contains("active") ? "♥" : "♡";
+        });
 
         addButton.addEventListener("click", function(e) {
 
