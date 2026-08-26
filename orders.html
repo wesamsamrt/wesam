@@ -456,6 +456,28 @@ function escapeCartHtml(value) {
     }[char]));
 }
 
+// يحوّل السعر والكمية إلى أرقام آمنة ثم يحسب إجمالي عناصر السلة نفسها.
+function calculateCartItemsTotal(items = cartItems) {
+    return (items || []).reduce((sum, item) => {
+        const price = Number(item.price);
+        const quantity = Number(item.quantity);
+        return sum + (Number.isFinite(price) ? price : 0) * (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
+    }, 0);
+}
+
+// يحدّث إجمالي الطلب في قاعدة البيانات بعد احتسابه من عناصر السلة المعروضة.
+async function saveCartItemsTotal(order = cartOrder, items = cartItems) {
+    if (!order?.id) return 0;
+    const total = calculateCartItemsTotal(items);
+    order.total = total;
+    const { error } = await supabaseClient
+        .from("orders")
+        .update({ total })
+        .eq("id", order.id);
+    if (error) console.warn("تعذر حفظ إجمالي السلة:", error);
+    return total;
+}
+
 function renderCartView() {
     const container = document.getElementById("orders");
     const tools = document.getElementById("cartTools");
@@ -720,8 +742,26 @@ async function loadOrders() {
     }
 
 
-    cartOrder = order;
-    cartItems = items;
+    // بعض السلال القديمة قد تكون حفظت السعر بصفر؛ نسترجع سعر المنتج الحالي لإصلاحها.
+    const productIds = [...new Set(items.map(item => item.product_id).filter(Boolean))];
+    const { data: products, error: productsError } = productIds.length
+        ? await supabaseClient.from("products").select("id, price").in("id", productIds)
+        : { data: [], error: null };
+    if (productsError) console.warn("تعذر جلب أسعار السلة:", productsError);
+
+    const pricesByProductId = new Map((products || []).map(product => [String(product.id), Number(product.price) || 0]));
+    cartItems = items.map(item => {
+        const savedPrice = Number(item.price);
+        const currentPrice = pricesByProductId.get(String(item.product_id));
+        return {
+            ...item,
+            price: Number.isFinite(savedPrice) && savedPrice > 0 ? savedPrice : (currentPrice ?? 0)
+        };
+    });
+    cartOrder = { ...order, total: calculateCartItemsTotal(cartItems) };
+
+    // يصلح الإجمالي في قاعدة البيانات أيضاً، حتى يظهر صحيحًا في الفاتورة ولوحة الإدارة.
+    await saveCartItemsTotal(cartOrder, cartItems);
     renderCartView();
     return;
 
