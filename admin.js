@@ -3968,53 +3968,23 @@ async function moveOrderToWarehouse(orderId, warehouse) {
 async function printOrder(orderId) {
 
     try {
+        // الطلب مع عناصره محمّل مسبقًا بصلاحية المخزن؛ نستخدمه كي لا تحجب RLS عملية الطباعة.
+        let order = adminOrdersData.find(item => String(item.id) === String(orderId));
 
-        const {
-            data: order,
-            error: orderError
-        } =
-            await supabaseClient
-                .from("orders")
-                .select("*")
-                .eq("id", orderId)
-                .single();
+        if (!order) {
+            const { data, error } = await supabaseClient.rpc("list_warehouse_orders", {
+                p_warehouse: selectedWarehouse
+            });
+            if (error) throw error;
+            order = (Array.isArray(data) ? data : []).find(item => String(item.id) === String(orderId));
+        }
 
-
-        if (orderError || !order) {
-
-            console.error(orderError);
-
-            alert(
-                "لم يتم العثور على الطلب"
-            );
-
+        if (!order) {
+            alert("لم يتم العثور على الطلب ضمن مخزن حسابك.");
             return;
         }
 
-
-        const {
-            data: items,
-            error: itemsError
-        } =
-            await supabaseClient
-                .from("order_items")
-                .select("*")
-                .eq("order_id", orderId)
-                .order("id", {
-                    ascending: true
-                });
-
-
-        if (itemsError) {
-
-            console.error(itemsError);
-
-            alert(
-                "حدث خطأ أثناء تحميل منتجات الطلب"
-            );
-
-            return;
-        }
+        const items = order.items || [];
 
 
         const date =
