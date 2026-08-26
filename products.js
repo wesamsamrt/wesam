@@ -1048,7 +1048,8 @@ function openProductModal(variants) {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session?.user) return;
             const { data: access, error } = await supabaseClient.rpc("get_my_team_access");
-            const canSetPrice = !error && access?.is_active && (access.role === "owner" || (access.permissions?.sections || []).includes("orders"));
+            const isRegisteredDriver = session.user.user_metadata?.is_driver === true && !!session.user.user_metadata?.driver_id;
+            const canSetPrice = isRegisteredDriver || (!error && access?.is_active && (access.role === "owner" || (access.permissions?.sections || []).includes("orders")));
             if (!canSetPrice) return;
             orderPriceOverrideBox.style.display = "flex";
             modal.querySelector("#baseProductPrice").textContent = baseProductPrice.toFixed(2);
