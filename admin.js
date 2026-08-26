@@ -551,7 +551,7 @@ async function loadTransferSourceProducts() {
     const [{ data, error }, { data: destinationProducts, error: destinationError }] = await Promise.all([
         supabaseClient
         .from("products")
-        .select("id, product_code, company, model, color, type, product_type, quantity, inventory_key")
+        .select("id, product_code, company, model, color, type, product_type, storage_location, quantity, inventory_key")
         .eq("warehouse", transferSourceWarehouse.value)
         .gt("quantity", 0)
         .order("model"),
@@ -1346,6 +1346,10 @@ function renderAdminProducts(products) {
                     ${product.company || ""}
                 </p>
 
+                <p class="admin-product-storage-location">
+                    📍 الموقع: ${product.storage_location || "غير محدد"}
+                </p>
+
             </div>
 
 
@@ -1409,6 +1413,7 @@ adminProductSearch.addEventListener(
                      ${product.category || ""}
                  ${product.product_type || ""}
                  ${product.type || ""}
+                 ${product.storage_location || ""}
 
                 `.toLowerCase();
 
@@ -1463,6 +1468,7 @@ addProductButton.addEventListener("click", function () {
 
     productFormCard.style.display = "block";
     document.getElementById("productWarehouse").value = selectedWarehouse;
+    document.getElementById("productStorageLocation").value = "";
     document.getElementById(
     "productCompatibilityType"
 ).value = "device";
@@ -1497,6 +1503,7 @@ function clearProductForm() {
     document.getElementById("productColor").value = "";
     document.getElementById("productQuantity").value = "";
     document.getElementById("productWarehouse").value = selectedWarehouse;
+    document.getElementById("productStorageLocation").value = "";
     document.getElementById("productPrice").value = "";
 
 const compatibilitySelect =
@@ -1724,6 +1731,8 @@ async function saveNewProduct() {
 
     const warehouse = document.getElementById("productWarehouse").value;
 
+    const storageLocation = document.getElementById("productStorageLocation").value.trim();
+
     const price =
         Number(
             document.getElementById("productPrice").value
@@ -1875,6 +1884,8 @@ catch (error) {
 
     warehouse: warehouse,
 
+    storage_location: storageLocation || null,
+
     price: price || 0,
 
     compatibility_type:
@@ -1918,6 +1929,8 @@ catch (error) {
     quantity: quantity || 0,
 
     warehouse: warehouse,
+
+    storage_location: storageLocation || null,
 
     price: price || 0,
 
@@ -2039,6 +2052,9 @@ async function editProduct(id) {
 
     document.getElementById("productWarehouse").value =
         product.warehouse || selectedWarehouse;
+
+    document.getElementById("productStorageLocation").value =
+        product.storage_location || "";
 
     document.getElementById("productPrice").value =
         product.price ?? 0;

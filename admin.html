@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260825-warehouse"
+        href="admin.css?v=20260826-storage-locations"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -801,6 +801,12 @@
             <select id="productWarehouse"></select>
         </div>
 
+        <div class="form-group">
+            <label>موقع المنتج داخل المخزن</label>
+            <input id="productStorageLocation" type="text" maxlength="120" placeholder="مثال: رف A - صف 2 - خانة 5">
+            <small>اختياري، ويختلف حسب مخزن المنتج.</small>
+        </div>
+
 
         <div class="form-group">
             <label>نوع المنتج</label>
@@ -1437,7 +1443,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260826-team-order-edit"></script>
+    <script src="admin.js?v=20260826-storage-locations"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
