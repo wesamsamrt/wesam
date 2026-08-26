@@ -10,6 +10,25 @@ const warehouseLoginPage = document.getElementById("warehouseLoginPage");
 let selectedWarehouse = null;
 let warehouses = [];
 let warehouseOptions = [];
+let currentTeamAccess = null;
+
+// يطبق صلاحيات الأقسام المحفوظة على عناصر التنقل في لوحة الإدارة.
+function applyTeamAccessToInterface() {
+    if (!currentTeamAccess?.is_active) return;
+    const allowedSections = currentTeamAccess.permissions?.sections || [];
+    const isOwner = currentTeamAccess.role === "owner";
+    const sectionButtons = {
+        dashboardButton: "dashboard",
+        productsButton: "products",
+        ordersButton: "orders",
+        transfersButton: "transfers",
+        accountsButton: "accounts"
+    };
+    Object.entries(sectionButtons).forEach(([id, section]) => {
+        const button = document.getElementById(id);
+        if (button) button.style.display = isOwner || allowedSections.includes(section) ? "" : "none";
+    });
+}
 
 // ينشئ خيارات HTML لقوائم اختيار المخازن ويحدد المخزن المختار عند الحاجة.
 function warehouseOptionsHtml(selected = "") {
@@ -108,6 +127,8 @@ function showAdmin() {
 
     const transfersPage = document.getElementById("transfersAdmin");
     if (transfersPage) transfersPage.style.display = "none";
+    const accountsPage = document.getElementById("accountsAdmin");
+    if (accountsPage) accountsPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
@@ -115,6 +136,7 @@ function showAdmin() {
     // تبقى لوحة التحكم الأساسية مستقلة عن أي إضافات إحصائية.
     // بهذا لا يمنع خطأ في تقرير أو تنبيه بقية عناصر الإدارة من العمل.
     updateWarehouseLabel();
+    applyTeamAccessToInterface();
     loadDashboardLatestOrders();
     setTimeout(() => loadDashboardData(), 0);
 
@@ -191,7 +213,16 @@ async function isAdmin() {
     }
 
 
-    return !!data;
+    if (!data) return false;
+
+    const { data: access, error: accessError } = await supabaseClient.rpc("get_my_team_access");
+    if (!accessError && access) {
+        currentTeamAccess = access;
+        return !!access.is_active;
+    }
+
+    // توافق مؤقت مع النسخ القديمة قبل تشغيل ملف تحديث الصلاحيات في Supabase.
+    return true;
 
 }
 
@@ -356,6 +387,7 @@ async function logout() {
     showLogin();
 
     selectedWarehouse = null;
+    currentTeamAccess = null;
 
     adminCode.value = "";
 
@@ -468,7 +500,7 @@ function renderTransferDraft() {
     }
     transferDraftItems.innerHTML = transferDraft.map((item, index) => `
         <div class="transfer-draft-item">
-            <span>${transferText(item.name)} — <strong>${item.quantity} قطعة</strong><small> · المصدر: ${item.source_quantity} · في مخزني: ${item.destination_quantity}</small></span>
+            <span>${transferText(item.name)} — <strong>${item.quantity} قطعة</strong><small> · المتاح في ${transferText(item.source_warehouse)}: ${item.source_quantity} · في ${transferText(item.destination_warehouse)}: ${item.destination_quantity}</small></span>
             <button type="button" onclick="removeTransferDraftItem(${index})">إزالة</button>
         </div>
     `).join("");
@@ -578,13 +610,15 @@ function updateTransferVariantColors() {
     updateTransferVariantStock();
 }
 
-// يعرض كمية النسخة التي حُددت بالجمع بين الموديل واللون في نافذة الاختيار.
+// يعرض كمية النسخة التي حُددت بالجمع بين الموديل واللون مع أسماء المخازن الفعلية.
 function updateTransferVariantStock() {
     const product = selectedTransferProductGroup.find(item =>
         (item.model || "بدون موديل") === transferVariantModel.value &&
         (item.color || "بدون لون") === transferVariantColor.value
     );
-    transferVariantStock.textContent = product ? `المتاح في المصدر: ${product.quantity || 0} · الموجود في مخزني: ${product.destination_quantity || 0}` : "هذه النسخة غير متاحة.";
+    transferVariantStock.textContent = product
+        ? `المتاح في مخزن ${transferSourceWarehouse.value}: ${product.quantity || 0} · الموجود في مخزن ${transferDestinationWarehouse.value}: ${product.destination_quantity || 0}`
+        : "هذه النسخة غير متاحة.";
 }
 
 // يغلق نافذة اختيار نسخ المنتج ويعيدها إلى حالة غير ظاهرة.
@@ -604,7 +638,7 @@ function renderSelectedTransferProduct() {
     }
     const name = [product.company, product.model].filter(Boolean).join(" ") || "منتج بدون اسم";
     transferSelectedProduct.className = "transfer-selected-product has-product";
-    transferSelectedProduct.innerHTML = `<strong>${transferText(name)}</strong><span>الكود: <b>${transferText(product.product_code || "—")}</b></span><span>نوع المنتج: <b>${transferText(product.product_type || "—")}</b></span><span>النوع: <b>${transferText(product.type || "—")}</b></span><span>الموديل: <b>${transferText(product.model || "—")}</b></span><span>اللون: <b>${transferText(product.color || "—")}</b></span><span class="stock">كمية المصدر: ${product.quantity || 0}</span><span class="stock">في مخزني: ${product.destination_quantity || 0}</span>`;
+    transferSelectedProduct.innerHTML = `<strong>${transferText(name)}</strong><span>الكود: <b>${transferText(product.product_code || "—")}</b></span><span>نوع المنتج: <b>${transferText(product.product_type || "—")}</b></span><span>النوع: <b>${transferText(product.type || "—")}</b></span><span>الموديل: <b>${transferText(product.model || "—")}</b></span><span>اللون: <b>${transferText(product.color || "—")}</b></span><span class="stock">كمية مخزن ${transferText(transferSourceWarehouse.value)}: ${product.quantity || 0}</span><span class="stock">كمية مخزن ${transferText(transferDestinationWarehouse.value)}: ${product.destination_quantity || 0}</span>`;
 }
 
 // يضبط مسار التحويل حسب الوضع: طلب بضاعة إلى مخزني أو إرسال بضاعة من مخزني.
@@ -653,7 +687,9 @@ document.getElementById("addTransferItemButton")?.addEventListener("click", () =
             quantity,
             name: [[product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`, product.color, product.type, product.product_type].filter(Boolean).join(" · "),
             source_quantity: product.quantity || 0,
-            destination_quantity: product.destination_quantity || 0
+            destination_quantity: product.destination_quantity || 0,
+            source_warehouse: transferSourceWarehouse.value,
+            destination_warehouse: transferDestinationWarehouse.value
         });
     }
     transferQuantity.value = "";
@@ -791,6 +827,103 @@ document.getElementById("refreshTransfersButton")?.addEventListener("click", loa
         if (transfersAdmin) transfersAdmin.style.display = "none";
     });
 });
+
+/* =========================================================
+   إدارة الحسابات والصلاحيات
+========================================================= */
+const accountsButton = document.getElementById("accountsButton");
+const accountsAdmin = document.getElementById("accountsAdmin");
+const backFromAccounts = document.getElementById("backFromAccounts");
+const accountsList = document.getElementById("accountsList");
+const accountsAuditList = document.getElementById("accountsAuditList");
+const accountsSummary = document.getElementById("accountsSummary");
+
+// يحول رمز الدور إلى اسم عربي مفهوم داخل واجهة الحسابات.
+function accountRoleLabel(role) {
+    return ({ owner: "مدير عام", warehouse_manager: "مدير مخزن", orders_staff: "موظف طلبات", viewer: "مشاهد" })[role] || "مستخدم";
+}
+
+// يعرض خانات اختيار المخازن التي يمكن منحها للحساب عند حفظ صلاحياته.
+function renderAccountWarehousePermissions(selected = []) {
+    const container = document.getElementById("accountWarehousePermissions");
+    if (!container) return;
+    container.innerHTML = warehouses.map(warehouse => `<label><input type="checkbox" value="${transferText(warehouse.name)}" ${selected.includes(warehouse.name) ? "checked" : ""}> مخزن ${transferText(warehouse.name)}</label>`).join("") || "لا توجد مخازن.";
+}
+
+// يقرأ الصلاحيات المحددة في نموذج الحساب ويرتبها قبل إرسالها لقاعدة البيانات.
+function getAccountFormPermissions() {
+    return {
+        warehouses: [...document.querySelectorAll("#accountWarehousePermissions input:checked")].map(input => input.value),
+        sections: [...document.querySelectorAll(".account-section-permissions input:checked")].map(input => input.value)
+    };
+}
+
+// يعرض حسابات الفريق والصلاحيات الممنوحة لكل حساب.
+async function loadAccounts() {
+    if (!accountsList) return;
+    accountsList.innerHTML = '<div class="message">جاري تحميل الحسابات...</div>';
+    const { data, error } = await supabaseClient.rpc("list_team_accounts");
+    if (error) { accountsList.innerHTML = `<div class="message error">تعذر تحميل الحسابات: ${transferText(error.message)}</div>`; return; }
+    const accounts = data || [];
+    if (accountsSummary) {
+        const active = accounts.filter(account => account.is_active).length;
+        accountsSummary.innerHTML = `<span><strong>${accounts.length}</strong> حسابات فريق</span><span><strong>${active}</strong> حسابات فعالة</span><span><strong>${accounts.filter(account => account.role === "warehouse_manager").length}</strong> مديرو مخازن</span>`;
+    }
+    if (!accounts.length) { accountsList.innerHTML = '<div class="message">لا توجد حسابات فريق مضافة بعد.</div>'; return; }
+    accountsList.innerHTML = accounts.map(account => {
+        const permissions = account.permissions || {};
+        const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
+    }).join("");
+}
+
+// يعرض آخر عمليات تعديل الحسابات لتسهيل المراجعة والمتابعة.
+async function loadAccountsAudit() {
+    if (!accountsAuditList) return;
+    const { data, error } = await supabaseClient.rpc("list_team_account_audit");
+    if (error) { accountsAuditList.innerHTML = '<div class="message">تعذر تحميل سجل النشاط.</div>'; return; }
+    accountsAuditList.innerHTML = (data || []).length ? data.map(item => `<div class="audit-card"><strong>${transferText(item.action)}</strong> — ${transferText(item.target_email || "حساب") }<br><small>${new Date(item.created_at).toLocaleString("ar-SA")}</small></div>`).join("") : '<div class="message">لا توجد عمليات مسجلة حتى الآن.</div>';
+}
+
+// يحفظ دور الحساب وصلاحياته بعد البحث عنه بالبريد الإلكتروني.
+async function saveAccountPermissions() {
+    const email = document.getElementById("accountEmail").value.trim();
+    const role = document.getElementById("accountRole").value;
+    const message = document.getElementById("accountPermissionsMessage");
+    if (!email) { message.textContent = "اكتب البريد الإلكتروني للحساب."; return; }
+    const permissions = getAccountFormPermissions();
+    message.textContent = "جاري حفظ الصلاحيات...";
+    const { error } = await supabaseClient.rpc("save_team_account", { p_email: email, p_role: role, p_permissions: permissions });
+    if (error) { message.textContent = `تعذر الحفظ: ${error.message}`; return; }
+    message.textContent = "تم حفظ صلاحيات الحساب بنجاح.";
+    document.getElementById("accountEmail").value = "";
+    renderAccountWarehousePermissions();
+    await Promise.all([loadAccounts(), loadAccountsAudit()]);
+}
+
+// يفعّل أو يوقف صلاحية حساب فريق بدون حذف سجل الحساب.
+window.toggleTeamAccount = async function (userId, isActive) {
+    if (!confirm(isActive ? "تفعيل صلاحية هذا الحساب؟" : "إيقاف صلاحية هذا الحساب؟")) return;
+    const { error } = await supabaseClient.rpc("toggle_team_account", { p_user_id: userId, p_is_active: isActive });
+    if (error) { alert(`تعذر تعديل الحساب: ${error.message}`); return; }
+    await Promise.all([loadAccounts(), loadAccountsAudit()]);
+};
+
+accountsButton?.addEventListener("click", async () => {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    if (transfersAdmin) transfersAdmin.style.display = "none";
+    accountsAdmin.style.display = "block";
+    await loadWarehouses();
+    renderAccountWarehousePermissions();
+    await Promise.all([loadAccounts(), loadAccountsAudit()]);
+});
+backFromAccounts?.addEventListener("click", () => { accountsAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+document.getElementById("saveAccountPermissionsButton")?.addEventListener("click", saveAccountPermissions);
+document.getElementById("refreshAccountsButton")?.addEventListener("click", () => Promise.all([loadAccounts(), loadAccountsAudit()]));
 
 
 /* =========================

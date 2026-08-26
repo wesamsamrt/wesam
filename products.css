@@ -931,3 +931,12 @@ body.modal-open {
     color: #4935b5;
     font-weight: 700;
 }
+
+.header-title { flex: 1; }.change-customer-warehouse { border: 1px solid #dedafc; border-radius: 11px; background: #faf9ff; color: var(--purple); padding: 9px 12px; font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+/* شاشة اختيار منطقة العميل قبل عرض منتجات المخزن المناسب. */
+.customer-warehouse-modal { position: fixed; inset: 0; z-index: 10050; display: grid; place-items: center; padding: 20px; background: rgba(17, 17, 35, .56); }
+.customer-warehouse-dialog { width: min(470px, 100%); padding: 32px; border-radius: 25px; background: #fff; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.25); font-family: "Cairo", sans-serif; }
+.customer-warehouse-dialog .login-icon { margin-bottom: 12px; }.customer-warehouse-dialog h1 { margin: 0 0 7px; font-size: 23px; color: #171827; }.customer-warehouse-dialog > p { color: #858796; font-size: 12px; margin: 0 0 17px; }
+.detect-customer-warehouse { width: 100%; min-height: 48px; border: 0; border-radius: 13px; background: #6557ed; color: #fff; font-family: inherit; font-weight: 800; cursor: pointer; }.customer-warehouse-divider { margin: 16px 0 !important; }
+.customer-warehouse-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }.customer-warehouse-option { min-height: 75px; border: 1px solid #e1dffc; border-radius: 14px; background: #faf9ff; color: #2a2a3d; font-family: inherit; cursor: pointer; }.customer-warehouse-option strong, .customer-warehouse-option span { display: block; }.customer-warehouse-option strong { font-size: 14px; }.customer-warehouse-option span { margin-top: 4px; color: #858796; font-size: 10px; }.customer-warehouse-message { min-height: 18px; margin: 13px 0 0 !important; color: #c14359 !important; }
+@media (max-width: 420px) { .customer-warehouse-options { grid-template-columns: 1fr; } }

@@ -53,6 +53,18 @@
 
 <body>
 
+    <div class="customer-warehouse-modal" id="customerWarehouseModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="customerWarehouseTitle">
+        <div class="customer-warehouse-dialog">
+            <div class="login-icon">📍</div>
+            <h1 id="customerWarehouseTitle">اختر منطقة التسوق</h1>
+            <p>سنظهر لك المنتجات المتوفرة في المخزن الأقرب لمنطقتك.</p>
+            <button type="button" id="detectCustomerWarehouse" class="detect-customer-warehouse">تحديد موقعي تلقائيًا</button>
+            <p class="customer-warehouse-divider">أو اختر المنطقة يدويًا</p>
+            <div id="customerWarehouseOptions" class="customer-warehouse-options">جاري تحميل المناطق...</div>
+            <p id="customerWarehouseMessage" class="customer-warehouse-message"></p>
+        </div>
+    </div>
+
 
     <!-- =========================
          HEADER
@@ -68,7 +80,7 @@
         </button>
 
 
-        <div class="header-title">
+<div class="header-title">
 
     <h1 id="pageTitle">
         جاري التحميل...
@@ -79,6 +91,8 @@
     </p>
 
 </div>
+
+        <button type="button" class="change-customer-warehouse" id="changeCustomerWarehouse">تغيير المنطقة</button>
 
     </header>
 

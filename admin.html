@@ -180,9 +180,10 @@
 
             <button
                 class="admin-nav-item"
+                id="accountsButton"
             >
-                <span>👤</span>
-                <strong>العملاء</strong>
+                <span>👥</span>
+                <strong>الحسابات والصلاحيات</strong>
             </button>
 
 
@@ -1147,6 +1148,46 @@
         id="adminOrders"
     ></div>
 
+</section>
+
+<section class="accounts-admin" id="accountsAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromAccounts">← رجوع</button>
+        <div><h2>إدارة الحسابات والصلاحيات</h2><p>إدارة وصول فريق العمل والمخازن والأقسام المسموح بها.</p></div>
+    </div>
+
+    <div class="accounts-summary" id="accountsSummary">جاري تحميل ملخص الحسابات...</div>
+
+    <div class="account-create-card">
+        <h3>إضافة أو تحديث صلاحيات حساب</h3>
+        <p>يجب أن يكون الحساب مسجلاً في الموقع مسبقًا باستخدام البريد الإلكتروني نفسه.</p>
+        <div class="account-form-grid">
+            <input id="accountEmail" type="email" placeholder="البريد الإلكتروني للحساب">
+            <select id="accountRole">
+                <option value="owner">مدير عام — كامل الصلاحيات</option>
+                <option value="warehouse_manager">مدير مخزن</option>
+                <option value="orders_staff">موظف طلبات</option>
+                <option value="viewer">مشاهد فقط</option>
+            </select>
+        </div>
+        <div class="account-permissions-row">
+            <div><strong>المخازن المسموح بها</strong><div id="accountWarehousePermissions" class="account-warehouse-permissions">جاري تحميل المخازن...</div></div>
+            <div><strong>الأقسام المسموحة</strong><div class="account-section-permissions">
+                <label><input type="checkbox" value="dashboard" checked> الرئيسية</label>
+                <label><input type="checkbox" value="products"> المنتجات</label>
+                <label><input type="checkbox" value="orders"> الطلبات</label>
+                <label><input type="checkbox" value="transfers"> التحويلات</label>
+                <label><input type="checkbox" value="accounts"> الحسابات</label>
+            </div></div>
+        </div>
+        <div class="account-create-actions"><button type="button" id="saveAccountPermissionsButton">حفظ الصلاحيات</button><span id="accountPermissionsMessage"></span></div>
+    </div>
+
+    <div class="accounts-list-header"><h3>حسابات الفريق</h3><button type="button" id="refreshAccountsButton">↻ تحديث</button></div>
+    <div class="accounts-list" id="accountsList"><div class="message">جاري تحميل الحسابات...</div></div>
+
+    <div class="accounts-list-header"><h3>سجل تغييرات الصلاحيات</h3></div>
+    <div class="accounts-audit-list" id="accountsAuditList"><div class="message">جاري تحميل السجل...</div></div>
 </section>
 
 

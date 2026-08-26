@@ -1,4 +1,81 @@
 let allProducts = [];
+let customerWarehouse = localStorage.getItem("customer_warehouse") || "";
+const productPageParams = new URLSearchParams(window.location.search);
+
+// يمسح المنطقة المحفوظة عند فتح الصفحة من زر تغيير المنطقة.
+if (productPageParams.get("changeRegion") === "1") {
+    customerWarehouse = "";
+    localStorage.removeItem("customer_warehouse");
+}
+
+// يعرض شاشة اختيار منطقة العميل ويحمل المخازن المتاحة للاختيار اليدوي.
+async function showCustomerWarehouseSelection() {
+    const modal = document.getElementById("customerWarehouseModal");
+    const options = document.getElementById("customerWarehouseOptions");
+    if (!modal || !options) return;
+    modal.style.display = "grid";
+    const { data, error } = await supabaseClient.from("warehouses").select("name").order("name");
+    if (error) {
+        options.innerHTML = "تعذر تحميل المناطق. حاول تحديث الصفحة.";
+        return;
+    }
+    options.innerHTML = (data || []).map(warehouse => `
+        <button type="button" class="customer-warehouse-option" data-customer-warehouse="${escapeCustomerWarehouseHtml(warehouse.name)}">
+            <strong>مخزن ${escapeCustomerWarehouseHtml(warehouse.name)}</strong><span>عرض المنتجات المتوفرة في هذه المنطقة</span>
+        </button>
+    `).join("") || "لا توجد مناطق متاحة حاليًا.";
+    options.querySelectorAll("[data-customer-warehouse]").forEach(button => {
+        button.addEventListener("click", () => chooseCustomerWarehouse(button.dataset.customerWarehouse));
+    });
+}
+
+// يحمي أسماء المخازن عند استخدامها داخل عناصر HTML.
+function escapeCustomerWarehouseHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+}
+
+// يحفظ مخزن التسوق للعميل ثم يعيد تحميل المنتجات الخاصة به فقط.
+function chooseCustomerWarehouse(warehouse) {
+    customerWarehouse = warehouse;
+    localStorage.setItem("customer_warehouse", warehouse);
+    document.getElementById("customerWarehouseModal").style.display = "none";
+    cachedOpenOrder = null;
+    loadProducts();
+}
+
+// يحسب المسافة التقريبية بين موقع العميل وموقع كل مدينة بالكيلومتر.
+function calculateDistanceKm(lat1, lng1, lat2, lng2) {
+    const toRadians = value => value * Math.PI / 180;
+    const earthRadiusKm = 6371;
+    const deltaLat = toRadians(lat2 - lat1);
+    const deltaLng = toRadians(lng2 - lng1);
+    const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(deltaLng / 2) ** 2;
+    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// يطلب موقع العميل من المتصفح ثم يختار أقرب مخزن مدعوم تلقائيًا.
+function detectCustomerWarehouse() {
+    const message = document.getElementById("customerWarehouseMessage");
+    if (!navigator.geolocation) { message.textContent = "جهازك لا يدعم تحديد الموقع؛ اختر المنطقة يدويًا."; return; }
+    message.textContent = "جاري تحديد موقعك...";
+    navigator.geolocation.getCurrentPosition(position => {
+        const cities = [
+            { warehouse: "الرياض", lat: 24.7136, lng: 46.6753 },
+            { warehouse: "جدة", lat: 21.4858, lng: 39.1925 }
+        ];
+        const nearest = cities.map(city => ({ ...city, distance: calculateDistanceKm(position.coords.latitude, position.coords.longitude, city.lat, city.lng) }))
+            .sort((a, b) => a.distance - b.distance)[0];
+        const availableWarehouse = [...document.querySelectorAll("[data-customer-warehouse]")]
+            .find(button => button.dataset.customerWarehouse === nearest.warehouse);
+        if (!availableWarehouse || nearest.distance > 150) {
+            message.textContent = "لم نتمكن من مطابقة موقعك مع منطقة خدمة قريبة؛ اختر المنطقة يدويًا.";
+            return;
+        }
+        chooseCustomerWarehouse(nearest.warehouse);
+    }, () => {
+        message.textContent = "لم تسمح بمشاركة الموقع؛ اختر المنطقة يدويًا.";
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
+}
 
 // نحتفظ بالمستخدم والطلب المفتوح طوال الجلسة بدلاً من طلبهما من الخادم
 // مع كل ضغطة على زر الإضافة.
@@ -30,6 +107,7 @@ async function getOpenOrder(user) {
         .select("id, user_id")
         .eq("user_id", user.id)
         .eq("status", "جديد")
+        .eq("warehouse", customerWarehouse)
         .order("id", { ascending: false })
         .limit(1);
 
@@ -49,7 +127,8 @@ async function getOpenOrder(user) {
             customer_name: user.user_metadata?.name || user.email || "عميل",
             customer_phone: user.user_metadata?.phone || "",
             status: "جديد",
-            total: 0
+            total: 0,
+            warehouse: customerWarehouse
         })
         .select("id, user_id")
         .single();
@@ -73,6 +152,12 @@ async function loadProducts() {
 
     if (!container) return;
 
+    if (!customerWarehouse) {
+        container.innerHTML = '<div class="loading">اختر منطقتك لعرض المنتجات المتاحة.</div>';
+        showCustomerWarehouseSelection();
+        return;
+    }
+
     container.innerHTML = `
         <div class="loading">
             جاري تحميل المنتجات...
@@ -86,7 +171,8 @@ async function loadProducts() {
 
     let query = supabaseClient
         .from("products")
-        .select("*");
+        .select("*")
+        .eq("warehouse", customerWarehouse);
 
     if (category) {
         query = query.eq("category", category);
@@ -2294,6 +2380,15 @@ function addProductModalStyles() {
    التشغيل
 ========================================================= */
 
+// يربط زر تحديد الموقع التلقائي بدالة اختيار أقرب منطقة خدمة.
+document.getElementById("detectCustomerWarehouse")?.addEventListener("click", detectCustomerWarehouse);
+
+// يفتح شاشة المناطق ليتيح للعميل تغيير مخزن التسوق في أي وقت.
+document.getElementById("changeCustomerWarehouse")?.addEventListener("click", () => {
+    document.getElementById("customerWarehouseMessage").textContent = "";
+    showCustomerWarehouseSelection();
+});
+
 loadProducts();
 
 setupFilters();
@@ -2539,6 +2634,7 @@ async function addProduct(product, quantity = 1) {
         .select("*")
         .eq("user_id", user.id)
         .eq("status", "جديد")
+        .eq("warehouse", customerWarehouse)
         .order("id", {
             ascending: false
         })
@@ -2573,7 +2669,9 @@ async function addProduct(product, quantity = 1) {
 
                 status: "جديد",
 
-                total: 0
+                total: 0,
+
+                warehouse: customerWarehouse
 
             })
             .select()
