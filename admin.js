@@ -3261,30 +3261,11 @@ async function loadAdminOrders() {
     `;
 
 
-    const {
-    data: orders,
-    error
-} = await supabaseClient
-    .from("orders")
-    .select(`
-    id,
-    status,
-    customer_name,
-    customer_phone,
-    customer_lat,
-    customer_lng,
-    customer_location,
-    total,
-    created_at,
-    user_id,
-    driver_name,
-    driver_number,
-    warehouse
-`)
-    .eq("warehouse", selectedWarehouse)
-    .order("id", {
-        ascending: false
+    // نستخدم دالة مخصّصة لتفادي أن تمنع سياسة RLS الطلبات من الظهور للحساب المصرح له بالمخزن.
+    const { data: ordersResult, error } = await supabaseClient.rpc("list_warehouse_orders", {
+        p_warehouse: selectedWarehouse
     });
+    const orders = Array.isArray(ordersResult) ? ordersResult : [];
 
     if (error) {
 
@@ -3316,30 +3297,8 @@ async function loadAdminOrders() {
     }
 
 
-    // نجلب عناصر كل الطلبات بطلب واحد بدلاً من طلب منفصل لكل بطاقة.
-    const { data: allItems, error: itemsError } = await supabaseClient
-        .from("order_items")
-        .select("*")
-        .in("order_id", orders.map(order => order.id))
-        .order("id", { ascending: true });
-
-    if (itemsError) {
-        console.error(itemsError);
-        adminOrders.innerHTML = '<div class="message error">حدث خطأ أثناء تحميل منتجات الطلبات.</div>';
-        return;
-    }
-
-    const itemsByOrder = new Map();
-    (allItems || []).forEach(item => {
-        const items = itemsByOrder.get(item.order_id) || [];
-        items.push(item);
-        itemsByOrder.set(item.order_id, items);
-    });
-
-    adminOrdersData = orders.map(order => ({
-        ...order,
-        items: itemsByOrder.get(order.id) || []
-    }));
+    // الدالة تعيد عناصر كل طلب معه لتبقى بيانات الفاتورة متاحة دون طلب إضافي محجوب بالصلاحيات.
+    adminOrdersData = orders.map(order => ({ ...order, items: order.items || [] }));
     updateOrdersSummary();
     renderAdminOrdersList();
 
