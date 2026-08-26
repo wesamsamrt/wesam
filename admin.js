@@ -863,7 +863,11 @@ async function loadAccounts() {
     if (!accountsList) return;
     accountsList.innerHTML = '<div class="message">جاري تحميل الحسابات...</div>';
     const { data, error } = await supabaseClient.rpc("list_team_accounts");
-    if (error) { accountsList.innerHTML = `<div class="message error">تعذر تحميل الحسابات: ${transferText(error.message)}</div>`; return; }
+    if (error) {
+        console.error("List team accounts error:", error);
+        accountsList.innerHTML = `<div class="message error">تعذر تحميل الحسابات: ${transferText(error.message)}<br><small>إذا ظهر خطأ 400، شغّل ملف fix-accounts-permissions.sql في Supabase SQL Editor.</small></div>`;
+        return;
+    }
     const accounts = data || [];
     if (accountsSummary) {
         const active = accounts.filter(account => account.is_active).length;
