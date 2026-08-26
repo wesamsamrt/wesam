@@ -13,7 +13,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="products.js?v=20260826-order-price-v2"></script>
+<script src="products.js?v=20260826-driver-links"></script>
 
 <style>
 /* =========================================================
@@ -3609,6 +3609,15 @@ async function searchProducts(value) {
 
                 logoutButton.style.display =
                     "flex";
+
+                // يعرض اسم المندوب المرتبط بالبريد، وإلا يعرض اسم صاحب الحساب المعتاد.
+                const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+                const displayName = driverIdentity?.is_driver
+                    ? driverIdentity.driver_name
+                    : (user.user_metadata?.name || user.user_metadata?.full_name || user.email || "مستخدم");
+                document.querySelectorAll(".user-name").forEach(element => {
+                    element.textContent = displayName;
+                });
 
             } else {
 

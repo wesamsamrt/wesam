@@ -547,6 +547,22 @@ function renderCartView() {
 document.getElementById("cartSearch")?.addEventListener("input", renderCartView);
 document.getElementById("cartGroupBy")?.addEventListener("change", renderCartView);
 
+// يملأ رقم المندوب تلقائياً عندما يكون البريد الحالي مربوطاً بسجل مندوب في الإدارة.
+async function fillLinkedDriverNumber() {
+    const driverInput = document.getElementById("driverNumber");
+    const driverMessage = document.getElementById("driverMessage");
+    if (!driverInput) return;
+    const { data: identity, error } = await supabaseClient.rpc("get_my_driver_identity");
+    if (error || !identity?.is_driver) return;
+    driverInput.value = identity.driver_number || "";
+    driverInput.readOnly = true;
+    driverInput.style.background = "#f4f3ff";
+    if (driverMessage) {
+        driverMessage.textContent = `المندوب المرتبط بالحساب: ${identity.driver_name || "مندوب"}`;
+        driverMessage.style.color = "#6557ed";
+    }
+}
+
 async function loadOrders() {
 
     const container = document.getElementById("orders");
@@ -627,6 +643,8 @@ async function loadOrders() {
         `;
         return;
     }
+
+    await fillLinkedDriverNumber();
 
     const {
         data: orders,

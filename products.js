@@ -1047,8 +1047,11 @@ function openProductModal(variants) {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session?.user) return;
-            const { data: access, error } = await supabaseClient.rpc("get_my_team_access");
-            const isRegisteredDriver = session.user.user_metadata?.is_driver === true && !!session.user.user_metadata?.driver_id;
+            const [{ data: access, error }, { data: driverIdentity, error: driverError }] = await Promise.all([
+                supabaseClient.rpc("get_my_team_access"),
+                supabaseClient.rpc("get_my_driver_identity")
+            ]);
+            const isRegisteredDriver = !driverError && driverIdentity?.is_driver === true;
             const canSetPrice = isRegisteredDriver || (!error && access?.is_active && (access.role === "owner" || (access.permissions?.sections || []).includes("orders")));
             if (!canSetPrice) return;
             orderPriceOverrideBox.style.display = "flex";

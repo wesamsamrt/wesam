@@ -171,6 +171,11 @@
                 <strong>المبيعات</strong>
             </button>
 
+            <button class="admin-nav-item" id="driversButton">
+                <span>🚚</span>
+                <strong>المناديب</strong>
+            </button>
+
 
             <button
                 class="admin-nav-item"
@@ -1191,6 +1196,7 @@
                 <label><input type="checkbox" value="products"> المنتجات</label>
                 <label><input type="checkbox" value="orders"> الطلبات</label>
                 <label><input type="checkbox" value="sales"> المبيعات</label>
+                <label><input type="checkbox" value="drivers"> المناديب</label>
                 <label><input type="checkbox" value="transfers"> التحويلات</label>
                 <label><input type="checkbox" value="accounts"> الحسابات</label>
             </div></div>
@@ -1203,6 +1209,23 @@
 
     <div class="accounts-list-header"><h3>سجل تغييرات الصلاحيات</h3></div>
     <div class="accounts-audit-list" id="accountsAuditList"><div class="message">جاري تحميل السجل...</div></div>
+</section>
+
+<section class="drivers-admin" id="driversAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromDrivers">← رجوع</button>
+        <div><h2>ربط حسابات المناديب</h2><p>اربط بريد المندوب المسجل برقم المندوب ليُستخدم تلقائياً في السلة والطلبات.</p></div>
+    </div>
+    <div class="account-create-card">
+        <h3>ربط بريد مندوب</h3>
+        <div class="account-form-grid">
+            <input id="driverAccountEmail" type="email" placeholder="البريد الإلكتروني للمندوب">
+            <input id="driverAccountNumber" type="text" inputmode="numeric" placeholder="رقم المندوب">
+        </div>
+        <div class="account-create-actions"><button type="button" id="linkDriverAccountButton">ربط الحساب بالمندوب</button><span id="driverAccountMessage"></span></div>
+    </div>
+    <div class="accounts-list-header"><h3>المناديب المرتبطون بالحسابات</h3><button type="button" id="refreshDriverAccountsButton">↻ تحديث</button></div>
+    <div class="accounts-list" id="driverAccountsList"><div class="message">جاري تحميل المناديب...</div></div>
 </section>
 
 <section class="sales-admin" id="salesAdmin" style="display:none;">
@@ -1469,7 +1492,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260826-sales-restock"></script>
+    <script src="admin.js?v=20260826-driver-links"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

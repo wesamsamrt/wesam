@@ -73,6 +73,7 @@ function applyTeamAccessToInterface() {
         productsButton: "products",
         ordersButton: "orders",
         salesButton: "sales",
+        driversButton: "drivers",
         transfersButton: "transfers",
         accountsButton: "accounts"
     };
@@ -211,6 +212,8 @@ function showAdmin() {
     if (accountsPage) accountsPage.style.display = "none";
     const salesPage = document.getElementById("salesAdmin");
     if (salesPage) salesPage.style.display = "none";
+    const driversPage = document.getElementById("driversAdmin");
+    if (driversPage) driversPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
@@ -970,7 +973,7 @@ async function loadAccounts() {
     accountsList.innerHTML = accounts.map(account => {
         const permissions = account.permissions || {};
         const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
-        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", sales: "المبيعات", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", sales: "المبيعات", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
         return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
     }).join("");
 }
@@ -1013,6 +1016,7 @@ accountsButton?.addEventListener("click", async () => {
     document.getElementById("ordersAdmin").style.display = "none";
     document.getElementById("categoriesAdmin").style.display = "none";
     if (transfersAdmin) transfersAdmin.style.display = "none";
+    if (driversAdmin) driversAdmin.style.display = "none";
     accountsAdmin.style.display = "block";
     await loadWarehouses();
     renderAccountWarehousePermissions();
@@ -1021,6 +1025,59 @@ accountsButton?.addEventListener("click", async () => {
 backFromAccounts?.addEventListener("click", () => { accountsAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
 document.getElementById("saveAccountPermissionsButton")?.addEventListener("click", saveAccountPermissions);
 document.getElementById("refreshAccountsButton")?.addEventListener("click", () => Promise.all([loadAccounts(), loadAccountsAudit()]));
+
+/* =========================================================
+   ربط حسابات المناديب
+========================================================= */
+const driversButton = document.getElementById("driversButton");
+const driversAdmin = document.getElementById("driversAdmin");
+
+// يعرض البريد ورقم المندوب واسم المندوب لكل رابط محفوظ.
+async function loadDriverAccountLinks() {
+    const container = document.getElementById("driverAccountsList");
+    if (!container) return;
+    container.innerHTML = '<div class="message">جاري تحميل المناديب...</div>';
+    const { data, error } = await supabaseClient.rpc("list_driver_account_links");
+    if (error) { container.innerHTML = `<div class="message error">تعذر تحميل المناديب: ${transferText(error.message)}</div>`; return; }
+    const links = data || [];
+    container.innerHTML = links.length ? links.map(link => `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(link.driver_name || "مندوب")}</h4><p>رقم المندوب: ${transferText(link.driver_number)} · مخزن ${transferText(link.warehouse || "غير محدد")}</p></div><span class="account-role">مندوب مربوط</span></div><div class="account-card-bottom"><span class="account-access">${transferText(link.email)}<br><small>تم الربط: ${new Date(link.linked_at).toLocaleString("ar-SA")}</small></span></div></article>`).join("") : '<div class="message">لا توجد حسابات مناديب مربوطة بعد.</div>';
+}
+
+// يحفظ ربط البريد برقم مندوب موجود ليعمل تلقائياً في السلة ومنتجات المندوب.
+async function linkDriverAccount() {
+    const email = document.getElementById("driverAccountEmail").value.trim();
+    const driverNumber = document.getElementById("driverAccountNumber").value.trim();
+    const message = document.getElementById("driverAccountMessage");
+    if (!email || !driverNumber) { message.textContent = "اكتب البريد ورقم المندوب."; return; }
+    message.textContent = "جاري حفظ الربط...";
+    const { data, error } = await supabaseClient.rpc("link_driver_account", { p_email: email, p_driver_number: driverNumber });
+    if (error) { message.textContent = `تعذر الربط: ${error.message}`; return; }
+    message.textContent = `تم ربط ${data?.driver_name || "المندوب"} بالحساب بنجاح.`;
+    document.getElementById("driverAccountEmail").value = "";
+    document.getElementById("driverAccountNumber").value = "";
+    await loadDriverAccountLinks();
+}
+
+driversButton?.addEventListener("click", async () => {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("productsAdmin").style.display = "none";
+    document.getElementById("ordersAdmin").style.display = "none";
+    document.getElementById("categoriesAdmin").style.display = "none";
+    if (transfersAdmin) transfersAdmin.style.display = "none";
+    if (accountsAdmin) accountsAdmin.style.display = "none";
+    if (salesAdmin) salesAdmin.style.display = "none";
+    driversAdmin.style.display = "block";
+    await loadDriverAccountLinks();
+});
+document.getElementById("backFromDrivers")?.addEventListener("click", () => { driversAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+document.getElementById("linkDriverAccountButton")?.addEventListener("click", linkDriverAccount);
+document.getElementById("refreshDriverAccountsButton")?.addEventListener("click", loadDriverAccountLinks);
+[
+    "dashboardButton", "productsButton", "ordersButton", "categoriesButton",
+    "transfersButton", "accountsButton", "salesButton"
+].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
+    if (driversAdmin) driversAdmin.style.display = "none";
+}));
 
 
 /* =========================
