@@ -784,6 +784,17 @@ function openProductModal(variants) {
                         اختيار المنتج
                     </h2>
 
+                    <div id="orderPriceOverrideBox" class="order-price-override" style="display:none;">
+                        <div>
+                            <strong>سعر البيع لهذا الطلب</strong>
+                            <small>السعر الأساسي: <span id="baseProductPrice">0.00</span> ر.س</small>
+                        </div>
+                        <label>
+                            <input id="orderPriceOverride" type="number" min="0" step="0.01" inputmode="decimal" aria-label="سعر البيع لهذا الطلب">
+                            <span>ر.س</span>
+                        </label>
+                    </div>
+
                     <!-- الشركة -->
 
                     <label>
@@ -1027,6 +1038,25 @@ function openProductModal(variants) {
 
 
     let selectedColorProducts = [];
+    const baseProductPrice = Number(variants[0]?.price) || 0;
+    const orderPriceOverrideBox = modal.querySelector("#orderPriceOverrideBox");
+    const orderPriceOverrideInput = modal.querySelector("#orderPriceOverride");
+
+    // يتيح تعديل سعر البيع للحسابات الداخلية المصرح لها بالطلبات، دون تغيير سعر المنتج الأساسي.
+    (async function configureOrderPriceOverride() {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session?.user) return;
+            const { data: access, error } = await supabaseClient.rpc("get_my_team_access");
+            const canSetPrice = !error && access?.is_active && (access.role === "owner" || (access.permissions?.sections || []).includes("orders"));
+            if (!canSetPrice) return;
+            orderPriceOverrideBox.style.display = "flex";
+            modal.querySelector("#baseProductPrice").textContent = baseProductPrice.toFixed(2);
+            orderPriceOverrideInput.value = baseProductPrice.toFixed(2);
+        } catch (error) {
+            console.warn("تعذر التحقق من صلاحية سعر البيع:", error);
+        }
+    })();
 
 
     /* =====================================================
@@ -1854,6 +1884,13 @@ plus.addEventListener("pointerdown", function (e) {
     addButton.onclick = async function () {
         const rows = colorsContainer.querySelectorAll(".color-quantity-row");
         const selectedItems = [];
+        const customPriceText = orderPriceOverrideInput?.value.trim();
+        const customPrice = customPriceText === "" ? baseProductPrice : Number(customPriceText);
+
+        if (!Number.isFinite(customPrice) || customPrice < 0) {
+            alert("اكتب سعر بيع صحيحًا.");
+            return;
+        }
 
         rows.forEach(row => {
             const quantity = parseInt(row.querySelector(".color-quantity-input").value) || 0;
@@ -1866,7 +1903,7 @@ plus.addEventListener("pointerdown", function (e) {
                 );
 
             if (quantity > 0) {
-                products.forEach(product => selectedItems.push({ product, quantity }));
+                products.forEach(product => selectedItems.push({ product, quantity, orderPrice: customPrice }));
             }
         });
 
@@ -2422,7 +2459,7 @@ async function addProductsBatch(items) {
         error: existingItemsError
     } = await supabaseClient
         .from("order_items")
-        .select("id, product_id, quantity")
+        .select("id, product_id, quantity, price")
         .eq("order_id", order.id)
         .in("product_id", productIds);
 
@@ -2463,6 +2500,11 @@ async function addProductsBatch(items) {
                 parseInt(item.quantity) || 1
             );
 
+        // سعر الطلب المؤقت يخص عنصر السلة فقط، ولا يحدّث سعر المنتج الأساسي.
+        const unitPrice = Number.isFinite(Number(item.orderPrice))
+            ? Number(item.orderPrice)
+            : (Number(product.price) || 0);
+
 
         const existingItem =
             existingMap.get(
@@ -2488,7 +2530,9 @@ async function addProductsBatch(items) {
                     newQuantity,
 
                 product_code:
-                    product.product_code
+                    product.product_code,
+
+                price: unitPrice
 
             });
 
@@ -2519,7 +2563,7 @@ async function addProductsBatch(items) {
                 company: product.company,
                 model: product.model,
                 color: product.color,
-                price: product.price,
+                price: unitPrice,
                 image: product.image
 
             });
@@ -2574,7 +2618,10 @@ async function addProductsBatch(items) {
                             item.quantity,
 
                         product_code:
-                            item.product_code
+                            item.product_code,
+
+                        price:
+                            item.price
 
                     })
                     .eq(
@@ -2595,6 +2642,23 @@ async function addProductsBatch(items) {
         );
 
     }
+
+    // يعيد حفظ إجمالي السلة وفق سعر البيع المؤقت الذي اختاره الموظف لهذا الطلب.
+    const { data: cartItems, error: cartItemsError } = await supabaseClient
+        .from("order_items")
+        .select("quantity, price")
+        .eq("order_id", order.id);
+    if (cartItemsError) throw cartItemsError;
+
+    const cartTotal = (cartItems || []).reduce(
+        (sum, cartItem) => sum + (Number(cartItem.price) || 0) * (Number(cartItem.quantity) || 1),
+        0
+    );
+    const { error: totalError } = await supabaseClient
+        .from("orders")
+        .update({ total: cartTotal })
+        .eq("id", order.id);
+    if (totalError) throw totalError;
 
 
     return order;
