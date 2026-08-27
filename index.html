@@ -2081,7 +2081,7 @@ a{
 </style>
 
 <!-- واجهة داكنة للصفحة الرئيسية، مع الحفاظ على جميع عناصر النظام ومعرّفاتها الحالية. -->
-<style>
+<style id="darkTechThemeStyles">
 /* =========================================================
    WESAM SMART — Dark tech storefront
 ========================================================= */
@@ -3625,6 +3625,22 @@ async function searchProducts(value) {
            LOGIN STATUS
         ===================================================== */
 
+        // يبدّل شكل الصفحة الرئيسية حسب نوع الحساب دون المساس بأي وظيفة أو بيانات.
+        function applyHomepageTheme(isLinkedDriver) {
+
+            const darkThemeStyles = document.getElementById("darkTechThemeStyles");
+
+            if (!darkThemeStyles) {
+                return;
+            }
+
+            // حساب المندوب يستخدم التصميم الكلاسيكي الأصلي، وبقية الحسابات تستخدم التصميم الداكن.
+            darkThemeStyles.media = isLinkedDriver ? "not all" : "all";
+            document.body.classList.toggle("driver-classic-theme", Boolean(isLinkedDriver));
+
+        }
+
+
         async function checkLoginStatus() {
 
 
@@ -3652,6 +3668,7 @@ async function searchProducts(value) {
 
                 // يعرض اسم المندوب المرتبط بالبريد، وإلا يعرض اسم صاحب الحساب المعتاد.
                 const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+                applyHomepageTheme(driverIdentity?.is_driver);
                 const displayName = driverIdentity?.is_driver
                     ? driverIdentity.driver_name
                     : (user.user_metadata?.name || user.user_metadata?.full_name || user.email || "مستخدم");
@@ -3663,6 +3680,8 @@ async function searchProducts(value) {
 
                 logoutButton.style.display =
                     "none";
+
+                applyHomepageTheme(false);
 
             }
 
