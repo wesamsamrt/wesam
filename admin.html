@@ -37,6 +37,9 @@
 
     <script src="supabase.js"></script>
 
+    <!-- مكتبة إنشاء ملفات Excel داخل المتصفح لتصدير المنتجات والمبيعات. -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 </head>
 
 
@@ -739,13 +742,17 @@
             <p>إضافة وتعديل وحذف منتجات المتجر</p>
         </div>
 
-        <button
-            class="add-product-button"
-            id="addProductButton"
-        >
-            + إضافة منتج
-
-        </button>
+        <div class="products-header-actions">
+            <button type="button" class="export-excel-button" id="exportProductsExcelButton">
+                ⇩ تصدير Excel
+            </button>
+            <button
+                class="add-product-button"
+                id="addProductButton"
+            >
+                + إضافة منتج
+            </button>
+        </div>
 
     </div>
 
@@ -1239,7 +1246,7 @@
         <label>إلى <input id="salesDateTo" type="date"></label>
         <label>المندوب <select id="salesDriverFilter"><option value="">كل المناديب</option></select></label>
         <button type="button" id="applySalesFilters">تحديث التقرير</button>
-        <button type="button" id="exportSalesReportButton">⇩ تصدير CSV</button>
+        <button type="button" id="exportSalesReportButton">⇩ تصدير Excel</button>
     </div>
 
     <div class="sales-metrics" id="salesMetrics">جاري تحميل المبيعات...</div>

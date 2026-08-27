@@ -1336,17 +1336,60 @@ async function loadSalesReport() {
     );
 }
 
-// يصدر المبيعات التي تظهر في التقرير الحالي بصيغة CSV.
+// ينشئ ملف Excel من أوراق بيانات مسماة ثم ينزله للمستخدم.
+function downloadExcelWorkbook(sheets, fileName) {
+    if (!window.XLSX) {
+        alert("تعذر تجهيز Excel. تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+        return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    sheets.forEach(({ name, rows }) => {
+        const sheet = XLSX.utils.json_to_sheet(rows);
+        const headers = rows.length ? Object.keys(rows[0]) : [];
+        sheet["!cols"] = headers.map(header => ({
+            wch: Math.min(32, Math.max(12, String(header).length + 8))
+        }));
+        XLSX.utils.book_append_sheet(workbook, sheet, name.slice(0, 31));
+    });
+    XLSX.writeFile(workbook, fileName);
+}
+
+// يصدر المبيعات التي تظهر في التقرير الحالي بصيغة Excel مع ملخص وتفاصيل الطلبات.
 function exportFilteredSalesReport() {
-    if (!salesOrdersCache.length) { alert("لا توجد مبيعات لتصديرها ضمن الفترة المحددة."); return; }
-    const rows = [["رقم الطلب", "التاريخ", "المندوب", "الحالة", "الإجمالي"]];
-    salesOrdersCache.forEach(order => rows.push([order.id, new Date(order.created_at).toLocaleString("ar-SA"), order.driver_name || order.driver_number || "", order.status || "", Number(order.total || 0).toFixed(2)]));
-    const csv = "\uFEFF" + rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    link.download = `sales-${selectedWarehouse}-${salesDateFrom.value}-${salesDateTo.value}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    if (!salesOrdersCache.length) {
+        alert("لا توجد مبيعات لتصديرها ضمن الفترة المحددة.");
+        return;
+    }
+
+    const revenue = salesOrdersCache.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const ordersRows = salesOrdersCache.map(order => ({
+        "رقم الطلب": order.id,
+        "التاريخ": new Date(order.created_at).toLocaleString("ar-SA"),
+        "المندوب": order.driver_name || order.driver_number || "بدون مندوب",
+        "رقم المندوب": order.driver_number || "",
+        "الحالة": order.status || "",
+        "الإجمالي (ر.س)": Number(order.total || 0)
+    }));
+    const itemsRows = salesOrdersCache.flatMap(order => (order.items || []).map(item => ({
+        "رقم الطلب": order.id,
+        "التاريخ": new Date(order.created_at).toLocaleString("ar-SA"),
+        "المندوب": order.driver_name || order.driver_number || "بدون مندوب",
+        "كود المنتج": item.product_code || "",
+        "النوع": item.type || item.product_type || "",
+        "الشركة": item.company || "",
+        "الموديل": item.model || "",
+        "اللون": item.color || "",
+        "الكمية": Number(item.quantity || 0),
+        "سعر الوحدة (ر.س)": Number(item.price || 0),
+        "الإجمالي (ر.س)": Number(item.quantity || 0) * Number(item.price || 0)
+    })));
+
+    downloadExcelWorkbook([
+        { name: "ملخص", rows: [{ "المخزن": selectedWarehouse, "من": salesDateFrom.value, "إلى": salesDateTo.value, "عدد الطلبات": salesOrdersCache.length, "إجمالي المبيعات (ر.س)": revenue }] },
+        { name: "طلبات المبيعات", rows: ordersRows },
+        { name: "تفاصيل المنتجات", rows: itemsRows.length ? itemsRows : [{ "لا توجد تفاصيل منتجات": "" }] }
+    ], `مبيعات-${selectedWarehouse}-${salesDateFrom.value}-${salesDateTo.value}.xlsx`);
 }
 
 salesButton?.addEventListener("click", async () => {
@@ -1392,6 +1435,33 @@ const adminProductSearch =
 let adminProductsData = [];
 let selectedProductImage = null;
 
+// يصدر جميع منتجات المخزن المختار حالياً إلى ملف Excel منظم.
+function exportSelectedWarehouseProducts() {
+    const products = getProductsForSelectedWarehouse();
+    if (!products.length) {
+        alert("لا توجد منتجات في مخزن " + (selectedWarehouse || "المختار") + " لتصديرها.");
+        return;
+    }
+
+    const rows = products.map(product => ({
+        "المخزن": product.warehouse || selectedWarehouse || "",
+        "كود المنتج": product.product_code || "",
+        "التصنيف": product.category || "",
+        "النوع": product.type || product.product_type || "",
+        "الشركة": product.company || "",
+        "الموديل": product.model || "",
+        "اللون": product.color || "",
+        "الكمية المتوفرة": Number(product.quantity || 0),
+        "السعر (ر.س)": Number(product.price || 0),
+        "موقع القطعة": product.storage_location || "غير محدد",
+        "تاريخ الإضافة": product.created_at ? new Date(product.created_at).toLocaleString("ar-SA") : ""
+    }));
+
+    downloadExcelWorkbook([
+        { name: "المنتجات", rows }
+    ], `منتجات-${selectedWarehouse || "المخزن"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 // يرجع المنتجات التابعة للمخزن الذي اختاره المدير فقط.
 function getProductsForSelectedWarehouse() {
     return adminProductsData.filter(product =>
@@ -1425,6 +1495,8 @@ productsButton.addEventListener("click", async function () {
     await loadAdminProducts();
 
 });
+
+document.getElementById("exportProductsExcelButton")?.addEventListener("click", exportSelectedWarehouseProducts);
 
 
 /* الرجوع */

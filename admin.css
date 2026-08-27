@@ -378,6 +378,25 @@ body {
     margin-bottom: 18px;
 }
 
+/* يجمع أزرار المنتجات في صف واحد، ومنها زر تصدير ملف Excel. */
+.products-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* يميّز عملية التصدير عن زر إضافة المنتج بدون تغيير وظيفة أي منهما. */
+.export-excel-button {
+    border: 1px solid #dcd8ff;
+    background: #f3f1ff;
+    color: var(--purple);
+    padding: 12px 18px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .warehouse-login-page {
     min-height: 100vh;
     display: flex;
@@ -572,6 +591,11 @@ body {
         order: 3;
         width: 100%;
         flex-basis: 100%;
+    }
+
+    .products-header-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .admin-product {
