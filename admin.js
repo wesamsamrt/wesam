@@ -1239,23 +1239,47 @@ checkSession();
 const formatAdminCurrency = value => `${Number(value || 0).toFixed(2)} ر.س`;
 let dashboardOrdersCache = [];
 
+// يجلب جميع منتجات المخزن على دفعات لتكون إحصاءات اللوحة صحيحة حتى مع أكثر من ألف منتج.
+async function loadAllDashboardWarehouseProducts() {
+    const allProducts = [];
+    const pageSize = 1000;
+    let from = 0;
+
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from("products")
+            .select("id, product_code, company, model, quantity, image")
+            .eq("warehouse", selectedWarehouse)
+            .order("id", { ascending: false })
+            .range(from, from + pageSize - 1);
+
+        if (error) throw error;
+        if (!data?.length) break;
+
+        allProducts.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+    }
+
+    return allProducts;
+}
+
 // يجلب ويعرض إحصاءات لوحة التحكم الخاصة بالمخزن المختار فقط.
 async function loadDashboardData() {
     const alerts = document.getElementById("dashboardOperationalAlerts");
 
     try {
-        const [{ data: ordersResult, error: ordersError }, { data: products, error: productsError }] = await Promise.all([
+        const [{ data: ordersResult, error: ordersError }, products] = await Promise.all([
             supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
-            supabaseClient.from("products").select("id, product_code, company, model, quantity, image").eq("warehouse", selectedWarehouse)
+            loadAllDashboardWarehouseProducts()
         ]);
 
         if (ordersError) throw ordersError;
-        if (productsError) console.warn("Dashboard products error:", productsError);
 
         // تأتي الطلبات عبر دالة تتحقق من صلاحية الحساب والمخزن حتى تظهر الإحصاءات للحسابات المقيّدة.
         const safeOrders = Array.isArray(ordersResult) ? ordersResult : [];
         dashboardOrdersCache = safeOrders;
-        const safeProducts = products || [];
+        const safeProducts = Array.isArray(products) ? products : [];
         const nonCancelled = safeOrders.filter(order => order.status !== "ملغي");
         const monthStart = new Date();
         monthStart.setDate(1);

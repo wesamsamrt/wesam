@@ -3,13 +3,17 @@ let customerWarehouse = localStorage.getItem("customer_warehouse") || "";
 const productPageParams = new URLSearchParams(window.location.search);
 let isGuestShopping = false;
 let customerWarehouseResolved = false;
+let isLinkedDriverShopping = false;
 
 // يعطّل طبقة التصميم الداكنة فقط للحساب المرتبط بمندوب، فيبقى على واجهته الكلاسيكية.
-async function applyProductsPageTheme(user) {
+async function applyProductsPageTheme(user, driverIdentity = null) {
     const darkThemeStyles = document.getElementById("productsDarkThemeStyles");
     if (!darkThemeStyles || !user) return;
 
-    const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+    if (!driverIdentity) {
+        const { data } = await supabaseClient.rpc("get_my_driver_identity");
+        driverIdentity = data;
+    }
     document.body.classList.toggle("driver-classic-theme", Boolean(driverIdentity?.is_driver));
 }
 
@@ -26,7 +30,22 @@ async function resolveCustomerWarehouseAccess() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     isGuestShopping = !user;
 
-    await applyProductsPageTheme(user);
+    const { data: driverIdentity } = user
+        ? await supabaseClient.rpc("get_my_driver_identity")
+        : { data: null };
+    isLinkedDriverShopping = Boolean(driverIdentity?.is_driver && driverIdentity?.warehouse);
+
+    await applyProductsPageTheme(user, driverIdentity);
+
+    // يفرض مخزن المندوب المرتبط حتى يرى كميات مخزنه فقط ولا يعتمد على منطقة محفوظة سابقًا.
+    if (isLinkedDriverShopping) {
+        customerWarehouse = driverIdentity.warehouse;
+        localStorage.setItem("customer_warehouse", customerWarehouse);
+        const changeButton = document.getElementById("changeCustomerWarehouse");
+        if (changeButton) changeButton.style.display = "none";
+        const modal = document.getElementById("customerWarehouseModal");
+        if (modal) modal.style.display = "none";
+    }
 
     if (isGuestShopping) {
         customerWarehouse = "الرياض";
@@ -43,7 +62,7 @@ async function resolveCustomerWarehouseAccess() {
 // يعرض شاشة اختيار منطقة العميل ويحمل المخازن المتاحة للاختيار اليدوي.
 async function showCustomerWarehouseSelection() {
     await resolveCustomerWarehouseAccess();
-    if (isGuestShopping) return;
+    if (isGuestShopping || isLinkedDriverShopping) return;
 
     const modal = document.getElementById("customerWarehouseModal");
     const options = document.getElementById("customerWarehouseOptions");
@@ -71,7 +90,7 @@ function escapeCustomerWarehouseHtml(value) {
 
 // يحفظ مخزن التسوق للعميل ثم يعيد تحميل المنتجات الخاصة به فقط.
 function chooseCustomerWarehouse(warehouse) {
-    if (isGuestShopping) return;
+    if (isGuestShopping || isLinkedDriverShopping) return;
 
     customerWarehouse = warehouse;
     localStorage.setItem("customer_warehouse", warehouse);
