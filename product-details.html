@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل المنتج | WESAM SMART</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="product-details.css?v=20260827">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+</head>
+<body>
+    <header class="detail-header">
+        <a class="detail-brand" href="index.html"><img src="logo.png" alt="WESAM SMART"></a>
+        <nav aria-label="التنقل الرئيسي">
+            <a href="index.html">الرئيسية</a>
+            <a href="products.html" class="active">المنتجات</a>
+            <a href="orders.html">السلة</a>
+        </nav>
+        <a class="back-link" href="products.html">← العودة للمنتجات</a>
+    </header>
+
+    <main class="detail-page">
+        <div class="breadcrumbs"><a href="index.html">الرئيسية</a><span>/</span><a href="products.html">المنتجات</a><span>/</span><strong id="breadcrumbProduct">تفاصيل المنتج</strong></div>
+        <section id="productDetail" class="detail-loading">جاري تحميل تفاصيل المنتج...</section>
+    </main>
+
+    <script src="product-details.js?v=20260827"></script>
+</body>
+</html>

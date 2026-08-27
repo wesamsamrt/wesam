@@ -282,6 +282,15 @@ console.log("عدد المنتجات المحملة كامل:", allProducts.leng
 
 renderProducts(allProducts);
 setupFilters();
+
+    // يعيد فتح نافذة الاختيار عند الرجوع من صفحة تفاصيل المنتج لإكمال الإضافة للسلة.
+    const productCodeToOpen = params.get("openProductCode");
+    if (productCodeToOpen) {
+        const variantsToOpen = Object.values(groupProductsByCode(allProducts)).find(group =>
+            String(group[0]?.product_code || "") === productCodeToOpen
+        );
+        if (variantsToOpen?.length) openProductModal(variantsToOpen);
+    }
 }
 
 
@@ -532,7 +541,7 @@ ${
                 e.stopPropagation();
             }
 
-            openProductModal(variants);
+            openProductExperience(variants);
         });
 
 
@@ -547,7 +556,7 @@ ${
 
             e.stopPropagation();
 
-            openProductModal(variants);
+            openProductExperience(variants);
         });
 
 
@@ -561,6 +570,22 @@ ${
 /* =========================================================
    البحث
 ========================================================= */
+// يفتح صفحة التفاصيل للحسابات العادية، ويُبقي نافذة اختيار الكمية للحساب المرتبط بمندوب.
+function openProductExperience(variants) {
+    if (!variants?.length) return;
+
+    if (isLinkedDriverShopping) {
+        openProductModal(variants);
+        return;
+    }
+
+    const firstProduct = variants[0];
+    const params = new URLSearchParams();
+    if (firstProduct.product_code) params.set("code", firstProduct.product_code);
+    params.set("id", firstProduct.id);
+    window.location.href = `product-details.html?${params.toString()}`;
+}
+
 function searchProducts() {
 
     const input =
