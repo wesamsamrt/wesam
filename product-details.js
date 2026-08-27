@@ -2,6 +2,7 @@ const detailParams = new URLSearchParams(window.location.search);
 let detailVariants = [];
 let selectedCompany = "";
 let selectedModel = "";
+let detailWarehouse = "";
 
 // يحمي بيانات المنتج قبل عرضها داخل صفحة التفاصيل.
 function escapeDetailHtml(value) {
@@ -29,6 +30,7 @@ async function loadProductDetails() {
     const container = document.getElementById("productDetail");
     const warehouse = await resolveDetailWarehouse();
     if (!warehouse) return;
+    detailWarehouse = warehouse;
 
     const code = detailParams.get("code");
     const id = detailParams.get("id");
@@ -83,6 +85,8 @@ function renderProductDetails(warehouse) {
                 ${companies.length ? `<span class="option-label">الماركة</span><div class="option-chips" id="detailCompanies">${companies.map(company => `<button type="button" class="option-chip" data-company="${escapeDetailHtml(company)}">${escapeDetailHtml(company)}</button>`).join("")}</div>` : ""}
                 <span class="option-label">الموديل</span>
                 <div class="option-chips" id="detailModels"><span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span></div>
+                <span class="option-label">اللون والكمية</span>
+                <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
             <div class="stock-line" id="detailStock">المتوفر في هذا المخزن: <strong>${totalStock} قطعة</strong></div>
             <button class="detail-action" id="detailChooseButton" type="button">اختر اللون والكمية وأضف للسلة</button>
@@ -96,6 +100,8 @@ function renderProductDetails(warehouse) {
         document.querySelector("[data-company]")?.classList.add("active");
         renderDetailModels();
         updateDetailStock();
+    } else if (!companies.length) {
+        renderDetailModels();
     }
 }
 
@@ -115,14 +121,7 @@ function setupDetailInteractions() {
         updateDetailStock();
     }));
 
-    document.getElementById("detailChooseButton")?.addEventListener("click", () => {
-        const code = detailVariants[0]?.product_code;
-        if (!code) {
-            window.location.href = "products.html";
-            return;
-        }
-        window.location.href = `products.html?openProductCode=${encodeURIComponent(code)}`;
-    });
+    document.getElementById("detailChooseButton")?.addEventListener("click", addDetailSelectionsToCart);
 }
 
 // يعرض موديلات الماركة المختارة فقط، بدل إظهار جميع الموديلات معًا.
@@ -130,13 +129,14 @@ function renderDetailModels() {
     const container = document.getElementById("detailModels");
     if (!container) return;
 
-    if (!selectedCompany) {
+    const hasCompanies = detailVariants.some(item => String(item.company || "").trim());
+    if (hasCompanies && !selectedCompany) {
         container.innerHTML = '<span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span>';
         return;
     }
 
     const models = [...new Set(detailVariants
-        .filter(item => String(item.company || "").trim() === selectedCompany)
+        .filter(item => !selectedCompany || String(item.company || "").trim() === selectedCompany)
         .map(item => String(item.model || "").trim())
         .filter(Boolean))];
 
@@ -147,8 +147,57 @@ function renderDetailModels() {
     container.querySelectorAll("[data-model]").forEach(button => button.addEventListener("click", () => {
         selectedModel = button.dataset.model;
         container.querySelectorAll("[data-model]").forEach(item => item.classList.toggle("active", item === button));
+        renderDetailColors();
         updateDetailStock();
     }));
+}
+
+// يعرض الألوان المتاحة للموديل المحدد مع أزرار زيادة ونقصان كمية كل لون.
+function renderDetailColors() {
+    const container = document.getElementById("detailColors");
+    if (!container) return;
+    if (!selectedModel) {
+        container.innerHTML = '<span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span>';
+        return;
+    }
+
+    const matching = detailVariants.filter(item =>
+        (!selectedCompany || String(item.company || "").trim() === selectedCompany) &&
+        String(item.model || "").trim() === selectedModel && Number(item.quantity || 0) > 0
+    );
+    const colors = new Map();
+    matching.forEach(product => {
+        const key = String(product.color || "بدون لون").trim() || "بدون لون";
+        const group = colors.get(key) || [];
+        group.push(product);
+        colors.set(key, group);
+    });
+
+    if (!colors.size) {
+        container.innerHTML = '<span class="detail-choice-hint">لا توجد كمية متوفرة لهذا الاختيار.</span>';
+        return;
+    }
+
+    container.innerHTML = [...colors.entries()].map(([color, products]) => {
+        const available = products.reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
+        return `<div class="detail-color-row" data-color="${escapeDetailHtml(color)}" data-available="${available}">
+            <div><strong>${escapeDetailHtml(color)}</strong><small>المتوفر: ${available}</small></div>
+            <div class="detail-quantity"><button type="button" data-adjust="-1">−</button><input type="number" min="0" max="${available}" value="0" inputmode="numeric"><button type="button" data-adjust="1">+</button></div>
+        </div>`;
+    }).join("");
+
+    container.querySelectorAll(".detail-color-row").forEach(row => {
+        const input = row.querySelector("input");
+        const available = Number(row.dataset.available || 0);
+        row.querySelectorAll("[data-adjust]").forEach(button => button.addEventListener("click", () => {
+            input.value = Math.max(0, Math.min(available, Number(input.value || 0) + Number(button.dataset.adjust)));
+            updateDetailStock();
+        }));
+        input.addEventListener("input", () => {
+            input.value = Math.max(0, Math.min(available, Number(input.value || 0)));
+            updateDetailStock();
+        });
+    });
 }
 
 // يحسب الكمية المعروضة بناءً على الماركة والموديل لتبقى مطابقة لمخزن المنطقة.
@@ -159,6 +208,119 @@ function updateDetailStock() {
     );
     const quantity = matching.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)), 0);
     document.getElementById("detailStock").innerHTML = `المتوفر بحسب اختيارك: <strong>${quantity} قطعة</strong>`;
+}
+
+// يضيف الألوان والكميات المختارة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
+async function addDetailSelectionsToCart() {
+    const button = document.getElementById("detailChooseButton");
+    const rows = [...document.querySelectorAll(".detail-color-row")];
+    const selected = rows.map(row => ({
+        color: row.dataset.color,
+        quantity: Math.max(0, Number(row.querySelector("input")?.value || 0))
+    })).filter(item => item.quantity > 0);
+
+    if (!selected.length) {
+        alert("اختر كمية لون واحد على الأقل.");
+        return;
+    }
+
+    const items = [];
+    selected.forEach(selection => {
+        let remaining = selection.quantity;
+        detailVariants.filter(product =>
+            (!selectedCompany || String(product.company || "").trim() === selectedCompany) &&
+            String(product.model || "").trim() === selectedModel &&
+            (String(product.color || "بدون لون").trim() || "بدون لون") === selection.color
+        ).forEach(product => {
+            const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
+            if (quantity > 0) items.push({ product, quantity });
+            remaining -= quantity;
+        });
+    });
+
+    if (!items.length) {
+        alert("الكمية المختارة غير متوفرة حاليًا.");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "جاري الإضافة للسلة...";
+    try {
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+        if (userError || !user) throw new Error("LOGIN_REQUIRED");
+
+        const { data: existingOrders, error: ordersError } = await supabaseClient
+            .from("orders").select("id, user_id").eq("user_id", user.id)
+            .eq("status", "جديد").eq("warehouse", detailWarehouse)
+            .order("id", { ascending: false }).limit(1);
+        if (ordersError) throw ordersError;
+
+        let order = existingOrders?.[0];
+        if (!order) {
+            const { data, error } = await supabaseClient.from("orders").insert({
+                user_id: user.id,
+                customer_name: user.user_metadata?.name || user.email || "عميل",
+                customer_phone: user.user_metadata?.phone || "",
+                status: "جديد",
+                total: 0,
+                warehouse: detailWarehouse
+            }).select("id, user_id").single();
+            if (error) throw error;
+            order = data;
+        }
+
+        const productIds = items.map(item => item.product.id);
+        const { data: existingItems, error: existingError } = await supabaseClient
+            .from("order_items").select("id, product_id, quantity, price")
+            .eq("order_id", order.id).in("product_id", productIds);
+        if (existingError) throw existingError;
+
+        const existingByProduct = new Map((existingItems || []).map(item => [String(item.product_id), item]));
+        const inserts = [];
+        const updates = [];
+        items.forEach(({ product, quantity }) => {
+            const existing = existingByProduct.get(String(product.id));
+            if (existing) {
+                updates.push(supabaseClient.from("order_items").update({
+                    quantity: Number(existing.quantity || 0) + quantity,
+                    price: Number(product.price || 0), product_code: product.product_code
+                }).eq("id", existing.id));
+            } else {
+                inserts.push({ order_id: order.id, product_id: product.id, quantity, product_code: product.product_code,
+                    category: product.category, product_type: product.product_type, type: product.type,
+                    company: product.company, model: product.model, color: product.color,
+                    price: Number(product.price || 0), image: product.image });
+            }
+        });
+        if (inserts.length) {
+            const { error } = await supabaseClient.from("order_items").insert(inserts);
+            if (error) throw error;
+        }
+        const updateResults = await Promise.all(updates);
+        const updateError = updateResults.find(result => result.error)?.error;
+        if (updateError) throw updateError;
+
+        const { data: cartItems, error: cartError } = await supabaseClient
+            .from("order_items").select("quantity, price").eq("order_id", order.id);
+        if (cartError) throw cartError;
+        const total = (cartItems || []).reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
+        const { error: totalError } = await supabaseClient.from("orders").update({ total }).eq("id", order.id);
+        if (totalError) throw totalError;
+
+        alert("تمت إضافة المنتجات المختارة إلى السلة.");
+        rows.forEach(row => { row.querySelector("input").value = 0; });
+    } catch (error) {
+        console.error("Detail cart error:", error);
+        if (error.message === "LOGIN_REQUIRED") {
+            alert("يجب تسجيل الدخول أولًا لإضافة المنتج للسلة.");
+            window.location.href = "login.html";
+        } else {
+            alert("تعذر إضافة المنتج للسلة: " + (error.message || "حاول مرة أخرى."));
+        }
+    } finally {
+        button.disabled = false;
+        button.textContent = "إضافة للسلة";
+    }
 }
 
 loadProductDetails();
