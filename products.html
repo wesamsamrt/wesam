@@ -37,9 +37,39 @@
     <!-- CSS -->
 
     <link
+        id="productsDarkThemeStyles"
         rel="stylesheet"
-        href="products.css?v=20260826-order-price-v3"
+        href="products.css?v=20260827-dark-storefront"
     >
+
+    <!-- يعيد المظهر الكلاسيكي للحسابات المرتبطة بالمناديب فقط. -->
+    <style>
+        body.driver-classic-theme { --purple:#6557ed; --purple-dark:#5142a8; --bg:#f8f9fd; --text:#171827; --muted:#858796; --white:#fff; --border:#ddd; background:#f8f9fd; color:#171827; }
+        body.driver-classic-theme .header, body.driver-classic-theme .search, body.driver-classic-theme .filters, body.driver-classic-theme .content { width:min(1100px,calc(100% - 32px)); }
+        body.driver-classic-theme .back-button { border:0; background:#fff; color:#171827; box-shadow:0 8px 25px rgba(50,50,100,.07); }
+        body.driver-classic-theme .change-customer-warehouse { border:1px solid #dedafc; background:#faf9ff; color:#6557ed; box-shadow:none; }
+        body.driver-classic-theme .header-title h1, body.driver-classic-theme .section-title h2, body.driver-classic-theme .product-card h3 { color:#171827; }
+        body.driver-classic-theme .header-title p, body.driver-classic-theme .section-title span, body.driver-classic-theme .product-card p, body.driver-classic-theme .product-compatibility { color:#858796; }
+        body.driver-classic-theme .search-box { background:#fff; border:0; box-shadow:0 8px 25px rgba(50,50,100,.06); }
+        body.driver-classic-theme .search-box span, body.driver-classic-theme .product-type, body.driver-classic-theme .price, body.driver-classic-theme .product-compatibility.general { color:#6557ed; }
+        body.driver-classic-theme .search-box input { color:#171827; }
+        body.driver-classic-theme .filter { border:0; background:#fff; color:#858796; box-shadow:0 6px 18px rgba(50,50,100,.04); }
+        body.driver-classic-theme .filter.active, body.driver-classic-theme .add-button, body.driver-classic-theme .modal-add-button, body.driver-classic-theme .detect-customer-warehouse { background:#6557ed; color:#fff; box-shadow:none; }
+        body.driver-classic-theme .products { grid-template-columns:repeat(3,1fr); }
+        body.driver-classic-theme .product-card { border:0; border-radius:24px; background:#fff; box-shadow:0 8px 25px rgba(50,50,100,.05); }
+        body.driver-classic-theme .product-image, body.driver-classic-theme .modal-product-image { background:#f0f1f7; }
+        body.driver-classic-theme .loading, body.driver-classic-theme .message { border:0; background:#fff; color:#858796; }
+        body.driver-classic-theme .product-modal-box, body.driver-classic-theme .customer-warehouse-dialog { border:0; background:#fff; color:#171827; }
+        body.driver-classic-theme .product-modal-close { background:#f1f1f1; color:#171827; }
+        body.driver-classic-theme .modal-product-type, body.driver-classic-theme .modal-product-info label { color:#5142a8; }
+        body.driver-classic-theme .product-select, body.driver-classic-theme .order-price-override input { border-color:#ddd; background:#fff; color:#171827; }
+        body.driver-classic-theme .modal-selected-product, body.driver-classic-theme .order-price-override { border-color:#cfc8ff; background:#f5f3ff; color:#171827; }
+        body.driver-classic-theme .modal-selected-product p, body.driver-classic-theme .order-price-override small { color:#666; }
+        body.driver-classic-theme .customer-warehouse-dialog h1, body.driver-classic-theme .customer-warehouse-option { color:#171827; }
+        body.driver-classic-theme .customer-warehouse-dialog > p, body.driver-classic-theme .customer-warehouse-option span { color:#858796; }
+        body.driver-classic-theme .customer-warehouse-option { border-color:#e1dffc; background:#faf9ff; }
+        @media (max-width:700px) { body.driver-classic-theme .products { grid-template-columns:repeat(2,1fr); } }
+    </style>
 
 
     <!-- Supabase -->

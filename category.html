@@ -410,6 +410,18 @@
 
     </style>
 
+    <!-- طبقة التصميم الداكن للتصنيفات؛ تُعطّل تلقائياً لحساب المندوب. -->
+    <style id="categoryDarkThemeStyles">
+        :root { --purple:#2879ff; --bg:#030a19; --text:#f4f7ff; --muted:#9cabca; --white:#081936; }
+        body { background:radial-gradient(circle at 14% 0%,rgba(16,99,247,.21),transparent 30%),linear-gradient(135deg,#020714,#071a38 54%,#020a1b); color:var(--text); }
+        .header,.search,.content { width:min(1250px,calc(100% - 40px)); }
+        .header { padding:26px 0 16px; }.back-button { border:1px solid rgba(92,151,255,.42); background:linear-gradient(135deg,rgba(15,47,104,.94),rgba(5,22,57,.94)); color:#eaf2ff; box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 24px rgba(0,0,0,.22); }
+        .header-title h1,.section-title h2 { color:#f4f7ff; }.header-title p,.section-title span,.type-card p { color:#9cabca; }
+        .search { margin-bottom:16px; }.search-box { height:58px; border:1px solid rgba(96,153,255,.44); border-radius:18px; background:rgba(7,25,59,.84); box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 25px rgba(0,0,0,.2); }.search-box span { color:#5ca3ff; }.search-box input { color:#eff5ff; }.search-box input::placeholder { color:#879cbe; }
+        .types { grid-template-columns:repeat(3,1fr); gap:15px; }.type-card,.card-1,.card-2,.card-3,.card-4,.card-5,.card-6 { min-height:165px; border:1px solid rgba(94,139,216,.37); background:linear-gradient(155deg,rgba(17,40,85,.95),rgba(5,19,47,.98)); box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 28px rgba(0,0,0,.18); color:#f2f6ff; }.type-card:hover { border-color:#408fff; box-shadow:0 0 19px rgba(38,119,255,.2); }.type-icon,.card-1 .type-icon,.card-2 .type-icon,.card-3 .type-icon,.card-4 .type-icon,.card-5 .type-icon,.card-6 .type-icon { background:radial-gradient(circle,rgba(56,138,255,.35),rgba(9,35,81,.58)); color:#71b2ff; box-shadow:0 0 15px rgba(34,117,255,.18); }.loading,.empty { border:1px solid rgba(94,139,216,.32); background:rgba(7,24,57,.75); color:#a9b8d1; }
+        @media (max-width:550px) { .header,.search,.content { width:calc(100% - 24px); }.header { padding:16px 0 10px; }.types { grid-template-columns:repeat(2,1fr); gap:10px; }.type-card { min-height:135px; padding:15px; border-radius:18px; }.type-icon { width:50px; height:50px; font-size:25px; }.type-card h3 { font-size:14px; } }
+    </style>
+
 </head>
 
 
@@ -514,6 +526,18 @@
         let currentCategory = null;
 
         let allTypes = [];
+
+        // يعطّل اللون الداكن لحساب المندوب لتبقى له واجهة التصنيفات الكلاسيكية.
+        async function applyCategoryThemeForAccount() {
+            const theme = document.getElementById("categoryDarkThemeStyles");
+            if (!theme) return;
+
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return;
+
+            const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+            theme.media = driverIdentity?.is_driver ? "not all" : "all";
+        }
 
 
 
@@ -908,6 +932,7 @@
            START
         ========================= */
 
+        applyCategoryThemeForAccount();
         loadCategory();
 
 

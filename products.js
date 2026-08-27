@@ -4,6 +4,15 @@ const productPageParams = new URLSearchParams(window.location.search);
 let isGuestShopping = false;
 let customerWarehouseResolved = false;
 
+// يعطّل طبقة التصميم الداكنة فقط للحساب المرتبط بمندوب، فيبقى على واجهته الكلاسيكية.
+async function applyProductsPageTheme(user) {
+    const darkThemeStyles = document.getElementById("productsDarkThemeStyles");
+    if (!darkThemeStyles || !user) return;
+
+    const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+    document.body.classList.toggle("driver-classic-theme", Boolean(driverIdentity?.is_driver));
+}
+
 // يمسح المنطقة المحفوظة عند فتح الصفحة من زر تغيير المنطقة.
 if (productPageParams.get("changeRegion") === "1") {
     customerWarehouse = "";
@@ -16,6 +25,8 @@ async function resolveCustomerWarehouseAccess() {
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     isGuestShopping = !user;
+
+    await applyProductsPageTheme(user);
 
     if (isGuestShopping) {
         customerWarehouse = "الرياض";
