@@ -59,7 +59,6 @@ function renderProductDetails(warehouse) {
     const productName = product.model || product.type || product.product_type || "منتج";
     const images = [...new Set(detailVariants.map(item => item.image).filter(Boolean))];
     const companies = [...new Set(detailVariants.map(item => String(item.company || "").trim()).filter(Boolean))];
-    const models = [...new Set(detailVariants.map(item => String(item.model || "").trim()).filter(Boolean))];
     const totalStock = detailVariants.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)), 0);
     const description = [product.type || product.product_type, product.company, product.category]
         .filter(Boolean).join(" · ") || "منتج متوفر في متجر وسام سمارت.";
@@ -82,7 +81,8 @@ function renderProductDetails(warehouse) {
             <div class="detail-options">
                 <h2>اختيار المواصفات</h2>
                 ${companies.length ? `<span class="option-label">الماركة</span><div class="option-chips" id="detailCompanies">${companies.map(company => `<button type="button" class="option-chip" data-company="${escapeDetailHtml(company)}">${escapeDetailHtml(company)}</button>`).join("")}</div>` : ""}
-                ${models.length ? `<span class="option-label">الموديل</span><div class="option-chips" id="detailModels">${models.map(model => `<button type="button" class="option-chip" data-model="${escapeDetailHtml(model)}">${escapeDetailHtml(model)}</button>`).join("")}</div>` : ""}
+                <span class="option-label">الموديل</span>
+                <div class="option-chips" id="detailModels"><span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span></div>
             </div>
             <div class="stock-line" id="detailStock">المتوفر في هذا المخزن: <strong>${totalStock} قطعة</strong></div>
             <button class="detail-action" id="detailChooseButton" type="button">اختر اللون والكمية وأضف للسلة</button>
@@ -90,6 +90,13 @@ function renderProductDetails(warehouse) {
         </section>`;
 
     setupDetailInteractions();
+
+    if (companies.length === 1) {
+        selectedCompany = companies[0];
+        document.querySelector("[data-company]")?.classList.add("active");
+        renderDetailModels();
+        updateDetailStock();
+    }
 }
 
 // يحدّث الاختيارات وكمية المخزون المعروضة حسب الماركة والموديل المختارين.
@@ -102,13 +109,9 @@ function setupDetailInteractions() {
 
     document.querySelectorAll("[data-company]").forEach(button => button.addEventListener("click", () => {
         selectedCompany = button.dataset.company;
+        selectedModel = "";
         document.querySelectorAll("[data-company]").forEach(item => item.classList.toggle("active", item === button));
-        updateDetailStock();
-    }));
-
-    document.querySelectorAll("[data-model]").forEach(button => button.addEventListener("click", () => {
-        selectedModel = button.dataset.model;
-        document.querySelectorAll("[data-model]").forEach(item => item.classList.toggle("active", item === button));
+        renderDetailModels();
         updateDetailStock();
     }));
 
@@ -120,6 +123,32 @@ function setupDetailInteractions() {
         }
         window.location.href = `products.html?openProductCode=${encodeURIComponent(code)}`;
     });
+}
+
+// يعرض موديلات الماركة المختارة فقط، بدل إظهار جميع الموديلات معًا.
+function renderDetailModels() {
+    const container = document.getElementById("detailModels");
+    if (!container) return;
+
+    if (!selectedCompany) {
+        container.innerHTML = '<span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span>';
+        return;
+    }
+
+    const models = [...new Set(detailVariants
+        .filter(item => String(item.company || "").trim() === selectedCompany)
+        .map(item => String(item.model || "").trim())
+        .filter(Boolean))];
+
+    container.innerHTML = models.length
+        ? models.map(model => `<button type="button" class="option-chip" data-model="${escapeDetailHtml(model)}">${escapeDetailHtml(model)}</button>`).join("")
+        : '<span class="detail-choice-hint">لا توجد موديلات متعددة لهذا المنتج.</span>';
+
+    container.querySelectorAll("[data-model]").forEach(button => button.addEventListener("click", () => {
+        selectedModel = button.dataset.model;
+        container.querySelectorAll("[data-model]").forEach(item => item.classList.toggle("active", item === button));
+        updateDetailStock();
+    }));
 }
 
 // يحسب الكمية المعروضة بناءً على الماركة والموديل لتبقى مطابقة لمخزن المنطقة.
