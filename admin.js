@@ -5956,37 +5956,46 @@ addOrderItemButton.addEventListener("click", async function () {
 
     try {
 
-        const { data, error } = await supabaseClient
-            .from("products")
-            .select("*")
-            .order("id", { ascending: false })
-            .limit(1000);
+        let products = [];
+        let from = 0;
+        const pageSize = 1000;
 
-        if (error) {
+        // يجلب كل منتجات المخزن على دفعات حتى لا يتوقف اختيار المنتج عند أول ألف نتيجة.
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from("products")
+                .select("*")
+                .eq("warehouse", selectedWarehouse)
+                .order("id", { ascending: false })
+                .range(from, from + pageSize - 1);
 
-            console.error("PRODUCT LOAD ERROR:", error);
+            if (error) {
+                throw error;
+            }
 
-            alert(
-                "خطأ في تحميل المنتجات:\n\n" +
-                error.message
-            );
+            if (!data?.length) {
+                break;
+            }
+
+            products.push(...data);
+
+            if (data.length < pageSize) {
+                break;
+            }
+
+            from += pageSize;
+        }
+
+        if (!products.length) {
+
+            alert("لم يتم العثور على منتجات في مخزن " + (selectedWarehouse || "المختار"));
 
             return;
         }
 
-        console.log(
-            "منتجات الإضافة:",
-            data
-        );
+        console.log("منتجات الإضافة:", products.length);
 
-        if (!data || data.length === 0) {
-
-            alert("لم يتم العثور على منتجات");
-
-            return;
-        }
-
-        showOrderProductList(data);
+        showOrderProductList(products);
 
     }
 
