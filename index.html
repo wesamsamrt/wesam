@@ -2269,6 +2269,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
         aria-label="فيديو عرض سماعات وسام سمارت"
         style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;"
       ></video>
+      <img id="offerGifPlayer" alt="عرض متحرك" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;">
       <div style="position:relative;z-index:4;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:18px;">
         <a href="products.html" style="display:inline-flex;align-items:center;justify-content:center;padding:9px 17px;border:1px solid rgba(255,255,255,.65);border-radius:10px;background:rgba(4,23,74,.72);color:#fff;font-size:11px;font-weight:800;backdrop-filter:blur(5px);">استفد الآن ←</a>
       </div>
@@ -3824,13 +3825,35 @@ if ("serviceWorker" in navigator) {
 // يشغّل مقاطع بطاقة العروض حسب القائمة، وينتقل للمقطع التالي ثم يعيدها من البداية.
 function setupOfferVideoPlaylist() {
     const video = document.getElementById("offerVideoPlayer");
+    const gifPlayer = document.getElementById("offerGifPlayer");
     const videoCount = Math.max(0, Number.parseInt(window.offerVideoCount, 10) || 0);
-    const playlist = Array.from({ length: videoCount }, (_, index) => `${index + 1}.mp4`);
+    const numberedVideos = Array.from({ length: videoCount }, (_, index) => `${index + 1}.mp4`);
+    const extraMedia = Array.isArray(window.offerExtraOfferMedia) ? window.offerExtraOfferMedia.filter(Boolean) : [];
+    const playlist = [...numberedVideos, ...extraMedia];
     if (!video || !playlist.length) return;
 
     let currentIndex = 0;
+    let nextGifTimer = null;
     const playCurrentVideo = () => {
-        video.src = `offers-videos/${playlist[currentIndex]}`;
+        const mediaFile = playlist[currentIndex];
+        const isGif = /\.gif$/i.test(mediaFile);
+        clearTimeout(nextGifTimer);
+
+        if (isGif && gifPlayer) {
+            video.pause();
+            video.style.display = "none";
+            gifPlayer.style.display = "block";
+            gifPlayer.src = `offers-videos/${mediaFile}`;
+            nextGifTimer = window.setTimeout(playNextVideo, 5000);
+            return;
+        }
+
+        if (gifPlayer) {
+            gifPlayer.style.display = "none";
+            gifPlayer.removeAttribute("src");
+        }
+        video.style.display = "block";
+        video.src = `offers-videos/${mediaFile}`;
         video.load();
         video.play().catch(() => {});
     };
