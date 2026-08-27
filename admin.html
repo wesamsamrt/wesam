@@ -268,10 +268,10 @@
 
             <div class="admin-top-actions">
 
-                <button>
+                <button type="button" id="adminOrderNotificationsButton" title="إشعارات الطلبات" aria-label="إشعارات الطلبات">
                     🔔
-                    <span class="notification-dot">
-                        3
+                    <span class="notification-dot" id="adminOrderNotificationsBadge" style="display:none">
+                        0
                     </span>
                 </button>
 
@@ -1258,6 +1258,20 @@
 
     <article class="sales-report-card sales-orders-card"><h3>آخر المبيعات</h3><div id="salesRecentOrders"></div></article>
 </section>
+
+<!-- نافذة إشعارات الطلبات المرتبطة بالمخزن المفتوح في الإدارة. -->
+<div class="admin-order-notifications-modal" id="adminOrderNotificationsModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="adminOrderNotificationsTitle">
+    <div class="admin-order-notifications-dialog">
+        <div class="admin-order-notifications-header">
+            <div>
+                <h3 id="adminOrderNotificationsTitle">إشعارات الطلبات</h3>
+                <p id="adminOrderNotificationsWarehouse">المخزن: —</p>
+            </div>
+            <button type="button" id="closeAdminOrderNotifications" aria-label="إغلاق">×</button>
+        </div>
+        <div class="admin-order-notifications-list" id="adminOrderNotificationsList">جاري تحميل الإشعارات...</div>
+    </div>
+</div>
 
 
 <section class="transfers-admin" id="transfersAdmin" style="display:none;">

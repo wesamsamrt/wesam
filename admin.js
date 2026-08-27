@@ -14,12 +14,109 @@ let warehouseOptions = [];
 let currentTeamAccess = null;
 let warehouseNotificationsChannel = null;
 
+// يخزن إشعارات الطلبات التي تم تحميلها لعرضها واحتساب شارة الجرس.
+let adminOrderNotificationsCache = [];
+
+// يحدّث الرقم الصغير فوق جرس الإدارة بعد تغيير إشعارات المخزن.
+function refreshAdminOrderNotificationBadge() {
+    const badge = document.getElementById("adminOrderNotificationsBadge");
+    if (!badge) return;
+    const count = adminOrderNotificationsCache.length;
+    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.style.display = count ? "grid" : "none";
+}
+
+// يجلب إشعارات الطلبات الحالية، ويقصرها على المخزن المفتوح وصلاحيات الحساب.
+async function loadAdminOrderNotifications() {
+    if (!selectedWarehouse) return [];
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session?.user?.id) return [];
+
+    const [{ data: notices, error: noticesError }, { data: warehouseOrders, error: ordersError }] = await Promise.all([
+        supabaseClient.from("notifications").select("*").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(50),
+        supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse })
+    ]);
+
+    const orders = Array.isArray(warehouseOrders) ? warehouseOrders : [];
+    const ordersById = new Map(orders.map(order => [String(order.id), order]));
+    const savedNotices = noticesError ? [] : (notices || [])
+        .filter(notice => notice.order_id && ordersById.has(String(notice.order_id)))
+        .map(notice => ({
+            id: notice.id,
+            orderId: notice.order_id,
+            title: notice.title || "إشعار طلب",
+            message: notice.message || "لديك طلب يحتاج متابعة.",
+            createdAt: notice.created_at
+        }));
+
+    // في حال لم تُشغّل قاعدة بيانات الإشعارات بعد، نبقي الجرس مفيدًا بعرض الطلبات المقدمة حديثًا.
+    const fallback = savedNotices.length ? [] : orders
+        .filter(order => ["مقدم", "قيد التجهيز"].includes(order.status || ""))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 20)
+        .map(order => ({
+            id: `order-${order.id}`,
+            orderId: order.id,
+            title: "طلب يحتاج متابعة 🔔",
+            message: `الطلب #${order.id} · ${order.customer_name || "عميل"} · الحالة: ${order.status}`,
+            createdAt: order.created_at
+        }));
+
+    if (ordersError) console.warn("تعذر تحميل طلبات الإشعارات:", ordersError);
+    if (noticesError) console.warn("تعذر تحميل سجل الإشعارات، سيتم عرض الطلبات الحديثة:", noticesError);
+    adminOrderNotificationsCache = savedNotices.length ? savedNotices : fallback;
+    refreshAdminOrderNotificationBadge();
+    return adminOrderNotificationsCache;
+}
+
+// يرسم نافذة إشعارات الطلبات ويتيح فتح الطلب المرتبط منها.
+async function openAdminOrderNotifications() {
+    const modal = document.getElementById("adminOrderNotificationsModal");
+    const list = document.getElementById("adminOrderNotificationsList");
+    const warehouseLabel = document.getElementById("adminOrderNotificationsWarehouse");
+    if (!modal || !list) return;
+
+    modal.style.display = "grid";
+    if (warehouseLabel) warehouseLabel.textContent = `المخزن: ${selectedWarehouse || "—"}`;
+    list.innerHTML = '<div class="admin-order-notifications-empty">جاري تحميل إشعارات الطلبات...</div>';
+    const notices = await loadAdminOrderNotifications();
+    list.innerHTML = notices.length ? notices.map(notice => `
+        <button type="button" class="admin-order-notification-item" data-order-id="${transferText(notice.orderId)}">
+            <span class="admin-order-notification-icon">🔔</span>
+            <span><strong>${transferText(notice.title)}</strong><span>${transferText(notice.message)}<br>${notice.createdAt ? new Date(notice.createdAt).toLocaleString("ar-SA") : ""}</span></span>
+        </button>
+    `).join("") : '<div class="admin-order-notifications-empty">لا توجد إشعارات طلبات لهذا المخزن حاليًا.</div>';
+
+    list.querySelectorAll("[data-order-id]").forEach(button => button.addEventListener("click", async () => {
+        modal.style.display = "none";
+        ordersButton?.click();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const search = document.getElementById("adminOrderSearch");
+        if (search) {
+            search.value = button.dataset.orderId;
+            renderAdminOrdersList();
+        }
+    }));
+}
+
+// يغلق نافذة إشعارات الطلبات دون تغيير حالة الصفحة الحالية.
+function closeAdminOrderNotifications() {
+    const modal = document.getElementById("adminOrderNotificationsModal");
+    if (modal) modal.style.display = "none";
+}
+
+document.getElementById("adminOrderNotificationsButton")?.addEventListener("click", openAdminOrderNotifications);
+document.getElementById("closeAdminOrderNotifications")?.addEventListener("click", closeAdminOrderNotifications);
+document.getElementById("adminOrderNotificationsModal")?.addEventListener("click", event => {
+    if (event.target.id === "adminOrderNotificationsModal") closeAdminOrderNotifications();
+});
+
 // يسجل عامل الخدمة ويستمع فوراً لإشعارات الطلبات الخاصة بالحساب الحالي.
 async function setupWarehouseOrderNotifications() {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-
     try {
-        await navigator.serviceWorker.register("./service-worker.js");
+        const canShowSystemNotification = "Notification" in window && "serviceWorker" in navigator;
+        if (canShowSystemNotification) await navigator.serviceWorker.register("./service-worker.js");
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (!session?.user?.id || warehouseNotificationsChannel) return;
 
@@ -31,9 +128,18 @@ async function setupWarehouseOrderNotifications() {
                 table: "notifications",
                 filter: `user_id=eq.${session.user.id}`
             }, async payload => {
-                // لا نعرض تنبيهاً نظامياً عندما تكون لوحة الإدارة أمام المستخدم بالفعل.
-                if (!document.hidden || Notification.permission !== "granted") return;
                 const notice = payload.new;
+                adminOrderNotificationsCache.unshift({
+                    id: notice.id,
+                    orderId: notice.order_id,
+                    title: notice.title || "طلب جديد 🔔",
+                    message: notice.message || "لديك طلب جديد يحتاج متابعة.",
+                    createdAt: notice.created_at
+                });
+                refreshAdminOrderNotificationBadge();
+
+                // لا نعرض تنبيهاً نظامياً عندما تكون لوحة الإدارة أمام المستخدم بالفعل.
+                if (!canShowSystemNotification || !document.hidden || Notification.permission !== "granted") return;
                 const registration = await navigator.serviceWorker.ready;
                 await registration.showNotification(notice.title || "طلب جديد 🔔", {
                     body: notice.message || "لديك طلب جديد يحتاج متابعة.",
@@ -223,6 +329,7 @@ function showAdmin() {
     updateWarehouseLabel();
     applyTeamAccessToInterface();
     setupWarehouseOrderNotifications();
+    loadAdminOrderNotifications();
     loadDashboardLatestOrders();
     setTimeout(() => loadDashboardData(), 0);
 

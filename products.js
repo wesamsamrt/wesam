@@ -1,6 +1,8 @@
 let allProducts = [];
 let customerWarehouse = localStorage.getItem("customer_warehouse") || "";
 const productPageParams = new URLSearchParams(window.location.search);
+let isGuestShopping = false;
+let customerWarehouseResolved = false;
 
 // يمسح المنطقة المحفوظة عند فتح الصفحة من زر تغيير المنطقة.
 if (productPageParams.get("changeRegion") === "1") {
@@ -8,8 +10,30 @@ if (productPageParams.get("changeRegion") === "1") {
     localStorage.removeItem("customer_warehouse");
 }
 
+// يثبت مخزن الرياض تلقائياً للزائر غير المسجل ويُبقي اختيار المنطقة للحسابات المسجلة فقط.
+async function resolveCustomerWarehouseAccess() {
+    if (customerWarehouseResolved) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    isGuestShopping = !user;
+
+    if (isGuestShopping) {
+        customerWarehouse = "الرياض";
+        localStorage.setItem("customer_warehouse", customerWarehouse);
+        const changeButton = document.getElementById("changeCustomerWarehouse");
+        if (changeButton) changeButton.style.display = "none";
+        const modal = document.getElementById("customerWarehouseModal");
+        if (modal) modal.style.display = "none";
+    }
+
+    customerWarehouseResolved = true;
+}
+
 // يعرض شاشة اختيار منطقة العميل ويحمل المخازن المتاحة للاختيار اليدوي.
 async function showCustomerWarehouseSelection() {
+    await resolveCustomerWarehouseAccess();
+    if (isGuestShopping) return;
+
     const modal = document.getElementById("customerWarehouseModal");
     const options = document.getElementById("customerWarehouseOptions");
     if (!modal || !options) return;
@@ -36,6 +60,8 @@ function escapeCustomerWarehouseHtml(value) {
 
 // يحفظ مخزن التسوق للعميل ثم يعيد تحميل المنتجات الخاصة به فقط.
 function chooseCustomerWarehouse(warehouse) {
+    if (isGuestShopping) return;
+
     customerWarehouse = warehouse;
     localStorage.setItem("customer_warehouse", warehouse);
     document.getElementById("customerWarehouseModal").style.display = "none";
@@ -151,6 +177,8 @@ async function loadProducts() {
     const container = document.getElementById("products");
 
     if (!container) return;
+
+    await resolveCustomerWarehouseAccess();
 
     if (!customerWarehouse) {
         container.innerHTML = '<div class="loading">اختر منطقتك لعرض المنتجات المتاحة.</div>';
@@ -2426,6 +2454,7 @@ document.getElementById("detectCustomerWarehouse")?.addEventListener("click", de
 
 // يفتح شاشة المناطق ليتيح للعميل تغيير مخزن التسوق في أي وقت.
 document.getElementById("changeCustomerWarehouse")?.addEventListener("click", () => {
+    if (isGuestShopping) return;
     document.getElementById("customerWarehouseMessage").textContent = "";
     showCustomerWarehouseSelection();
 });
