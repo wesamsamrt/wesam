@@ -2257,7 +2257,22 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
   <section id="offers" class="sales-layout">
 
     <div class="sale-card">
-     بطاقة العروض
+      <!-- فيديو العرض محفوظ داخل ملفات الموقع ولا يُرفع إلى قاعدة البيانات. -->
+      <video
+        class="sale-card-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        aria-label="فيديو عرض سماعات وسام سمارت"
+        style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;"
+      >
+        <source src="wesam_earbuds_ad_4s.mp4" type="video/mp4">
+      </video>
+      <div style="position:relative;z-index:4;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:18px;">
+        <a href="products.html" style="display:inline-flex;align-items:center;justify-content:center;padding:9px 17px;border:1px solid rgba(255,255,255,.65);border-radius:10px;background:rgba(4,23,74,.72);color:#fff;font-size:11px;font-weight:800;backdrop-filter:blur(5px);">استفد الآن ←</a>
+      </div>
     </div>
 
     <div class="products-panel">
