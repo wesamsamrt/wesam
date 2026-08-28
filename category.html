@@ -527,6 +527,19 @@
 
         let allTypes = [];
 
+        // يحدد مخزن المنطقة نفسه المستخدم في صفحة المنتجات حتى لا تظهر أنواع من مخزن آخر.
+        async function resolveCategoryWarehouse() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return "الرياض";
+
+            const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+            if (driverIdentity?.is_driver && driverIdentity?.warehouse) {
+                return driverIdentity.warehouse;
+            }
+
+            return localStorage.getItem("customer_warehouse") || "الرياض";
+        }
+
         // يعطّل اللون الداكن لحساب المندوب لتبقى له واجهة التصنيفات الكلاسيكية.
         async function applyCategoryThemeForAccount() {
             const theme = document.getElementById("categoryDarkThemeStyles");
@@ -667,6 +680,8 @@
 
             `;
 
+            const categoryWarehouse = await resolveCategoryWarehouse();
+
 
 
             const { data, error } =
@@ -680,6 +695,11 @@
                     .eq(
                         "category",
                         currentCategory.name
+                    )
+
+                    .eq(
+                        "warehouse",
+                        categoryWarehouse
                     );
 
 
@@ -729,7 +749,7 @@
                 .getElementById("countText")
                 .textContent =
                 allTypes.length +
-                " أنواع";
+                " أنواع متوفرة في مخزن " + categoryWarehouse;
 
 
 
