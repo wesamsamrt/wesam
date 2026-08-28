@@ -144,6 +144,8 @@ function renderDetailModels() {
         ? models.map(model => `<button type="button" class="option-chip" data-model="${escapeDetailHtml(model)}">${escapeDetailHtml(model)}</button>`).join("")
         : '<span class="detail-choice-hint">لا توجد موديلات متعددة لهذا المنتج.</span>';
 
+    if (!models.length) renderDetailColors();
+
     container.querySelectorAll("[data-model]").forEach(button => button.addEventListener("click", () => {
         selectedModel = button.dataset.model;
         container.querySelectorAll("[data-model]").forEach(item => item.classList.toggle("active", item === button));
@@ -156,14 +158,15 @@ function renderDetailModels() {
 function renderDetailColors() {
     const container = document.getElementById("detailColors");
     if (!container) return;
-    if (!selectedModel) {
+    const hasModels = detailVariants.some(item => String(item.model || "").trim());
+    if (hasModels && !selectedModel) {
         container.innerHTML = '<span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span>';
         return;
     }
 
     const matching = detailVariants.filter(item =>
         (!selectedCompany || String(item.company || "").trim() === selectedCompany) &&
-        String(item.model || "").trim() === selectedModel && Number(item.quantity || 0) > 0
+        (!selectedModel || String(item.model || "").trim() === selectedModel) && Number(item.quantity || 0) > 0
     );
     const colors = new Map();
     matching.forEach(product => {
@@ -229,7 +232,7 @@ async function addDetailSelectionsToCart() {
         let remaining = selection.quantity;
         detailVariants.filter(product =>
             (!selectedCompany || String(product.company || "").trim() === selectedCompany) &&
-            String(product.model || "").trim() === selectedModel &&
+            (!selectedModel || String(product.model || "").trim() === selectedModel) &&
             (String(product.color || "بدون لون").trim() || "بدون لون") === selection.color
         ).forEach(product => {
             const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
