@@ -522,7 +522,7 @@ function renderCartView() {
             card.innerHTML = `
                 <div class="order-image">${item.image ? `<img src="${escapeCartHtml(item.image)}" alt="">` : "📱"}</div>
                 <div class="order-info">
-                    <h3>${escapeCartHtml(item.model || item.type || "منتج")}</h3>
+                    <h3>${escapeCartHtml(item.type || item.product_type || item.model || "منتج")}</h3>
                     <p>${escapeCartHtml([item.company, item.type, item.color].filter(Boolean).join(" • "))}</p>
                     <p>${item.product_code ? `كود المنتج: ${escapeCartHtml(item.product_code)}` : ""}</p>
                     <div class="price">${itemTotal.toFixed(2)} ر.س</div>
@@ -1756,7 +1756,7 @@ async function showPreviousOrders() {
                     <strong style="
                         font-size:14px;
                     ">
-                        ${item.model || "بدون موديل"}
+                        ${item.type || item.product_type || item.model || "بدون نوع"}
                     </strong>
 
                     <p style="

@@ -58,7 +58,7 @@ async function loadProductDetails() {
 function renderProductDetails(warehouse) {
     const container = document.getElementById("productDetail");
     const product = detailVariants[0];
-    const productName = product.model || product.type || product.product_type || "منتج";
+    const productName = product.type || product.product_type || product.model || "منتج";
     const images = [...new Set(detailVariants.map(item => item.image).filter(Boolean))];
     const companies = [...new Set(detailVariants.map(item => String(item.company || "").trim()).filter(Boolean))];
     const totalStock = detailVariants.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)), 0);
