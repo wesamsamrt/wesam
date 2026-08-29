@@ -94,10 +94,14 @@ function renderProductDetails(warehouse) {
                 <span class="option-label">اللون والكمية</span>
                 <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
+        </section>
+        <aside class="detail-purchase">
+            <h2>إتمام الاختيار</h2>
+            <p>حدد المواصفات والكمية المطلوبة، ثم أضف المنتج إلى سلتك.</p>
             <div class="stock-line" id="detailStock"><strong>${formatDetailStock(totalStock)}</strong></div>
-            <button class="detail-action" id="detailChooseButton" type="button">اختر اللون والكمية وأضف للسلة</button>
+            <button class="detail-action" id="detailChooseButton" type="button">🛒 أضف إلى السلة</button>
             <div class="benefits"><div class="benefit"><strong>🚚 شحن سريع</strong>حسب المنطقة</div><div class="benefit"><strong>🛡️ ضمان</strong>لجودة المنتج</div><div class="benefit"><strong>🔒 دفع آمن</strong>عند إتمام الطلب</div></div>
-        </section>`;
+        </aside>`;
 
     setupDetailInteractions();
 
