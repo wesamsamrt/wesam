@@ -3868,7 +3868,7 @@ if ("serviceWorker" in navigator) {
 // يجلب عروض اليوم المنشورة من لوحة الإدارة ويعرضها لزوار المتجر.
 async function loadDailyOffers() {
     const container = document.getElementById("dailyOffersGrid");
-    if (!container || !window.supabaseClient) return;
+    if (!container || typeof supabaseClient === "undefined") return;
 
     const escapeOfferHtml = value => String(value || "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
     const { data, error } = await supabaseClient
