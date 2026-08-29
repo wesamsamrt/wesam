@@ -11,6 +11,12 @@ function escapeDetailHtml(value) {
     })[character]);
 }
 
+// يعرض رقم المخزون فقط عندما يكون منخفضًا لحماية كمية المخزن الفعلية.
+function formatDetailStock(quantity) {
+    const safeQuantity = Math.max(0, Number(quantity || 0));
+    return safeQuantity < 20 ? `المتبقي: ${safeQuantity} قطعة` : "المخزون متوفر";
+}
+
 // يحدد مخزن عرض المنتج للحساب العادي، ويمنع فتح هذه الصفحة لحساب المندوب.
 async function resolveDetailWarehouse() {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -88,7 +94,7 @@ function renderProductDetails(warehouse) {
                 <span class="option-label">اللون والكمية</span>
                 <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
-            <div class="stock-line" id="detailStock">المتوفر في هذا المخزن: <strong>${totalStock} قطعة</strong></div>
+            <div class="stock-line" id="detailStock"><strong>${formatDetailStock(totalStock)}</strong></div>
             <button class="detail-action" id="detailChooseButton" type="button">اختر اللون والكمية وأضف للسلة</button>
             <div class="benefits"><div class="benefit"><strong>🚚 شحن سريع</strong>حسب المنطقة</div><div class="benefit"><strong>🛡️ ضمان</strong>لجودة المنتج</div><div class="benefit"><strong>🔒 دفع آمن</strong>عند إتمام الطلب</div></div>
         </section>`;
@@ -184,7 +190,7 @@ function renderDetailColors() {
     container.innerHTML = [...colors.entries()].map(([color, products]) => {
         const available = products.reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
         return `<div class="detail-color-row" data-color="${escapeDetailHtml(color)}" data-available="${available}">
-            <div><strong>${escapeDetailHtml(color)}</strong><small>المتوفر: ${available}</small></div>
+            <div><strong>${escapeDetailHtml(color)}</strong><small>${formatDetailStock(available)}</small></div>
             <div class="detail-quantity"><button type="button" data-adjust="-1">−</button><input type="number" min="0" max="${available}" value="0" inputmode="numeric"><button type="button" data-adjust="1">+</button></div>
         </div>`;
     }).join("");
@@ -210,7 +216,7 @@ function updateDetailStock() {
         (!selectedModel || String(item.model || "").trim() === selectedModel)
     );
     const quantity = matching.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)), 0);
-    document.getElementById("detailStock").innerHTML = `المتوفر بحسب اختيارك: <strong>${quantity} قطعة</strong>`;
+    document.getElementById("detailStock").innerHTML = `<strong>${formatDetailStock(quantity)}</strong>`;
 }
 
 // يضيف الألوان والكميات المختارة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
