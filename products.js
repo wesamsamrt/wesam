@@ -5,6 +5,27 @@ let isGuestShopping = false;
 let customerWarehouseResolved = false;
 let isLinkedDriverShopping = false;
 
+// يحدد ما إذا كان المنتج مناسبًا للجهاز المختار في قسم «تسوق حسب جهازك».
+function isProductCompatibleWithDevice(product, selectedDevice) {
+    const aliases = {
+        iphone: ["iphone", "ايفون", "آيفون", "apple"],
+        samsung: ["samsung", "سامسونج"],
+        ipad: ["ipad", "ايباد", "آيباد", "apple"],
+        laptop: ["laptop", "لابتوب", "كمبيوتر", "macbook", "ماك بوك"],
+        playstation: ["playstation", "بلايستيشن", "ps4", "ps5"]
+    };
+    const terms = aliases[selectedDevice] || [selectedDevice];
+    const searchable = [
+        product.company,
+        product.model,
+        product.type,
+        product.product_type,
+        ...(Array.isArray(product.compatible_devices) ? product.compatible_devices : [])
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    return product.compatibility_type === "general" || terms.some(term => searchable.includes(term.toLowerCase()));
+}
+
 // يعطّل طبقة التصميم الداكنة فقط للحساب المرتبط بمندوب، فيبقى على واجهته الكلاسيكية.
 async function applyProductsPageTheme(user, driverIdentity = null) {
     const darkThemeStyles = document.getElementById("productsDarkThemeStyles");
@@ -226,6 +247,7 @@ async function loadProducts() {
 
     const category = params.get("category");
     const productType = params.get("type");
+    const selectedDevice = params.get("device");
 
     let query = supabaseClient
         .from("products")
@@ -276,7 +298,9 @@ while (true) {
     from += pageSize;
 }
 
-allProducts = allData;
+allProducts = selectedDevice
+    ? allData.filter(product => isProductCompatibleWithDevice(product, selectedDevice))
+    : allData;
 
 console.log("عدد المنتجات المحملة كامل:", allProducts.length);
 
