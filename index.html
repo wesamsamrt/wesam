@@ -2093,7 +2093,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 /* الشريط العلوي يأخذ شكل كبسولة داكنة مثل المرجع، بدون تغيير الروابط. */
 .top-header{height:113px;background:transparent;border:0;}.header-inner{position:relative;width:min(1510px,calc(100% - 68px));height:113px;display:block;}.brand{position:absolute;right:0;top:20px;width:220px;height:72px;min-width:0;justify-content:flex-start;z-index:2;}.brand-logo-image{width:214px;height:70px;filter:brightness(1.15) contrast(1.08);}
 .main-nav{position:absolute;top:20px;right:270px;left:250px;height:74px;padding:0 150px 0 25px;justify-content:flex-start;gap:29px;border:1px solid rgba(73,135,241,.57);border-radius:26px;background:linear-gradient(125deg,rgba(8,27,67,.96),rgba(4,16,42,.9));box-shadow:inset 0 1px 0 rgba(178,212,255,.12),0 12px 28px rgba(0,0,0,.25);}.main-nav a{height:74px;color:#dce7ff;font-size:13px;}.main-nav a:hover,.main-nav a.active{color:#3d88ff;}.main-nav a.active:after{height:3px;background:#2780ff;box-shadow:0 0 12px #2780ff;}
-.header-actions{position:absolute;left:calc(250px + 18px);top:31px;z-index:3;gap:9px;}.header-actions .icon-button,.profile-icon{width:43px!important;height:43px!important;border:1px solid rgba(83,137,236,.26)!important;border-radius:14px!important;background:rgba(16,40,88,.78)!important;color:#fff!important;display:grid!important;place-items:center;font-size:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07);}.header-actions .cart-button{border-color:rgba(68,139,255,.75)!important;box-shadow:0 0 16px rgba(33,115,255,.18)!important;}.user-name{display:none;}.notification{background:#2e7cff;color:#fff;}
+.header-actions{position:absolute;left:calc(250px + 18px);top:31px;z-index:3;gap:9px;}.header-actions .icon-button,.profile-icon{width:43px!important;height:43px!important;border:1px solid rgba(83,137,236,.26)!important;border-radius:14px!important;background:rgba(16,40,88,.78)!important;color:#fff!important;display:grid!important;place-items:center;font-size:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07);}.header-line-icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}.header-actions .cart-button{border-color:rgba(68,139,255,.75)!important;box-shadow:0 0 16px rgba(33,115,255,.18)!important;}.user-name{display:none;}.notification{background:#2e7cff;color:#fff;}
 /* يبقى البحث مربوطاً بوظيفته الحالية ويأخذ مظهر الحقل الزجاجي. */
 .search-area{width:min(900px,calc(100% - 80px));min-height:55px;margin:6px auto 22px;gap:0;direction:rtl;}.search-box{height:54px;border:1px solid rgba(101,152,250,.48);border-radius:17px;background:rgba(7,24,59,.8);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 22px rgba(0,0,0,.2);padding:0;overflow:hidden;}.search-box .search-symbol{width:56px;height:54px;display:grid;place-items:center;background:#155bea;color:#fff;font-size:25px;order:2;}.search-box input{order:1;margin:0;padding:0 18px;color:#f4f7ff;font-size:13px;}.search-box input::placeholder{color:#9aaed2;}.category-select{display:none;}#searchResults{position:relative;z-index:50;width:min(900px,calc(100% - 80px));margin:-10px auto 15px;}
 /* الهيرو يستخدم بانر المشروع نفسه مع طبقات وإضاءة تتطابق مع الهوية الداكنة. */
@@ -2164,14 +2164,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 
     <div class="header-actions">
       <button class="icon-button cart-button" type="button" onclick="openOrders()" title="السلة" aria-label="السلة">
-        🛒<span id="cartBadge" class="notification">0</span>
+        <svg class="header-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span id="cartBadge" class="notification">0</span>
       </button>
       <button
     class="profile-icon"
     type="button"
     onclick="window.location.href='profile.html'"
 >
-    👤
+    <svg class="header-line-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.5-4 2.6-6 6.5-6s6 2 6.5 6"/></svg>
 </button>
 
 
