@@ -81,11 +81,11 @@ function renderProductDetails(warehouse) {
             ${images.length > 1 ? `<div class="detail-thumbnails">${images.map((image, index) => `<button class="detail-thumbnail ${index === 0 ? "active" : ""}" type="button" data-image="${escapeDetailHtml(image)}"><img src="${escapeDetailHtml(image)}" alt="صورة المنتج ${index + 1}"></button>`).join("")}</div>` : ""}
         </section>
         <section class="detail-info">
-            <span class="detail-label">${escapeDetailHtml(product.company || product.category || "WESAM SMART")}</span>
+            <span class="detail-label">متوفر في مخزن ${escapeDetailHtml(warehouse)}</span>
             <h1 class="detail-title">${escapeDetailHtml(productName)}</h1>
             <div class="detail-code">كود المنتج: ${escapeDetailHtml(product.product_code || "غير محدد")}</div>
             <div class="detail-price">${Number(product.price || 0).toFixed(2)} <small>ر.س</small></div>
-            <div class="detail-summary">${escapeDetailHtml(description)}<br>اختر الماركة والموديل واللون المناسب.</div>
+            <div class="detail-summary">${escapeDetailHtml(description)}<br>اختر الماركة والموديل المناسبين ثم انتقل لاختيار اللون والكمية.</div>
             <div class="detail-options">
                 <h2>اختيار المواصفات</h2>
                 ${companies.length ? `<span class="option-label">الماركة</span><div class="option-chips" id="detailCompanies">${companies.map(company => `<button type="button" class="option-chip" data-company="${escapeDetailHtml(company)}">${escapeDetailHtml(company)}</button>`).join("")}</div>` : ""}
@@ -94,17 +94,10 @@ function renderProductDetails(warehouse) {
                 <span class="option-label">اللون والكمية</span>
                 <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
-        </section>
-        <aside class="detail-purchase">
-            <div class="delivery-destination">توصيل إلى: <strong>${escapeDetailHtml(warehouse)}</strong><span>⌄</span></div>
-            <div class="delivery-status">متوقع غداً</div>
-            <p class="delivery-note">أو متاح للاستلام من المعرض</p>
-            <p class="delivery-time">وقت الاستلام المتوقع: خلال ساعة</p>
             <div class="stock-line" id="detailStock"><strong>${formatDetailStock(totalStock)}</strong></div>
-            <button class="detail-action" id="detailChooseButton" type="button"><span>🛒</span> أضف إلى السلة</button>
+            <button class="detail-action" id="detailChooseButton" type="button">اختر اللون والكمية وأضف للسلة</button>
             <div class="benefits"><div class="benefit"><strong>🚚 شحن سريع</strong>حسب المنطقة</div><div class="benefit"><strong>🛡️ ضمان</strong>لجودة المنتج</div><div class="benefit"><strong>🔒 دفع آمن</strong>عند إتمام الطلب</div></div>
-            <div class="purchase-links"><button type="button">مشاركة</button><button type="button">♡ المفضلة</button><button type="button">مقارنة</button></div>
-        </aside>`;
+        </section>`;
 
     setupDetailInteractions();
 
