@@ -1005,14 +1005,48 @@ window.editTransferItemQuantity = async function (transferId, transferItemId, cu
     await Promise.all([loadTransfers(), loadTransferSourceProducts(), loadDashboardData(), loadDashboardLatestOrders()]);
 };
 
-// يفتح نسخة قابلة للطباعة من فاتورة التحويل المحدد.
-window.printTransfer = function (transferId) {
+// يطبع التحويل بالقالب والترتيب نفسيهما المستخدمين في كشف طباعة الطلبات.
+window.printTransfer = async function (transferId) {
     const transfer = transfersCache.find(item => Number(item.id) === Number(transferId));
     if (!transfer) return;
-    const card = [...document.querySelectorAll(".transfer-card")].find(item => item.textContent.includes(`تحويل #${transferId}:`));
-    const printWindow = window.open("", "_blank", "width=850,height=700");
+    const printWindow = window.open("", "_blank", "width=1200,height=800");
     if (!printWindow) { alert("السماح بالنوافذ المنبثقة مطلوب للطباعة."); return; }
-    printWindow.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تحويل #${transfer.id}</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#171827}h1{color:#5144d8}.transfer-card{border:1px solid #ddd;border-radius:14px;padding:20px}.transfer-card-bottom,.transfer-actions{display:none}.transfer-card-top{border-bottom:1px solid #ddd;padding-bottom:12px}.transfer-items-summary div{padding:9px 0;border-bottom:1px solid #eee}small{color:#666}</style></head><body><h1>فاتورة تحويل مخزون</h1>${card?.outerHTML || ""}<script>window.onload=()=>window.print()<\/script></body></html>`);
+
+    const { data: items, error } = await supabaseClient
+        .from("warehouse_transfer_items")
+        .select("id, product_name, product_code, company, model, color, product_type, type, price, quantity")
+        .eq("transfer_id", transferId)
+        .order("id", { ascending: true });
+    if (error) {
+        printWindow.close();
+        alert(`تعذر تجهيز طباعة التحويل: ${error.message}`);
+        return;
+    }
+
+    const safeItems = items || [];
+    const referenceTotal = safeItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+    const codeStats = {};
+    safeItems.forEach(item => {
+        const code = String(item.product_code || "بدون كود").trim();
+        codeStats[code] = (codeStats[code] || 0) + Number(item.quantity || 0);
+    });
+    const rowsHTML = safeItems.map((item, index) => {
+        const quantity = Number(item.quantity || 0);
+        const total = quantity * Number(item.price || 0);
+        return `<tr><td>${index + 1}</td><td>${transferText(item.product_code || "-")}</td><td>${transferText(item.product_type || "-")}</td><td>${transferText(item.type || "-")}</td><td>${transferText(item.company || "-")}</td><td>${transferText(item.model || item.product_name || "-")}</td><td>${transferText(item.color || "-")}</td><td>${quantity}</td><td>${total.toFixed(2)} ر.س</td></tr>`;
+    }).join("");
+    const typeStatsHTML = Object.entries(codeStats).map(([code, quantity]) => `<span class="type-stat">${transferText(code)}: ${quantity} قطعة</span>`).join("");
+    const date = new Date(transfer.created_at).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short" });
+
+    printWindow.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تحويل #${transfer.id}</title><style>
+*{box-sizing:border-box}body{font-family:Arial,Tahoma,sans-serif;margin:0;padding:30px;background:#fff;color:#111}.print-page{width:100%;max-width:1200px;margin:auto}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:18px;margin-bottom:20px}.header h1{margin:0 0 8px;font-size:25px}.header p{margin:4px 0;font-size:13px}.document-number{font-size:22px;font-weight:bold}.document-info{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #111;margin-bottom:20px}.info-box{padding:12px;border-left:1px solid #111}.info-box:last-child{border-left:0}.info-label{display:block;font-size:11px;color:#555;margin-bottom:5px}.info-value{font-size:14px;font-weight:bold}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}th,td{border:1px solid #111;padding:9px 5px;text-align:center;vertical-align:middle;word-break:break-word}th{background:#eee;font-weight:bold}tbody tr:nth-child(even){background:#fafafa}.total-section{margin-top:20px;display:flex;justify-content:flex-end}.total-box{border:2px solid #111;min-width:280px;display:flex;justify-content:space-between;padding:14px 18px;font-size:17px;font-weight:bold}.type-stats{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.type-stat{border:1px solid #111;padding:5px 9px;font-size:11px}.notes{margin-top:18px;padding:12px;border:1px solid #111;font-size:12px}.footer{margin-top:30px;padding-top:12px;border-top:1px solid #aaa;text-align:center;font-size:11px;color:#555}@media print{body{padding:10px}.print-page{max-width:none}@page{size:A4 portrait;margin:10mm}th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body><div class="print-page">
+<div class="header"><div><h1>تحويل مخزون</h1><p>رقم التحويل: <strong>#${transfer.id}</strong></p></div><div><div class="document-number">تحويل #${transfer.id}</div><p>${date}</p></div></div>
+<div class="document-info"><div class="info-box"><span class="info-label">المخزن المصدر</span><span class="info-value">${transferText(transfer.source_warehouse)}</span></div><div class="info-box"><span class="info-label">المخزن الوجهة</span><span class="info-value">${transferText(transfer.destination_warehouse)}</span></div><div class="info-box"><span class="info-label">حالة التحويل</span><span class="info-value">${transferText(transferStatusLabel(transfer.status))}</span></div><div class="info-box"><span class="info-label">تاريخ الإنشاء</span><span class="info-value">${date}</span></div><div class="info-box"><span class="info-label">رقم التحويل</span><span class="info-value">#${transfer.id}</span></div></div>
+<table><thead><tr><th>#</th><th>رقم المنتج</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الكمية</th><th>الإجمالي</th></tr></thead><tbody>${rowsHTML || '<tr><td colspan="9">لا توجد عناصر في التحويل</td></tr>'}</tbody></table>
+<div class="total-section"><div><div class="total-box"><span>إجمالي التحويل</span><span>${referenceTotal.toFixed(2)} ر.س</span></div><div class="type-stats"><strong>إحصائيات الأنواع:</strong>${typeStatsHTML}</div></div></div>
+${transfer.notes ? `<div class="notes"><strong>ملاحظات التحويل:</strong> ${transferText(transfer.notes)}</div>` : ""}
+<div class="footer">تم إنشاء هذا الكشف من لوحة إدارة المتجر</div></div><script>window.onload=function(){window.print();};<\/script></body></html>`);
     printWindow.document.close();
 };
 
