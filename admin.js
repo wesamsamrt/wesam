@@ -944,7 +944,7 @@ async function loadTransfers() {
     const ids = visibleTransfers.map(item => item.id);
     const { data: items, error: itemsError } = ids.length ? await supabaseClient
         .from("warehouse_transfer_items")
-        .select("transfer_id, product_name, product_code, company, model, color, product_type, type, image, price, quantity")
+        .select("id, transfer_id, product_name, product_code, company, model, color, product_type, type, image, price, quantity")
         .in("transfer_id", ids) : { data: [], error: null };
     if (itemsError) { transfersList.innerHTML = `<div class="message error">تعذر تحميل عناصر التحويلات: ${itemsError.message}</div>`; return; }
     const itemsByTransfer = new Map();
@@ -959,9 +959,10 @@ async function loadTransfers() {
         const canCancel = ["draft", "requested", "in_transit"].includes(transfer.status);
         const direction = isDestination ? `وارد إلى مخزن ${selectedWarehouse}` : `صادر من مخزن ${selectedWarehouse}`;
         const referenceTotal = transferItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+        const canEditQuantities = currentTeamAccess?.role === "owner" && transfer.status !== "cancelled";
         return `<article class="transfer-card">
             <div class="transfer-card-top"><div><h4>تحويل #${transfer.id}: ${transfer.source_warehouse} إلى ${transfer.destination_warehouse}</h4><p class="transfer-card-meta"><span class="transfer-direction">${direction}</span> ${new Date(transfer.created_at).toLocaleString("ar-SA")}${transfer.notes ? ` · ${transferText(transfer.notes)}` : ""}</p></div><span class="transfer-status ${transfer.status}">${transferStatusLabel(transfer.status)}</span></div>
-            <div class="transfer-invoice-items">${transferItems.map(item => `<div class="transfer-invoice-item"><div class="transfer-invoice-image">${item.image ? `<img src="${transferText(item.image)}" alt="${transferText(item.product_name)}">` : "📦"}</div><div class="transfer-invoice-info"><strong>${transferText(item.model || item.product_name)}</strong><small>${[item.company, item.product_code].filter(Boolean).map(transferText).join(" · ")}</small><small>${[item.color, item.type, item.product_type].filter(Boolean).map(transferText).join(" · ") || "بدون تفاصيل إضافية"}</small><small class="transfer-invoice-quantity">الكمية: ${item.quantity} قطعة</small></div><div class="transfer-invoice-price">${Number(item.price || 0).toFixed(2)} ر.س</div></div>`).join("") || "لا توجد عناصر"}</div>
+            <div class="transfer-invoice-items">${transferItems.map(item => `<div class="transfer-invoice-item"><div class="transfer-invoice-image">${item.image ? `<img src="${transferText(item.image)}" alt="${transferText(item.product_name)}">` : "📦"}</div><div class="transfer-invoice-info"><strong>${transferText(item.model || item.product_name)}</strong><small>${[item.company, item.product_code].filter(Boolean).map(transferText).join(" · ")}</small><small>${[item.color, item.type, item.product_type].filter(Boolean).map(transferText).join(" · ") || "بدون تفاصيل إضافية"}</small><small class="transfer-invoice-quantity">الكمية: ${item.quantity} قطعة</small>${canEditQuantities ? `<button class="transfer-action" type="button" onclick="editTransferItemQuantity(${transfer.id}, ${item.id}, ${item.quantity})">✎ تعديل الكمية</button>` : ""}</div><div class="transfer-invoice-price">${Number(item.price || 0).toFixed(2)} ر.س</div></div>`).join("") || "لا توجد عناصر"}</div>
             <div class="transfer-total"><span>إجمالي القيمة المرجعية</span><strong>${referenceTotal.toFixed(2)} ر.س</strong></div>
             <div class="transfer-card-bottom"><span class="transfer-card-meta">${transfer.dispatched_at ? `تم الشحن: ${new Date(transfer.dispatched_at).toLocaleString("ar-SA")}` : "لم يتم الشحن"}</span><div class="transfer-actions">${canDispatch ? `<button class="transfer-action" onclick="changeTransferStatus(${transfer.id}, 'dispatch')">${transfer.status === "requested" ? "قبول وإرسال" : "شحن التحويل"}</button>` : ""}${canReceive ? `<button class="transfer-action receive" onclick="changeTransferStatus(${transfer.id}, 'receive')">تأكيد الاستلام</button>` : ""}${canCancel ? `<button class="transfer-action cancel" onclick="changeTransferStatus(${transfer.id}, 'cancel')">إلغاء</button>` : ""}<button class="transfer-action print" onclick="printTransfer(${transfer.id})">🖨️ طباعة</button></div></div>
         </article>`;
@@ -974,6 +975,33 @@ window.changeTransferStatus = async function (transferId, action) {
     if (!confirm(descriptions[action])) return;
     const { error } = await supabaseClient.rpc("process_warehouse_transfer", { p_transfer_id: transferId, p_action: action });
     if (error) { alert(`تعذر تنفيذ العملية: ${error.message}`); return; }
+    await Promise.all([loadTransfers(), loadTransferSourceProducts(), loadDashboardData(), loadDashboardLatestOrders()]);
+};
+
+// يسمح للمدير العام فقط بتعديل كمية عنصر التحويل، ويترك تسوية مخزون الحالتين للدالة الآمنة في قاعدة البيانات.
+window.editTransferItemQuantity = async function (transferId, transferItemId, currentQuantity) {
+    if (currentTeamAccess?.role !== "owner") {
+        alert("تعديل كميات التحويلات متاح للمدير العام فقط.");
+        return;
+    }
+    const entered = prompt("أدخل الكمية الجديدة للتحويل:", String(currentQuantity));
+    if (entered === null) return;
+    const quantity = Number(entered);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+        alert("أدخل كمية صحيحة أكبر من صفر.");
+        return;
+    }
+    if (quantity === Number(currentQuantity)) return;
+    const { error } = await supabaseClient.rpc("adjust_warehouse_transfer_item_quantity", {
+        p_transfer_id: transferId,
+        p_transfer_item_id: transferItemId,
+        p_new_quantity: quantity
+    });
+    if (error) {
+        alert(`تعذر تعديل الكمية: ${error.message}`);
+        return;
+    }
+    alert("تم تعديل كمية التحويل وتسوية المخزون المرتبط بنجاح.");
     await Promise.all([loadTransfers(), loadTransferSourceProducts(), loadDashboardData(), loadDashboardLatestOrders()]);
 };
 
