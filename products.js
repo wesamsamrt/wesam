@@ -5,6 +5,24 @@ let isGuestShopping = false;
 let customerWarehouseResolved = false;
 let isLinkedDriverShopping = false;
 
+// يطابق اسم الماركة الثابت في قسم الأجهزة مع صيغها العربية والإنجليزية المخزنة في المنتجات.
+function isProductFromBrand(product, selectedBrand) {
+    const aliases = {
+        iphone: ["iphone", "ايفون", "آيفون", "apple"],
+        samsung: ["samsung", "سامسونج"],
+        huawei: ["huawei", "هواوي"],
+        honor: ["honor", "هونر"],
+        infinix: ["infinix", "انفنيكس", "إنفنيكس"],
+        itel: ["itel", "ايتل", "آيتل"],
+        realme: ["realme", "ريلمي"],
+        redmi: ["redmi", "ريدمي", "xiaomi", "شاومي"],
+        tecno: ["tecno", "تكنو"],
+        vivo: ["vivo", "فيفو"]
+    };
+    const company = String(product.company || "").trim().toLowerCase();
+    return (aliases[selectedBrand] || [selectedBrand]).some(name => company === name.toLowerCase());
+}
+
 // يحدد ما إذا كان المنتج مناسبًا للجهاز المختار في قسم «تسوق حسب جهازك».
 function isProductCompatibleWithDevice(product, selectedDevice) {
     const aliases = {
@@ -301,7 +319,7 @@ while (true) {
 
 allProducts = allData.filter(product =>
     (!selectedDevice || isProductCompatibleWithDevice(product, selectedDevice)) &&
-    (!selectedBrand || String(product.company || "").trim().toLowerCase() === selectedBrand.trim().toLowerCase())
+    (!selectedBrand || isProductFromBrand(product, selectedBrand))
 );
 
 console.log("عدد المنتجات المحملة كامل:", allProducts.length);
