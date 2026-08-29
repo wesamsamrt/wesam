@@ -2096,11 +2096,9 @@ body.driver-classic-theme .brand-logo-image{content:url("logo.png")}
 .store-intro-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 50% 45%,#092d69 0,#020b20 48%,#010511 100%);opacity:1;visibility:visible;transition:opacity .55s ease,visibility .55s ease}
 .store-intro-overlay.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 .store-intro-video{display:block;width:min(560px,88vw);max-height:78vh;border:1px solid rgba(74,153,255,.55);border-radius:28px;background:#020817;object-fit:contain;box-shadow:0 0 42px rgba(24,130,255,.34),0 28px 70px rgba(0,0,0,.52)}
-.store-intro-play{position:absolute;bottom:max(38px,7vh);left:50%;transform:translateX(-50%);display:none;padding:13px 24px;border:1px solid rgba(120,183,255,.65);border-radius:14px;background:linear-gradient(135deg,#1465ee,#3191ff);color:#fff;font:700 14px Cairo,sans-serif;box-shadow:0 10px 28px rgba(27,115,240,.38);cursor:pointer}
-.store-intro-play.is-visible{display:block}
 .store-intro-skip{position:absolute;top:24px;left:24px;padding:8px 13px;border:1px solid rgba(160,194,242,.3);border-radius:10px;background:rgba(5,21,50,.72);color:#c9d8ee;font:600 11px Cairo,sans-serif;cursor:pointer}
 body.store-intro-open{overflow:hidden}
-@media(max-width:600px){.store-intro-video{width:min(92vw,430px);border-radius:21px}.store-intro-skip{top:15px;left:15px}.store-intro-play{bottom:35px;font-size:12px}}
+@media(max-width:600px){.store-intro-video{width:min(92vw,430px);border-radius:21px}.store-intro-skip{top:15px;left:15px}}
 </style>
 
 <!-- واجهة داكنة للصفحة الرئيسية، مع الحفاظ على جميع عناصر النظام ومعرّفاتها الحالية. -->
@@ -2240,14 +2238,12 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
   <video class="store-intro-video" id="storeIntroVideo" autoplay playsinline preload="auto">
     <source src="store-intro.mp4" type="video/mp4">
   </video>
-  <button class="store-intro-play" id="storeIntroPlay" type="button">▶ تشغيل المقدمة بالصوت</button>
   <button class="store-intro-skip" id="storeIntroSkip" type="button">تخطي المقدمة</button>
 </div>
 <script>
 (function () {
   const overlay = document.getElementById("storeIntroOverlay");
   const video = document.getElementById("storeIntroVideo");
-  const playButton = document.getElementById("storeIntroPlay");
   const skipButton = document.getElementById("storeIntroSkip");
   const introKey = "wesam_store_intro_seen";
 
@@ -2270,19 +2266,21 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
 
   const playback = video.play();
   if (playback && typeof playback.catch === "function") {
-    playback.catch(() => playButton.classList.add("is-visible"));
+    playback.catch(() => {
+      const resumeWithSound = async function (event) {
+        if (event.target === skipButton) return;
+        video.muted = false;
+        video.volume = 1;
+        try {
+          await video.play();
+          overlay.removeEventListener("pointerdown", resumeWithSound);
+        } catch (error) {
+          console.warn("تعذر تشغيل مقدمة المتجر بالصوت", error);
+        }
+      };
+      overlay.addEventListener("pointerdown", resumeWithSound);
+    });
   }
-
-  playButton.addEventListener("click", async function () {
-    video.muted = false;
-    video.volume = 1;
-    try {
-      await video.play();
-      playButton.classList.remove("is-visible");
-    } catch (error) {
-      console.warn("تعذر تشغيل مقدمة المتجر بالصوت", error);
-    }
-  });
   skipButton.addEventListener("click", closeStoreIntro);
   video.addEventListener("ended", closeStoreIntro);
   video.addEventListener("error", closeStoreIntro);
