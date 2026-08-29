@@ -2259,14 +2259,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
   <section class="shop-by-device" aria-labelledby="shopByDeviceTitle">
     <div class="shop-by-device-head">
       <h2 id="shopByDeviceTitle">تسوق حسب جهازك</h2>
-      <span>منتجات مناسبة لجهازك</span>
+      <span>ماركات متوفرة في منطقتك</span>
     </div>
-    <div class="device-shop-grid">
-      <a class="device-shop-card" href="products.html?device=iphone"><span class="device-shop-icon">📱</span><span><strong>آيفون</strong><small>إكسسوارات وحماية</small></span></a>
-      <a class="device-shop-card" href="products.html?device=samsung"><span class="device-shop-icon">📲</span><span><strong>سامسونج</strong><small>إكسسوارات وحماية</small></span></a>
-      <a class="device-shop-card" href="products.html?device=ipad"><span class="device-shop-icon">💻</span><span><strong>آيباد</strong><small>ملحقات الآيباد</small></span></a>
-      <a class="device-shop-card" href="products.html?device=laptop"><span class="device-shop-icon">🖥️</span><span><strong>لابتوب</strong><small>توصيل وملحقات</small></span></a>
-      <a class="device-shop-card" href="products.html?device=playstation"><span class="device-shop-icon">🎮</span><span><strong>بلايستيشن</strong><small>ألعاب وإكسسوارات</small></span></a>
+    <div class="device-shop-grid" id="deviceShopGrid">
+      <span style="color:#9eb1d5;font-size:12px;">جاري تحميل الأجهزة...</span>
     </div>
   </section>
 
@@ -3687,6 +3683,84 @@ async function searchProducts(value) {
         }
 
 
+        // يحدد المخزن الذي تُعرض منه ماركات الأجهزة في الصفحة الرئيسية.
+        async function resolveHomeDeviceWarehouse() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return "الرياض";
+
+            const { data: driverIdentity } = await supabaseClient.rpc("get_my_driver_identity");
+            if (driverIdentity?.is_driver && driverIdentity?.warehouse) return driverIdentity.warehouse;
+
+            return localStorage.getItem("customer_warehouse") || "الرياض";
+        }
+
+
+        // يرجع رمزًا مناسبًا للماركة المعروضة دون الاعتماد على قائمة أجهزة ثابتة.
+        function getBrandDeviceIcon(brand) {
+            const value = String(brand || "").toLowerCase();
+            if (value.includes("ipad") || value.includes("ايباد") || value.includes("آيباد")) return "💻";
+            if (value.includes("playstation") || value.includes("بلايستيشن") || value.includes("ps")) return "🎮";
+            if (value.includes("laptop") || value.includes("لابتوب") || value.includes("macbook")) return "🖥️";
+            if (value.includes("samsung") || value.includes("سامسونج")) return "📲";
+            return "📱";
+        }
+
+
+        // يجلب الماركات الحقيقية من جدول المنتجات للمخزن الحالي ويربط كل ماركة بنتائجها.
+        async function loadShopByDevice() {
+            const container = document.getElementById("deviceShopGrid");
+            if (!container) return;
+            const warehouse = await resolveHomeDeviceWarehouse();
+            const brands = new Map();
+            let from = 0;
+            const pageSize = 1000;
+
+            try {
+                while (true) {
+                    const { data, error } = await supabaseClient
+                        .from("products")
+                        .select("company")
+                        .eq("warehouse", warehouse)
+                        .range(from, from + pageSize - 1);
+                    if (error) throw error;
+                    if (!data?.length) break;
+                    data.forEach(product => {
+                        const brand = String(product.company || "").trim();
+                        if (brand) brands.set(brand.toLowerCase(), brand);
+                    });
+                    if (data.length < pageSize) break;
+                    from += pageSize;
+                }
+
+                container.innerHTML = "";
+                if (!brands.size) {
+                    container.innerHTML = '<span style="color:#9eb1d5;font-size:12px;">لا توجد ماركات أجهزة في هذا المخزن حاليًا.</span>';
+                    return;
+                }
+
+                [...brands.values()].sort((a, b) => a.localeCompare(b, "ar")).forEach(brand => {
+                    const card = document.createElement("a");
+                    card.className = "device-shop-card";
+                    card.href = `products.html?brand=${encodeURIComponent(brand)}`;
+                    const icon = document.createElement("span");
+                    icon.className = "device-shop-icon";
+                    icon.textContent = getBrandDeviceIcon(brand);
+                    const text = document.createElement("span");
+                    const title = document.createElement("strong");
+                    title.textContent = brand;
+                    const label = document.createElement("small");
+                    label.textContent = "عرض منتجات الماركة";
+                    text.append(title, label);
+                    card.append(icon, text);
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("Load device brands error:", error);
+                container.innerHTML = '<span style="color:#ff9eae;font-size:12px;">تعذر تحميل الأجهزة.</span>';
+            }
+        }
+
+
         async function checkLoginStatus() {
 
 
@@ -3805,6 +3879,8 @@ async function searchProducts(value) {
         ===================================================== */
 
         loadCategories();
+
+        loadShopByDevice();
 
         checkLoginStatus();
 

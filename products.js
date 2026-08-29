@@ -248,6 +248,7 @@ async function loadProducts() {
     const category = params.get("category");
     const productType = params.get("type");
     const selectedDevice = params.get("device");
+    const selectedBrand = params.get("brand");
 
     let query = supabaseClient
         .from("products")
@@ -298,9 +299,10 @@ while (true) {
     from += pageSize;
 }
 
-allProducts = selectedDevice
-    ? allData.filter(product => isProductCompatibleWithDevice(product, selectedDevice))
-    : allData;
+allProducts = allData.filter(product =>
+    (!selectedDevice || isProductCompatibleWithDevice(product, selectedDevice)) &&
+    (!selectedBrand || String(product.company || "").trim().toLowerCase() === selectedBrand.trim().toLowerCase())
+);
 
 console.log("عدد المنتجات المحملة كامل:", allProducts.length);
 
