@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260826-sales"
+        href="admin.css?v=20260829-daily-offers"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -172,6 +172,11 @@
             <button class="admin-nav-item" id="salesButton">
                 <span>📈</span>
                 <strong>المبيعات</strong>
+            </button>
+
+            <button class="admin-nav-item" id="offersButton">
+                <span>🎁</span>
+                <strong>عروض اليوم</strong>
             </button>
 
             <button class="admin-nav-item" id="driversButton">
@@ -1203,6 +1208,7 @@
                 <label><input type="checkbox" value="products"> المنتجات</label>
                 <label><input type="checkbox" value="orders"> الطلبات</label>
                 <label><input type="checkbox" value="sales"> المبيعات</label>
+                <label><input type="checkbox" value="offers"> عروض اليوم</label>
                 <label><input type="checkbox" value="drivers"> المناديب</label>
                 <label><input type="checkbox" value="transfers"> التحويلات</label>
                 <label><input type="checkbox" value="accounts"> الحسابات</label>
@@ -1257,6 +1263,28 @@
     </div>
 
     <article class="sales-report-card sales-orders-card"><h3>آخر المبيعات</h3><div id="salesRecentOrders"></div></article>
+</section>
+
+<section class="offers-admin" id="offersAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromOffers">← رجوع</button>
+        <div><h2>عروض اليوم</h2><p>أضف صور العروض والنصوص والرابط الذي ينتقل إليه العميل عند الضغط عليها.</p></div>
+    </div>
+
+    <div class="offers-admin-form">
+        <div class="offers-form-grid">
+            <label>عنوان العرض<input id="dailyOfferTitle" type="text" maxlength="90" placeholder="مثال: خصم اليوم"></label>
+            <label>وصف مختصر<input id="dailyOfferSubtitle" type="text" maxlength="150" placeholder="مثال: عروض مختارة لفترة محدودة"></label>
+            <label>رابط العرض<input id="dailyOfferLink" type="text" value="products.html" placeholder="products.html أو رابط خارجي"></label>
+            <label>ترتيب العرض<input id="dailyOfferOrder" type="number" min="1" value="1"></label>
+            <label class="daily-offer-image-field">صورة العرض<input id="dailyOfferImage" type="file" accept="image/png,image/jpeg,image/webp"><small>PNG أو JPG أو WEBP — حد أقصى 5 MB</small></label>
+        </div>
+        <div class="daily-offer-preview" id="dailyOfferPreview"><span>معاينة الصورة</span></div>
+        <div class="offers-admin-actions"><button type="button" id="saveDailyOfferButton">+ إضافة العرض</button><button type="button" id="cancelDailyOfferEdit" class="secondary-offer-button" style="display:none;">إلغاء التعديل</button><span id="dailyOfferMessage"></span></div>
+    </div>
+
+    <div class="accounts-list-header"><h3>العروض المعروضة للعملاء</h3><button type="button" id="refreshDailyOffersButton">↻ تحديث</button></div>
+    <div class="daily-offers-list" id="dailyOffersList"><div class="message">جاري تحميل العروض...</div></div>
 </section>
 
 <!-- نافذة إشعارات الطلبات المرتبطة بالمخزن المفتوح في الإدارة. -->
@@ -1513,7 +1541,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260827-all-products"></script>
+    <script src="admin.js?v=20260829-daily-offers"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

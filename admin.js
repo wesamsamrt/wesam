@@ -179,6 +179,7 @@ function applyTeamAccessToInterface() {
         productsButton: "products",
         ordersButton: "orders",
         salesButton: "sales",
+        offersButton: "offers",
         driversButton: "drivers",
         transfersButton: "transfers",
         accountsButton: "accounts"
@@ -1080,7 +1081,7 @@ async function loadAccounts() {
     accountsList.innerHTML = accounts.map(account => {
         const permissions = account.permissions || {};
         const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
-        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", sales: "المبيعات", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", sales: "المبيعات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
         return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
     }).join("");
 }
@@ -1537,6 +1538,146 @@ document.getElementById("backFromSales")?.addEventListener("click", () => { sale
 document.getElementById("applySalesFilters")?.addEventListener("click", loadSalesReport);
 document.getElementById("exportSalesReportButton")?.addEventListener("click", exportFilteredSalesReport);
 ["productsButton", "ordersButton", "categoriesButton", "dashboardButton", "transfersButton", "accountsButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => { if (salesAdmin) salesAdmin.style.display = "none"; }));
+
+/* =========================================================
+   إدارة عروض اليوم
+========================================================= */
+const DAILY_OFFERS_BUCKET = "daily-offers";
+const offersButton = document.getElementById("offersButton");
+const offersAdmin = document.getElementById("offersAdmin");
+const dailyOffersList = document.getElementById("dailyOffersList");
+const dailyOfferImage = document.getElementById("dailyOfferImage");
+const dailyOfferPreview = document.getElementById("dailyOfferPreview");
+const dailyOfferMessage = document.getElementById("dailyOfferMessage");
+let editingDailyOffer = null;
+
+// يحول النص إلى HTML آمن قبل عرضه داخل بطاقات عروض الإدارة.
+function escapeDailyOfferHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
+}
+
+// يرفع صورة العرض إلى مساحة التخزين ويعيد رابطها العام للعرض في الصفحة الرئيسية.
+async function uploadDailyOfferImage(file) {
+    if (!file) return null;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("اختر صورة PNG أو JPG أو WEBP فقط.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("حجم الصورة يجب ألا يتجاوز 5 MB.");
+    const extension = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `offer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+    const { error: uploadError } = await supabaseClient.storage.from(DAILY_OFFERS_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+    if (uploadError) throw uploadError;
+    const { data } = supabaseClient.storage.from(DAILY_OFFERS_BUCKET).getPublicUrl(path);
+    if (!data?.publicUrl) throw new Error("تعذر الحصول على رابط صورة العرض.");
+    return data.publicUrl;
+}
+
+// يعرض معاينة محلية للصورة التي اختارها المدير قبل رفعها وحفظ العرض.
+function previewDailyOfferImage(file) {
+    if (!dailyOfferPreview) return;
+    if (!file) { dailyOfferPreview.innerHTML = "<span>معاينة الصورة</span>"; return; }
+    const reader = new FileReader();
+    reader.onload = () => { dailyOfferPreview.innerHTML = `<img src="${reader.result}" alt="معاينة العرض">`; };
+    reader.readAsDataURL(file);
+}
+
+// يجلب عروض اليوم من قاعدة البيانات ويجهز بطاقات التعديل والحذف والنشر.
+async function loadDailyOffersAdmin() {
+    if (!dailyOffersList) return;
+    dailyOffersList.innerHTML = '<div class="message">جاري تحميل عروض اليوم...</div>';
+    const { data, error } = await supabaseClient.from("daily_offers").select("*").order("display_order", { ascending: true });
+    if (error) {
+        dailyOffersList.innerHTML = `<div class="message error">تعذر تحميل عروض اليوم: ${escapeDailyOfferHtml(error.message)}<br><small>شغّل ملف daily-offers.sql في Supabase SQL Editor مرة واحدة.</small></div>`;
+        return;
+    }
+    dailyOffersList.innerHTML = data?.length ? data.map(offer => `<article class="daily-offer-admin-card"><img src="${escapeDailyOfferHtml(offer.image_url)}" alt="${escapeDailyOfferHtml(offer.title)}"><div><h3>${escapeDailyOfferHtml(offer.title)}</h3><p>${escapeDailyOfferHtml(offer.subtitle || "بدون وصف")}</p><small>الترتيب: ${Number(offer.display_order || 0)} — ${offer.is_active ? "منشور" : "مخفي"}</small></div><div class="daily-offer-admin-actions"><button type="button" onclick="editDailyOffer('${offer.id}')">تعديل</button><button type="button" onclick="toggleDailyOffer('${offer.id}', ${!offer.is_active})">${offer.is_active ? "إخفاء" : "نشر"}</button><button type="button" class="delete-daily-offer" onclick="deleteDailyOffer('${offer.id}')">حذف</button></div></article>`).join("") : '<div class="message">لا توجد عروض بعد. أضف أول عرض من النموذج أعلاه.</div>';
+    window.dailyOffersAdminCache = data || [];
+}
+
+// يعيد نموذج عروض اليوم إلى وضع الإضافة بعد الحفظ أو إلغاء التعديل.
+function resetDailyOfferForm() {
+    editingDailyOffer = null;
+    ["dailyOfferTitle", "dailyOfferSubtitle"].forEach(id => { const input = document.getElementById(id); if (input) input.value = ""; });
+    document.getElementById("dailyOfferLink").value = "products.html";
+    document.getElementById("dailyOfferOrder").value = "1";
+    if (dailyOfferImage) dailyOfferImage.value = "";
+    if (dailyOfferPreview) dailyOfferPreview.innerHTML = "<span>معاينة الصورة</span>";
+    document.getElementById("saveDailyOfferButton").textContent = "+ إضافة العرض";
+    document.getElementById("cancelDailyOfferEdit").style.display = "none";
+}
+
+// يحفظ عرضاً جديداً أو تعديل العرض المحدد، مع الاحتفاظ بالصورة السابقة إن لم تتغير.
+async function saveDailyOffer() {
+    const title = document.getElementById("dailyOfferTitle").value.trim();
+    const subtitle = document.getElementById("dailyOfferSubtitle").value.trim();
+    const targetUrl = document.getElementById("dailyOfferLink").value.trim() || "products.html";
+    const displayOrder = Math.max(1, Number(document.getElementById("dailyOfferOrder").value || 1));
+    const file = dailyOfferImage?.files?.[0];
+    if (!title) { dailyOfferMessage.textContent = "اكتب عنوان العرض."; return; }
+    if (!editingDailyOffer && !file) { dailyOfferMessage.textContent = "اختر صورة للعرض."; return; }
+    dailyOfferMessage.textContent = "جاري حفظ العرض ورفع الصورة...";
+    try {
+        const imageUrl = file ? await uploadDailyOfferImage(file) : editingDailyOffer.image_url;
+        const payload = { title, subtitle, target_url: targetUrl, display_order: displayOrder, image_url: imageUrl };
+        const request = editingDailyOffer ? supabaseClient.from("daily_offers").update(payload).eq("id", editingDailyOffer.id) : supabaseClient.from("daily_offers").insert({ ...payload, is_active: true });
+        const { error } = await request;
+        if (error) throw error;
+        dailyOfferMessage.textContent = "تم حفظ العرض بنجاح.";
+        resetDailyOfferForm();
+        await loadDailyOffersAdmin();
+    } catch (error) {
+        console.error("Daily offer save error:", error);
+        dailyOfferMessage.textContent = `تعذر حفظ العرض: ${error.message}`;
+    }
+}
+
+// يملأ النموذج ببيانات العرض المحدد ليتم تعديله دون فقدان صورته الحالية.
+window.editDailyOffer = function (id) {
+    const offer = (window.dailyOffersAdminCache || []).find(item => item.id === id);
+    if (!offer) return;
+    editingDailyOffer = offer;
+    document.getElementById("dailyOfferTitle").value = offer.title || "";
+    document.getElementById("dailyOfferSubtitle").value = offer.subtitle || "";
+    document.getElementById("dailyOfferLink").value = offer.target_url || "products.html";
+    document.getElementById("dailyOfferOrder").value = offer.display_order || 1;
+    dailyOfferPreview.innerHTML = `<img src="${escapeDailyOfferHtml(offer.image_url)}" alt="معاينة العرض">`;
+    document.getElementById("saveDailyOfferButton").textContent = "حفظ التعديل";
+    document.getElementById("cancelDailyOfferEdit").style.display = "";
+    dailyOfferMessage.textContent = "يمكنك اختيار صورة جديدة، أو حفظ العرض بالإبقاء على الصورة الحالية.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+// يغير حالة نشر العرض حتى يمكن إخفاؤه مؤقتاً دون حذفه.
+window.toggleDailyOffer = async function (id, isActive) {
+    const { error } = await supabaseClient.from("daily_offers").update({ is_active: isActive }).eq("id", id);
+    if (error) { alert(`تعذر تحديث العرض: ${error.message}`); return; }
+    await loadDailyOffersAdmin();
+};
+
+// يحذف العرض من القائمة؛ تبقى الصورة في التخزين لتجنب حذف ملف مشترك بالخطأ.
+window.deleteDailyOffer = async function (id) {
+    if (!confirm("حذف هذا العرض من الصفحة الرئيسية؟")) return;
+    const { error } = await supabaseClient.from("daily_offers").delete().eq("id", id);
+    if (error) { alert(`تعذر حذف العرض: ${error.message}`); return; }
+    if (editingDailyOffer?.id === id) resetDailyOfferForm();
+    await loadDailyOffersAdmin();
+};
+
+// يفتح قسم عروض اليوم ويخفي أقسام الإدارة الأخرى لتبقى الشاشة واضحة.
+offersButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
+    offersAdmin.style.display = "block";
+    await loadDailyOffersAdmin();
+});
+document.getElementById("backFromOffers")?.addEventListener("click", () => { offersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+dailyOfferImage?.addEventListener("change", event => previewDailyOfferImage(event.target.files?.[0]));
+document.getElementById("saveDailyOfferButton")?.addEventListener("click", saveDailyOffer);
+document.getElementById("cancelDailyOfferEdit")?.addEventListener("click", resetDailyOfferForm);
+document.getElementById("refreshDailyOffersButton")?.addEventListener("click", loadDailyOffersAdmin);
+[
+    "dashboardButton", "productsButton", "ordersButton", "categoriesButton",
+    "transfersButton", "accountsButton", "driversButton", "salesButton"
+].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
+    if (offersAdmin) offersAdmin.style.display = "none";
+}));
 
 
 
