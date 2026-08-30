@@ -196,10 +196,12 @@
         /* تخطيط سلة العملاء: منتجات واسعة مع ملخص ثابت بجانبها، دون تغيير سلة المندوب. */
         .cart-page-layout { display: block; }
         .customer-cart-summary { display: none; }
+        .customer-orders-link { display: none; }
         body.customer-cart { background: radial-gradient(circle at 88% 5%, #113b83 0, transparent 26%), radial-gradient(circle at 10% 70%, #0a2962 0, transparent 25%), #020d24; color: #eaf1ff; }
         body.customer-cart .header { width: min(1450px, calc(100% - 48px)); margin-top: 18px; padding: 12px 20px; border: 1px solid rgba(75,139,242,.55); border-radius: 25px; background: linear-gradient(125deg, rgba(8,27,67,.96), rgba(4,16,42,.9)); box-shadow: inset 0 1px rgba(255,255,255,.12), 0 12px 28px rgba(0,0,0,.24); }
         body.customer-cart .header h1 { color: #f5f8ff; }
         body.customer-cart .header p { color: #9eb1d5; }
+        body.customer-cart .customer-orders-link { display: inline-flex; align-items: center; margin-right: 0; padding: 9px 12px; border: 1px solid rgba(105,164,255,.42); border-radius: 11px; background: #0b2557; color: #9bc8ff; text-decoration: none; font-size: 11px; font-weight: 800; }
         body.customer-cart .back-button { background: #0b2557; color: #dce9ff; border: 1px solid rgba(105,164,255,.42); box-shadow: none; }
         body.customer-cart .header button[style] { border-color: rgba(105,164,255,.42) !important; background: #0b2557 !important; color: #9bc8ff !important; }
         body.customer-cart .content { width: min(1450px, calc(100% - 48px)); }
@@ -228,6 +230,7 @@
         body.customer-cart #checkoutDetails button { background: linear-gradient(135deg,#145bea,#548bff) !important; color: #fff !important; }
         body.customer-cart #locationText { background: rgba(6,25,55,.82) !important; color: #9eb1d5 !important; border: 1px solid rgba(113,161,245,.2); }
         body.customer-cart button[onclick="showPreviousOrders()"] { background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28) !important; color: #a9d1ff !important; box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
+        body.customer-cart #notifications, body.customer-cart button[onclick="showPreviousOrders()"], body.customer-cart #checkoutDetails, body.customer-cart #submitOrderButton, body.customer-cart #previousOrders { display: none !important; }
 
         @media (max-width: 600px) {
             .cart-controls input, .cart-controls select, .cart-clear-button { width: 100%; }
@@ -267,6 +270,8 @@
                 المنتجات التي اخترتها
             </p>
         </div>
+
+        <a class="customer-orders-link" href="customer-orders.html">📋 طلباتي السابقة</a>
 
         <button
             type="button"
@@ -555,14 +560,14 @@ function renderCustomerCartSummary(total, totalQuantity) {
             <div class="customer-summary-row customer-summary-total"><span>إجمالي الطلب</span><strong>${total.toFixed(2)} ر.س</strong></div>
         </div>
         <div class="customer-summary-actions">
-            <button type="button" onclick="scrollToCheckoutDetails()">🛒 متابعة تقديم الطلب</button>
+            <button type="button" onclick="continueCustomerCheckout()">🛒 متابعة تقديم الطلب</button>
             <button type="button" class="summary-clear-cart" onclick="clearCart()">إفراغ السلة</button>
         </div>`;
 }
 
-// ينقل العميل إلى النموذج الحالي لإكمال بياناته دون تجاوز شروط تقديم الطلب.
-function scrollToCheckoutDetails() {
-    document.getElementById("checkoutDetails")?.scrollIntoView({ behavior: "smooth", block: "start" });
+// يفتح صفحة بيانات العميل المنفصلة لإكمال الطلب دون إظهار نموذج المندوب داخل السلة.
+function continueCustomerCheckout() {
+    window.location.href = "customer-details.html";
 }
 
 // ينشئ بطاقة منتج عريضة لسلة العميل مع أزرار الكمية والحذف.
