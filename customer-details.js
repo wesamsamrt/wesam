@@ -56,6 +56,7 @@ function openCustomerMap() {
     document.body.appendChild(modal);
     const mapSearchInput = document.getElementById("mapSearchInput");
     const mapSearchResults = document.getElementById("mapSearchResults");
+    if (mapSearchResults) mapSearchResults.style.top = "96px";
     mapSearchInput?.addEventListener("input", () => {
         clearTimeout(mapSearchDelay);
         if (mapSearchInput.value.trim().length < 2) { if (mapSearchResults) mapSearchResults.innerHTML = ""; return; }
@@ -119,7 +120,7 @@ async function searchCustomerMap() {
             const country = String(place.properties?.country || "").toLowerCase();
             return !country || country.includes("saudi") || country.includes("arabia") || country.includes("السعود");
         });
-        if (!places.length) { results.innerHTML = '<div style="padding:10px;color:#4b5d79;font-size:12px">لم نجد نتيجة، جرّب اسمًا أو شارعًا آخر.</div>'; return; }
+        if (!places.length) { await searchCustomerMapFallback(query, input, results); return; }
         results.innerHTML = places.map((place, index) => {
             const props = place.properties || {};
             const label = [props.name, props.street, props.city || props.district, props.state, props.country].filter(Boolean).join("، ");
@@ -138,6 +139,29 @@ async function searchCustomerMap() {
         }));
     } catch (error) {
         console.error("Map search error:", error);
+        await searchCustomerMapFallback(query, input, results);
+    }
+}
+
+// يستخدم بحث OpenStreetMap كخطة احتياطية عندما لا تتاح خدمة Photon أو لا تعيد نتائج.
+async function searchCustomerMapFallback(query, input, results) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=sa&accept-language=ar&q=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error("FALLBACK_SEARCH_FAILED");
+        const places = await response.json();
+        if (!places.length) { results.innerHTML = '<div style="padding:10px;color:#4b5d79;font-size:12px">لم نجد هذا الموقع، جرّب كتابة اسم الحي أو الشارع.</div>'; return; }
+        results.innerHTML = places.map((place, index) => `<button type="button" data-fallback-place-index="${index}" style="display:block;width:100%;border:0;border-bottom:1px solid #edf0f5;padding:10px;background:#fff;color:#18233a;text-align:right;font-family:inherit;font-size:12px;cursor:pointer">${escapeMapHtml(place.display_name)}</button>`).join("");
+        results.querySelectorAll("[data-fallback-place-index]").forEach(button => button.addEventListener("click", () => {
+            const place = places[Number(button.dataset.fallbackPlaceIndex)];
+            customerLat = Number(place.lat); customerLng = Number(place.lon);
+            customerMap.setView([customerLat, customerLng], 16);
+            if (customerMarker) customerMarker.setLatLng([customerLat, customerLng]);
+            else customerMarker = L.marker([customerLat, customerLng]).addTo(customerMap);
+            input.value = place.display_name.split(",").slice(0, 2).join("، ");
+            results.innerHTML = "";
+        }));
+    } catch (error) {
+        console.error("Fallback map search error:", error);
         results.innerHTML = '<div style="padding:10px;color:#b33c4d;font-size:12px">تعذر البحث الآن، حدد النقطة مباشرة من الخريطة.</div>';
     }
 }
