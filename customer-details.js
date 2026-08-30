@@ -32,7 +32,7 @@ async function loadCustomerCheckout() {
     const { data: orders, error } = await supabaseClient.from("orders").select("*").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", checkoutWarehouse).order("id", { ascending: false }).limit(1);
     if (error || !orders?.length) { setCheckoutMessage("السلة فارغة، أضف منتجًا أولًا ثم أتمم البيانات."); document.getElementById("submitButton").disabled = true; return; }
     const order = orders[0];
-    const savedDetails = getSavedDeliveryDetails();
+    const savedDetails = { ...(user.user_metadata?.delivery_address || {}), ...getSavedDeliveryDetails() };
     const savedName = order.customer_name || user.user_metadata?.name || "";
     const nameParts = savedName.trim().split(/\s+/);
     document.getElementById("firstName").value = savedDetails.firstName || nameParts.shift() || "";
@@ -40,10 +40,12 @@ async function loadCustomerCheckout() {
     document.getElementById("deliveryRegion").value = checkoutWarehouse;
     document.getElementById("district").value = savedDetails.district || "";
     document.getElementById("street").value = savedDetails.street || "";
-    document.getElementById("customerPhone").value = order.customer_phone || user.user_metadata?.phone || "";
+    document.getElementById("customerPhone").value = order.customer_phone || savedDetails.phone || user.user_metadata?.phone || "";
     document.getElementById("additionalPhone").value = savedDetails.additionalPhone || "";
-    customerLat = Number.isFinite(Number(order.customer_lat)) ? Number(order.customer_lat) : null;
-    customerLng = Number.isFinite(Number(order.customer_lng)) ? Number(order.customer_lng) : null;
+    const savedLatitude = Number(savedDetails.latitude);
+    const savedLongitude = Number(savedDetails.longitude);
+    customerLat = order.customer_lat !== null && order.customer_lat !== undefined && Number.isFinite(Number(order.customer_lat)) ? Number(order.customer_lat) : (Number.isFinite(savedLatitude) ? savedLatitude : null);
+    customerLng = order.customer_lng !== null && order.customer_lng !== undefined && Number.isFinite(Number(order.customer_lng)) ? Number(order.customer_lng) : (Number.isFinite(savedLongitude) ? savedLongitude : null);
     updateLocationStatus();
 }
 
@@ -212,8 +214,11 @@ async function saveCustomerDeliveryDetails(event) {
         const location = `${addressSummary || region} • الموقع: ${customerLat.toFixed(6)},${customerLng.toFixed(6)}`;
         const { error: detailsError } = await supabaseClient.from("orders").update({ customer_name: name, customer_phone: phone, customer_location: location, customer_lat: customerLat, customer_lng: customerLng }).eq("id", order.id).eq("user_id", user.id);
         if (detailsError) throw detailsError;
+        const savedAddress = { firstName, lastName, region, district, street, phone, additionalPhone, latitude: customerLat, longitude: customerLng };
         localStorage.setItem("customer_delivery_address", addressSummary || `موقع محدد: ${customerLat.toFixed(5)}, ${customerLng.toFixed(5)}`);
-        localStorage.setItem("customer_delivery_details", JSON.stringify({ firstName, lastName, region, district, street, additionalPhone }));
+        localStorage.setItem("customer_delivery_details", JSON.stringify(savedAddress));
+        const { error: profileAddressError } = await supabaseClient.auth.updateUser({ data: { ...user.user_metadata, delivery_address: savedAddress } });
+        if (profileAddressError) console.warn("Could not save account delivery address:", profileAddressError);
         window.location.href = "orders.html";
     } catch (error) {
         console.error("Customer checkout error:", error);
