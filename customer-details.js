@@ -51,7 +51,7 @@ function openCustomerMap() {
     document.getElementById("customerMapModal")?.remove();
     const modal = document.createElement("div");
     modal.id = "customerMapModal";
-    modal.innerHTML = `<div style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.72)"><section style="width:min(620px,100%);height:80vh;overflow:hidden;border-radius:20px;background:#fff;display:flex;flex-direction:column"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px;color:#132140"><strong>📍 حدد موقع العميل</strong><button type="button" onclick="closeCustomerMap()" style="border:0;border-radius:10px;padding:7px 11px;cursor:pointer">✕</button></div><div style="position:relative;padding:0 13px 10px"><div style="display:flex;gap:7px"><input id="mapSearchInput" type="search" placeholder="ابحث عن حي أو شارع أو معلم" style="flex:1;min-width:0;height:42px;border:1px solid #cdd7e8;border-radius:9px;padding:0 10px;font-family:inherit;outline:none"><button type="button" onclick="searchCustomerMap()" style="border:0;border-radius:9px;padding:0 13px;background:#236ee8;color:#fff;font-family:inherit;font-weight:800;cursor:pointer">بحث</button></div><div id="mapSearchResults" style="position:absolute;right:13px;left:13px;top:52px;z-index:1000;max-height:135px;overflow:auto;border-radius:9px;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.2)"></div></div><div id="customerMap" style="flex:1"></div><div style="padding:13px"><button type="button" onclick="confirmCustomerLocation()" style="width:100%;min-height:48px;border:0;border-radius:12px;background:#236ee8;color:#fff;font-family:inherit;font-weight:800;cursor:pointer">تأكيد الموقع</button></div></section></div>`;
+    modal.innerHTML = `<div style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.72)"><section style="width:min(620px,100%);height:80vh;overflow:hidden;border-radius:20px;background:#fff;display:flex;flex-direction:column"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px;color:#132140"><strong>📍 حدد موقع العميل</strong><button type="button" onclick="closeCustomerMap()" style="border:0;border-radius:10px;padding:7px 11px;cursor:pointer">✕</button></div><div style="position:relative;padding:0 13px 10px"><div style="display:flex;gap:7px"><input id="mapSearchInput" type="search" placeholder="ابحث عن حي أو شارع أو معلم" style="flex:1;min-width:0;height:42px;border:1px solid #cdd7e8;border-radius:9px;padding:0 10px;font-family:inherit;outline:none"><button type="button" onclick="searchCustomerMap()" style="border:0;border-radius:9px;padding:0 13px;background:#236ee8;color:#fff;font-family:inherit;font-weight:800;cursor:pointer">بحث</button></div><button id="locateMeButton" type="button" onclick="locateCustomerOnMap()" style="width:100%;margin-top:8px;min-height:38px;border:1px solid #236ee8;border-radius:9px;background:#eff5ff;color:#1556be;font-family:inherit;font-weight:800;cursor:pointer">◎ تحديد موقعي الحالي</button><div id="mapLocateStatus" style="padding:5px 2px 0;color:#4b5d79;font-size:12px"></div><div id="mapSearchResults" style="position:absolute;right:13px;left:13px;top:52px;z-index:1000;max-height:135px;overflow:auto;border-radius:9px;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.2)"></div></div><div id="customerMap" style="flex:1"></div><div style="padding:13px"><button type="button" onclick="confirmCustomerLocation()" style="width:100%;min-height:48px;border:0;border-radius:12px;background:#236ee8;color:#fff;font-family:inherit;font-weight:800;cursor:pointer">تأكيد الموقع</button></div></section></div>`;
     document.body.appendChild(modal);
     setTimeout(() => {
         const startLat = customerLat ?? 24.7136;
@@ -65,6 +65,29 @@ function openCustomerMap() {
             else customerMarker = L.marker([customerLat, customerLng]).addTo(customerMap);
         });
     }, 100);
+}
+
+// يطلب إذن الموقع من الجهاز، ثم ينقل الخريطة والمؤشر إلى موقع العميل الحالي.
+function locateCustomerOnMap() {
+    const status = document.getElementById("mapLocateStatus");
+    const button = document.getElementById("locateMeButton");
+    if (!navigator.geolocation) { if (status) status.textContent = "جهازك لا يدعم تحديد الموقع."; return; }
+    if (!customerMap) return;
+    if (status) status.textContent = "جارٍ تحديد موقعك...";
+    if (button) button.disabled = true;
+    navigator.geolocation.getCurrentPosition((position) => {
+        customerLat = position.coords.latitude;
+        customerLng = position.coords.longitude;
+        customerMap.setView([customerLat, customerLng], 17);
+        if (customerMarker) customerMarker.setLatLng([customerLat, customerLng]);
+        else customerMarker = L.marker([customerLat, customerLng]).addTo(customerMap);
+        if (status) status.innerHTML = '<span style="color:#218653">✓ تم تحديد موقعك، حرّك المؤشر إذا أردت.</span>';
+        if (button) button.disabled = false;
+    }, (error) => {
+        const messages = { 1: "يرجى السماح للموقع باستخدام موقعك من إعدادات المتصفح.", 2: "تعذر معرفة موقعك حاليًا.", 3: "انتهت مهلة تحديد الموقع، حاول مرة أخرى." };
+        if (status) status.textContent = messages[error.code] || "تعذر تحديد موقعك.";
+        if (button) button.disabled = false;
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
 }
 
 // يبحث عبر Photon المجاني عن موقع أو شارع أو معلم داخل السعودية ويضع المؤشر على النتيجة.
