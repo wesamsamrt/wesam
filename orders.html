@@ -223,6 +223,7 @@
         body.customer-cart .customer-cart-item .quantity-controls button:last-child { background: #1367df; color: #fff; }
         body.customer-cart .customer-cart-item .quantity-controls strong { min-width: 30px; text-align: center; }
         .customer-summary-delivery { padding: 18px 20px; border-bottom: 1px solid rgba(113,161,245,.2); }.customer-summary-delivery strong { display: block; padding: 12px 14px; border-radius: 22px; background: rgba(27,75,150,.34); color: #dceaff; font-size: 13px; }.customer-summary-delivery p { margin-top: 13px; color: #7ce5a9; font-size: 13px; font-weight: 800; }.customer-summary-delivery small { display: block; margin-top: 5px; color: #9eb1d5; font-size: 11px; }
+        .customer-summary-address { margin: 14px 20px 0; padding: 13px; border: 1px solid rgba(113,161,245,.25); border-radius: 12px; background: rgba(6,25,55,.58); }.customer-summary-address span { display:block; color:#9eb1d5; font-size:11px; }.customer-summary-address strong { display:block; margin-top:5px; color:#eaf1ff; font-size:12px; }.customer-summary-address a { display:inline-block; margin-top:7px; color:#78b8ff; font-size:12px; font-weight:800; text-decoration:none; }
         .customer-summary-totals { padding: 15px 20px; }.customer-summary-row { display:flex; justify-content:space-between; gap:12px; margin:10px 0; color:#c8dbfa; font-size:13px; font-weight:700; }.customer-summary-row strong { font-size:17px; }.customer-summary-total { margin:14px -20px -15px; padding:17px 20px; border-top:1px solid rgba(113,161,245,.2); color:#76b6ff; font-size:20px; font-weight:800; }
         .customer-summary-actions { padding: 16px 20px; border-top: 1px solid rgba(113,161,245,.2); }.customer-summary-actions button { width:100%; min-height:48px; border:1px solid rgba(110,173,255,.58); border-radius:10px; background:linear-gradient(135deg,#145bea,#548bff); color:#fff; font-family:inherit; font-weight:800; font-size:15px; cursor:pointer; }.customer-summary-actions .summary-clear-cart { margin-top:9px; min-height:38px; background:rgba(240,72,99,.13); border-color:rgba(255,124,142,.25); color:#ffabb6; font-size:12px; }
         body.customer-cart .empty, body.customer-cart #checkoutDetails { color: #eaf1ff !important; background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28); box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
@@ -538,7 +539,7 @@ async function saveCartItemsTotal(order = cartOrder, items = cartItems) {
     return total;
 }
 
-// يعرض ملخص الطلب الجانبي المخصص للعميل، ويأخذه مباشرة إلى بيانات إتمام الطلب عند المتابعة.
+// يعرض ملخص الطلب الجانبي للعميل مع حالة عنوان الاستلام والمخزن المختار.
 function renderCustomerCartSummary(total, totalQuantity) {
     const summary = document.getElementById("customerCartSummary");
     if (!summary) return;
@@ -548,12 +549,15 @@ function renderCustomerCartSummary(total, totalQuantity) {
     }
 
     const warehouse = localStorage.getItem("customer_warehouse") || "المنطقة المختارة";
+    const hasSavedDelivery = Boolean(cartOrder?.customer_name && cartOrder?.customer_phone && cartOrder?.customer_lat !== null && cartOrder?.customer_lat !== undefined && cartOrder?.customer_lng !== null && cartOrder?.customer_lng !== undefined);
+    const savedAddress = localStorage.getItem("customer_delivery_address") || (hasSavedDelivery ? `موقع محدد: ${Number(cartOrder.customer_lat).toFixed(5)}, ${Number(cartOrder.customer_lng).toFixed(5)}` : "");
     summary.innerHTML = `
         <div class="customer-summary-delivery">
-            <strong>📍 التوصيل من: ${escapeCartHtml(warehouse)}</strong>
+            <strong>📍 التوصيل من مخزن ${escapeCartHtml(warehouse)}</strong>
             <p>🚚 تجهيز سريع للطلب</p>
-            <small>سيتم تأكيد بيانات العميل والتوصيل قبل تقديم الطلب.</small>
+            <small>سيصل طلبك إلى المخزن المرتبط بالمنطقة المختارة.</small>
         </div>
+        <div class="customer-summary-address"><span>التوصيل إلى الموقع الحالي</span>${hasSavedDelivery ? `<strong>📍 ${escapeCartHtml(savedAddress)}</strong><a href="customer-details.html">تغيير عنوان الاستلام</a>` : '<a href="customer-details.html">📍 سجل عنوان الاستلام</a>'}</div>
         <div class="customer-summary-totals">
             <div class="customer-summary-row"><span>عدد القطع</span><strong>${totalQuantity}</strong></div>
             <div class="customer-summary-row"><span>الإجمالي الفرعي</span><strong>${total.toFixed(2)} ر.س</strong></div>
@@ -565,9 +569,43 @@ function renderCustomerCartSummary(total, totalQuantity) {
         </div>`;
 }
 
-// يفتح صفحة بيانات العميل المنفصلة لإكمال الطلب دون إظهار نموذج المندوب داخل السلة.
-function continueCustomerCheckout() {
-    window.location.href = "customer-details.html";
+// يتحقق من عنوان العميل المحفوظ ثم يقدّم السلة مباشرة إلى مخزن المنطقة المختارة.
+async function continueCustomerCheckout() {
+    const hasSavedDelivery = Boolean(cartOrder?.customer_name && cartOrder?.customer_phone && cartOrder?.customer_lat !== null && cartOrder?.customer_lat !== undefined && cartOrder?.customer_lng !== null && cartOrder?.customer_lng !== undefined);
+    if (!hasSavedDelivery) {
+        alert("الرجاء تسجيل عنوان التوصيل أولًا.");
+        window.location.href = "customer-details.html";
+        return;
+    }
+
+    const button = document.querySelector(".customer-summary-actions button");
+    if (button) { button.disabled = true; button.textContent = "جاري تقديم الطلب..."; }
+    try {
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+        if (userError || !user) throw new Error("يجب تسجيل الدخول أولًا.");
+        const warehouse = localStorage.getItem("customer_warehouse") || "";
+        const { data: orders, error: orderError } = await supabaseClient.from("orders").select("id, customer_name, customer_location, customer_lat, customer_lng").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", warehouse).order("id", { ascending: false }).limit(1);
+        if (orderError || !orders?.length) throw new Error("السلة فارغة أو لم تعد متاحة.");
+        const order = orders[0];
+        const { error: submitError } = await supabaseClient.rpc("submit_customer_order", {
+            p_order_id: order.id,
+            p_driver_number: null,
+            p_driver_name: null,
+            p_customer_name: order.customer_name,
+            p_customer_location: order.customer_location,
+            p_customer_lat: order.customer_lat,
+            p_customer_lng: order.customer_lng,
+            p_warehouse: warehouse
+        });
+        if (submitError) throw submitError;
+        localStorage.removeItem("customer_delivery_address");
+        alert("تم تقديم الطلب بنجاح ✅");
+        window.location.href = "customer-orders.html";
+    } catch (error) {
+        console.error("Customer cart submit error:", error);
+        alert("تعذر تقديم الطلب: " + (error.message || "حاول مرة أخرى."));
+        if (button) { button.disabled = false; button.textContent = "🛒 متابعة تقديم الطلب"; }
+    }
 }
 
 // ينشئ بطاقة منتج عريضة لسلة العميل مع أزرار الكمية والحذف.

@@ -40,16 +40,29 @@ begin
         raise exception 'منطقة السلة لا تطابق منطقة التسوق الحالية';
     end if;
 
-    select * into verified_driver
-    from public.drivers
-    where driver_number::text = trim(p_driver_number)
-    limit 1;
-
-    if not found then
-        raise exception 'رقم المندوب غير صحيح';
+    if nullif(trim(coalesce(p_customer_name, '')), '') is null then
+        raise exception 'يجب كتابة اسم العميل';
     end if;
-    if verified_driver.warehouse <> p_warehouse then
-        raise exception 'المندوب تابع لمنطقة مختلفة؛ الرجاء تغيير منطقتك أو اختيار مندوب مناسب';
+    if selected_order.customer_phone is null or trim(selected_order.customer_phone) = '' then
+        raise exception 'يجب كتابة رقم جوال العميل';
+    end if;
+    if p_customer_lat is null or p_customer_lng is null then
+        raise exception 'يجب تحديد عنوان العميل من الخريطة';
+    end if;
+
+    -- رقم المندوب اختياري لطلبات العملاء، وإلزامي فقط عندما ترسله واجهة المندوب.
+    if nullif(trim(coalesce(p_driver_number, '')), '') is not null then
+        select * into verified_driver
+        from public.drivers
+        where driver_number::text = trim(p_driver_number)
+        limit 1;
+
+        if not found then
+            raise exception 'رقم المندوب غير صحيح';
+        end if;
+        if verified_driver.warehouse <> p_warehouse then
+            raise exception 'المندوب تابع لمنطقة مختلفة؛ الرجاء تغيير منطقتك أو اختيار مندوب مناسب';
+        end if;
     end if;
 
     for order_item in
@@ -70,8 +83,8 @@ begin
 
     update public.orders
     set status = 'مقدم',
-        driver_number = verified_driver.driver_number,
-        driver_name = coalesce(nullif(trim(p_driver_name), ''), verified_driver.name),
+        driver_number = case when nullif(trim(coalesce(p_driver_number, '')), '') is null then null else verified_driver.driver_number end,
+        driver_name = case when nullif(trim(coalesce(p_driver_number, '')), '') is null then null else coalesce(nullif(trim(p_driver_name), ''), verified_driver.name) end,
         customer_name = p_customer_name,
         customer_location = p_customer_location,
         customer_lat = p_customer_lat,

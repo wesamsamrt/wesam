@@ -68,40 +68,33 @@ function updateLocationStatus() {
     status.innerHTML = customerLat === null || customerLng === null ? "لم يتم تحديد الموقع بعد" : `<strong style="color:#7ce5a9">✅ تم تحديد موقع العميل</strong><br>${customerLat.toFixed(6)}, ${customerLng.toFixed(6)}`;
 }
 
-// يتحقق من بيانات العميل والمندوب ويقدم السلة باستخدام الإجراء الآمن لخصم المخزون.
-async function submitCustomerCheckout(event) {
+// يحفظ بيانات وعنوان الاستلام في السلة الحالية قبل العودة إلى صفحة العميل.
+async function saveCustomerDeliveryDetails(event) {
     event.preventDefault();
     const name = document.getElementById("customerName").value.trim();
     const phone = document.getElementById("customerPhone").value.trim();
-    const driverNumber = document.getElementById("driverNumber").value.trim();
     if (!name || !phone || customerLat === null || customerLng === null) { setCheckoutMessage("أدخل اسم العميل ورقم جواله وحدد موقعه من الخريطة أولًا."); return; }
     if (!/^0?5\d{8}$/.test(phone.replace(/\s|-/g, ""))) { setCheckoutMessage("اكتب رقم جوال سعودي صحيحًا."); return; }
-    if (!driverNumber) { setCheckoutMessage("اكتب رقم المندوب أولًا."); return; }
     const button = document.getElementById("submitButton");
-    button.disabled = true; button.textContent = "جاري تقديم الطلب..."; setCheckoutMessage("", false);
+    button.disabled = true; button.textContent = "جاري حفظ العنوان..."; setCheckoutMessage("", false);
     try {
         const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
         if (userError || !user) throw new Error("يجب تسجيل الدخول أولًا.");
-        const { data: driver, error: driverError } = await supabaseClient.from("drivers").select("driver_number, name, warehouse").eq("driver_number", driverNumber).maybeSingle();
-        if (driverError || !driver) throw new Error("رقم المندوب غير صحيح.");
-        if ((driver.warehouse || "الرياض") !== checkoutWarehouse) throw new Error(`هذا المندوب تابع لمخزن ${driver.warehouse || "الرياض"}. غيّر المنطقة أو اختر مندوبًا مناسبًا.`);
         const { data: orders, error: orderError } = await supabaseClient.from("orders").select("id").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", checkoutWarehouse).order("id", { ascending: false }).limit(1);
         if (orderError || !orders?.length) throw new Error("لم يتم العثور على سلة قابلة للتقديم.");
         const order = orders[0];
         const location = `${customerLat},${customerLng}`;
         const { error: detailsError } = await supabaseClient.from("orders").update({ customer_name: name, customer_phone: phone, customer_location: location, customer_lat: customerLat, customer_lng: customerLng }).eq("id", order.id).eq("user_id", user.id);
         if (detailsError) throw detailsError;
-        const { error: submitError } = await supabaseClient.rpc("submit_customer_order", { p_order_id: order.id, p_driver_number: driver.driver_number, p_driver_name: driver.name, p_customer_name: name, p_customer_location: location, p_customer_lat: customerLat, p_customer_lng: customerLng, p_warehouse: checkoutWarehouse });
-        if (submitError) throw submitError;
-        alert("تم تقديم الطلب بنجاح ✅");
-        window.location.href = "customer-orders.html";
+        localStorage.setItem("customer_delivery_address", `موقع محدد: ${customerLat.toFixed(5)}, ${customerLng.toFixed(5)}`);
+        window.location.href = "orders.html";
     } catch (error) {
         console.error("Customer checkout error:", error);
-        setCheckoutMessage(error.message || "تعذر تقديم الطلب، حاول مرة أخرى.");
+        setCheckoutMessage(error.message || "تعذر حفظ عنوان الاستلام، حاول مرة أخرى.");
     } finally {
-        button.disabled = false; button.textContent = "تقديم الطلب";
+        button.disabled = false; button.textContent = "حفظ عنوان الاستلام";
     }
 }
 
-document.getElementById("customerDetailsForm").addEventListener("submit", submitCustomerCheckout);
+document.getElementById("customerDetailsForm").addEventListener("submit", saveCustomerDeliveryDetails);
 loadCustomerCheckout();

@@ -20,15 +20,13 @@
         <header class="top"><a class="back" href="orders.html">← العودة للسلة</a><img src="logo.png" alt="WESAM SMART"></header>
         <section class="panel">
             <h1>بيانات العميل</h1>
-            <p class="intro">أكمل هذه البيانات لتقديم طلبك. لن يتم إرسال الطلب إلا بعد إدخال الاسم ورقم الجوال وتحديد الموقع.</p>
+            <p class="intro">احفظ بيانات الاستلام أولًا. بعد الحفظ ستعود إلى السلة، ومنها يمكنك تقديم الطلب مباشرة.</p>
             <form id="customerDetailsForm">
                 <div class="field"><label for="customerName">👤 اسم العميل</label><input id="customerName" required autocomplete="name" placeholder="اكتب اسم العميل"></div>
                 <div class="field"><label for="customerPhone">📱 رقم جوال العميل</label><input id="customerPhone" required inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx"></div>
-                <div class="field"><label for="driverNumber">🚚 رقم المندوب</label><input id="driverNumber" required inputmode="numeric" placeholder="اكتب رقم المندوب"></div>
-                <p class="driver-note">يستخدم رقم المندوب لربط الطلب بالمخزن والمنطقة الصحيحة.</p>
                 <div class="field"><label>📍 عنوان العميل</label><button type="button" class="location-button" onclick="openCustomerMap()">تحديد الموقع من الخريطة</button><div id="locationStatus" class="location-status">لم يتم تحديد الموقع بعد</div></div>
                 <div id="formMessage" class="message" aria-live="polite"></div>
-                <button id="submitButton" class="submit" type="submit">تقديم الطلب</button>
+                <button id="submitButton" class="submit" type="submit">حفظ عنوان الاستلام</button>
             </form>
         </section>
     </main>
