@@ -93,7 +93,7 @@ function renderProductDetails(warehouse) {
                 ${companies.length ? `<span class="option-label">الماركة</span><div class="option-chips" id="detailCompanies">${companies.map(company => `<button type="button" class="option-chip" data-company="${escapeDetailHtml(company)}">${escapeDetailHtml(company)}</button>`).join("")}</div>` : ""}
                 <span class="option-label">الموديل</span>
                 <div class="option-chips" id="detailModels"><span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span></div>
-                <span class="option-label">اختر اللون</span>
+                <span class="option-label" id="detailColorLabel">اختر اللون</span>
                 <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
         </section>
@@ -174,6 +174,7 @@ function renderDetailModels() {
 // يعرض الألوان المتاحة أفقيًا ويتيح للعميل اختيار لون واحد فقط لكل إضافة إلى السلة.
 function renderDetailColors() {
     const container = document.getElementById("detailColors");
+    const colorLabel = document.getElementById("detailColorLabel");
     if (!container) return;
     const hasModels = detailVariants.some(item => String(item.model || "").trim());
     if (hasModels && !selectedModel) {
@@ -198,6 +199,18 @@ function renderDetailColors() {
         return;
     }
 
+    const hasOnlyNoColor = colors.size === 1 && colors.has("بدون لون");
+    if (hasOnlyNoColor) {
+        const available = [...colors.values()][0].reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
+        selectedColor = "بدون لون";
+        selectedQuantity = Math.max(1, Math.min(available, selectedQuantity || 1));
+        container.innerHTML = "";
+        if (colorLabel) colorLabel.style.display = "none";
+        renderDetailPurchaseQuantity(available);
+        return;
+    }
+
+    if (colorLabel) colorLabel.style.display = "block";
     container.innerHTML = [...colors.entries()].map(([color, products]) => {
         const available = products.reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
         return `<button type="button" class="detail-color-choice ${color === selectedColor ? "active" : ""}" data-color="${escapeDetailHtml(color)}" data-available="${available}">
@@ -215,12 +228,7 @@ function renderDetailColors() {
         });
     });
 
-    if (colors.size === 1 && colors.has("بدون لون")) {
-        const onlyColor = container.querySelector(".detail-color-choice");
-        onlyColor?.click();
-    } else {
-        renderDetailPurchaseQuantity(0);
-    }
+    renderDetailPurchaseQuantity(0);
 }
 
 // يرسم متحكم الكمية الواحد فوق زر الإضافة وفق اللون المختار والكمية المتوفرة له.
@@ -234,7 +242,8 @@ function renderDetailPurchaseQuantity(available) {
     }
 
     selectedQuantity = Math.max(1, Math.min(safeAvailable, Number(selectedQuantity || 1)));
-    container.innerHTML = `<span>الكمية (${escapeDetailHtml(selectedColor)})</span><div class="detail-quantity">
+    const quantityLabel = selectedColor === "بدون لون" ? "الكمية" : `الكمية (${escapeDetailHtml(selectedColor)})`;
+    container.innerHTML = `<span>${quantityLabel}</span><div class="detail-quantity">
         <button type="button" data-detail-adjust="-1" aria-label="تقليل الكمية">−</button>
         <input id="detailSelectedQuantity" type="number" min="1" max="${safeAvailable}" value="${selectedQuantity}" inputmode="numeric" aria-label="الكمية">
         <button type="button" data-detail-adjust="1" aria-label="زيادة الكمية">+</button>
