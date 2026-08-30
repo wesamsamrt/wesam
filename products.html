@@ -68,6 +68,7 @@
         body.driver-classic-theme .customer-warehouse-dialog h1, body.driver-classic-theme .customer-warehouse-option { color:#171827; }
         body.driver-classic-theme .customer-warehouse-dialog > p, body.driver-classic-theme .customer-warehouse-option span { color:#858796; }
         body.driver-classic-theme .customer-warehouse-option { border-color:#e1dffc; background:#faf9ff; }
+        .products-loading-screen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#020d24;transition:opacity .35s ease,visibility .35s ease}.products-loading-screen.is-hidden{opacity:0;visibility:hidden;pointer-events:none}.products-loading-screen video{width:min(560px,90vw);max-height:80vh;object-fit:contain;border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
         @media (max-width:700px) { body.driver-classic-theme .products { grid-template-columns:repeat(2,1fr); } }
     </style>
 
@@ -82,6 +83,10 @@
 
 
 <body>
+
+    <div class="products-loading-screen" id="productsLoadingScreen" aria-label="جاري تحميل المنتجات">
+        <video autoplay muted loop playsinline preload="auto"><source src="products-loading.mp4" type="video/mp4"></video>
+    </div>
 
     <div class="customer-warehouse-modal" id="customerWarehouseModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="customerWarehouseTitle">
         <div class="customer-warehouse-dialog">
@@ -220,7 +225,7 @@
 
     <!-- JavaScript -->
 
-    <script src="products.js?v=20260829-static-brand-carousel"></script>
+    <script src="products.js?v=20260830-video-loader"></script>
 
 
 

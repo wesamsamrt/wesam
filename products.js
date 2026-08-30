@@ -241,15 +241,23 @@ async function getOpenOrder(user) {
    تحميل المنتجات
 ========================================================= */
 
+// يظهر أو يخفي مقطع التحميل حتى لا تظهر رسالة نصية عند بطء الإنترنت.
+function setProductsLoadingScreen(visible) {
+    document.getElementById("productsLoadingScreen")?.classList.toggle("is-hidden", !visible);
+}
+
 async function loadProducts() {
 
     const container = document.getElementById("products");
 
     if (!container) return;
 
+    setProductsLoadingScreen(true);
+
     await resolveCustomerWarehouseAccess();
 
     if (!customerWarehouse) {
+        setProductsLoadingScreen(false);
         container.innerHTML = '<div class="loading">اختر منطقتك لعرض المنتجات المتاحة.</div>';
         showCustomerWarehouseSelection();
         return;
@@ -301,6 +309,8 @@ while (true) {
             </div>
         `;
 
+        setProductsLoadingScreen(false);
+
         return;
     }
 
@@ -325,6 +335,7 @@ allProducts = allData.filter(product =>
 console.log("عدد المنتجات المحملة كامل:", allProducts.length);
 
 renderProducts(allProducts);
+setProductsLoadingScreen(false);
 setupFilters();
 
     // يعيد فتح نافذة الاختيار عند الرجوع من صفحة تفاصيل المنتج لإكمال الإضافة للسلة.
