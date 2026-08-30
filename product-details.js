@@ -87,13 +87,13 @@ function renderProductDetails(warehouse) {
             <h1 class="detail-title">${escapeDetailHtml(productName)}</h1>
             <div class="detail-code">كود المنتج: ${escapeDetailHtml(product.product_code || "غير محدد")}</div>
             <div class="detail-price">${Number(product.price || 0).toFixed(2)} <small>ر.س</small></div>
-            <div class="detail-summary">${escapeDetailHtml(description)}<br>اختر الماركة والموديل المناسبين، ثم اختر لونًا واحدًا وحدد كميته.</div>
+            <div class="detail-summary">${escapeDetailHtml(description)}<br>اختر الماركة والموديل المناسبين، ثم اختر اللون وحدد الكمية.</div>
             <div class="detail-options">
                 <h2>اختيار المواصفات</h2>
                 ${companies.length ? `<span class="option-label">الماركة</span><div class="option-chips" id="detailCompanies">${companies.map(company => `<button type="button" class="option-chip" data-company="${escapeDetailHtml(company)}">${escapeDetailHtml(company)}</button>`).join("")}</div>` : ""}
                 <span class="option-label">الموديل</span>
                 <div class="option-chips" id="detailModels"><span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span></div>
-                <span class="option-label">اختر لونًا واحدًا</span>
+                <span class="option-label">اختر اللون</span>
                 <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
         </section>
@@ -264,7 +264,7 @@ function updateDetailStock() {
 async function addDetailSelectionsToCart() {
     const button = document.getElementById("detailChooseButton");
     if (!selectedColor || !selectedQuantity) {
-        alert("اختر لونًا واحدًا وحدد كميته أولًا.");
+        alert("اختر اللون وحدد الكمية أولًا.");
         return;
     }
 

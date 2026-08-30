@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 
-    <title>الطلبات</title>
+    <title>السلة</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
@@ -196,31 +196,38 @@
         /* تخطيط سلة العملاء: منتجات واسعة مع ملخص ثابت بجانبها، دون تغيير سلة المندوب. */
         .cart-page-layout { display: block; }
         .customer-cart-summary { display: none; }
-        body.customer-cart { background: #f6f7fa; }
-        body.customer-cart .header { width: min(1450px, calc(100% - 48px)); }
+        body.customer-cart { background: radial-gradient(circle at 88% 5%, #113b83 0, transparent 26%), radial-gradient(circle at 10% 70%, #0a2962 0, transparent 25%), #020d24; color: #eaf1ff; }
+        body.customer-cart .header { width: min(1450px, calc(100% - 48px)); margin-top: 18px; padding: 12px 20px; border: 1px solid rgba(75,139,242,.55); border-radius: 25px; background: linear-gradient(125deg, rgba(8,27,67,.96), rgba(4,16,42,.9)); box-shadow: inset 0 1px rgba(255,255,255,.12), 0 12px 28px rgba(0,0,0,.24); }
+        body.customer-cart .header h1 { color: #f5f8ff; }
+        body.customer-cart .header p { color: #9eb1d5; }
+        body.customer-cart .back-button { background: #0b2557; color: #dce9ff; border: 1px solid rgba(105,164,255,.42); box-shadow: none; }
+        body.customer-cart .header button[style] { border-color: rgba(105,164,255,.42) !important; background: #0b2557 !important; color: #9bc8ff !important; }
         body.customer-cart .content { width: min(1450px, calc(100% - 48px)); }
         body.customer-cart .cart-page-layout { display: grid; grid-template-columns: minmax(0, 1fr) 385px; align-items: start; gap: 20px; direction: ltr; }
         body.customer-cart .cart-items-column, body.customer-cart .customer-cart-summary { direction: rtl; }
-        body.customer-cart .customer-cart-summary { display: block; position: sticky; top: 18px; overflow: hidden; border: 1px solid #e5e7ee; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(23,33,58,.08); }
+        body.customer-cart .customer-cart-summary { display: block; position: sticky; top: 18px; overflow: hidden; border: 1px solid rgba(105,164,255,.32); border-radius: 18px; background: linear-gradient(145deg, rgba(15,43,91,.94), rgba(5,19,49,.98)); box-shadow: 0 18px 38px rgba(0,0,0,.25), inset 0 1px rgba(255,255,255,.07); }
         body.customer-cart .cart-tools { display: none !important; }
         body.customer-cart .orders { gap: 14px; }
-        body.customer-cart .order-card.customer-cart-item { min-height: 150px; padding: 16px; border: 1px solid #e1e4eb; border-radius: 14px; box-shadow: 0 3px 8px rgba(23,33,58,.12); align-items: flex-start; }
+        body.customer-cart .order-card.customer-cart-item { min-height: 150px; padding: 16px; border: 1px solid rgba(105,164,255,.28); border-radius: 16px; background: linear-gradient(145deg, rgba(13,42,91,.92), rgba(5,20,52,.96)); box-shadow: 0 14px 30px rgba(0,0,0,.22); align-items: flex-start; }
         body.customer-cart .customer-cart-item .order-image { width: 96px; height: 96px; border-radius: 10px; background: #fff; }
         body.customer-cart .customer-cart-item .order-image img { object-fit: contain; }
         body.customer-cart .customer-cart-item .order-info h3 { font-size: 14px; margin-bottom: 4px; }
-        body.customer-cart .customer-cart-item .order-info p { display: inline; padding: 2px 6px; border: 1px solid #e0e3ea; border-radius: 5px; color: #65708a; font-size: 10px; }
-        body.customer-cart .customer-cart-item .price { color: #e10019; font-size: 15px; }
-        body.customer-cart .customer-cart-item .delete-button { order: 3; margin-right: auto; background: #f4f5f7; color: #536178; }
+        body.customer-cart .customer-cart-item .order-info h3 { color: #f4f8ff; }
+        body.customer-cart .customer-cart-item .order-info p { display: inline; padding: 2px 6px; border: 1px solid rgba(126,177,255,.28); border-radius: 5px; color: #a9c3ec; font-size: 10px; }
+        body.customer-cart .customer-cart-item .price { color: #71b1ff; font-size: 15px; }
+        body.customer-cart .customer-cart-item .delete-button { order: 3; margin-right: auto; background: rgba(240,72,99,.14); color: #ff90a1; }
         body.customer-cart .customer-cart-item .quantity-controls { display: flex; align-items: center; gap: 7px; margin: auto 0 0; }
         body.customer-cart .customer-cart-item .quantity-controls button { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f0f1f3; color: #18233a; font-size: 23px; cursor: pointer; }
         body.customer-cart .customer-cart-item .quantity-controls button:last-child { background: #1367df; color: #fff; }
         body.customer-cart .customer-cart-item .quantity-controls strong { min-width: 30px; text-align: center; }
-        .customer-summary-delivery { padding: 18px 20px; border-bottom: 1px solid #e5e7ee; }
-        .customer-summary-delivery strong { display: block; padding: 12px 14px; border-radius: 22px; background: #edf0f4; color: #263956; font-size: 13px; }
-        .customer-summary-delivery p { margin-top: 13px; color: #159a52; font-size: 13px; font-weight: 800; }
-        .customer-summary-delivery small { display: block; margin-top: 5px; color: #68748a; font-size: 11px; }
-        .customer-summary-totals { padding: 15px 20px; }.customer-summary-row { display:flex; justify-content:space-between; gap:12px; margin:10px 0; color:#344460; font-size:13px; font-weight:700; }.customer-summary-row strong { font-size:17px; }.customer-summary-total { margin:14px -20px -15px; padding:17px 20px; border-top:1px solid #e5e7ee; color:#db0017; font-size:20px; font-weight:800; }
-        .customer-summary-actions { padding: 16px 20px; border-top: 1px solid #e5e7ee; }.customer-summary-actions button { width:100%; min-height:48px; border:0; border-radius:8px; background:#e60012; color:#fff; font-family:inherit; font-weight:800; font-size:15px; cursor:pointer; }.customer-summary-actions .summary-clear-cart { margin-top:9px; min-height:38px; background:#f4f5f7; color:#d30016; font-size:12px; }
+        .customer-summary-delivery { padding: 18px 20px; border-bottom: 1px solid rgba(113,161,245,.2); }.customer-summary-delivery strong { display: block; padding: 12px 14px; border-radius: 22px; background: rgba(27,75,150,.34); color: #dceaff; font-size: 13px; }.customer-summary-delivery p { margin-top: 13px; color: #7ce5a9; font-size: 13px; font-weight: 800; }.customer-summary-delivery small { display: block; margin-top: 5px; color: #9eb1d5; font-size: 11px; }
+        .customer-summary-totals { padding: 15px 20px; }.customer-summary-row { display:flex; justify-content:space-between; gap:12px; margin:10px 0; color:#c8dbfa; font-size:13px; font-weight:700; }.customer-summary-row strong { font-size:17px; }.customer-summary-total { margin:14px -20px -15px; padding:17px 20px; border-top:1px solid rgba(113,161,245,.2); color:#76b6ff; font-size:20px; font-weight:800; }
+        .customer-summary-actions { padding: 16px 20px; border-top: 1px solid rgba(113,161,245,.2); }.customer-summary-actions button { width:100%; min-height:48px; border:1px solid rgba(110,173,255,.58); border-radius:10px; background:linear-gradient(135deg,#145bea,#548bff); color:#fff; font-family:inherit; font-weight:800; font-size:15px; cursor:pointer; }.customer-summary-actions .summary-clear-cart { margin-top:9px; min-height:38px; background:rgba(240,72,99,.13); border-color:rgba(255,124,142,.25); color:#ffabb6; font-size:12px; }
+        body.customer-cart .empty, body.customer-cart #checkoutDetails { color: #eaf1ff !important; background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28); box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
+        body.customer-cart #checkoutDetails input { color: #eef5ff !important; border-color: rgba(113,161,245,.3) !important; background: #061937 !important; }
+        body.customer-cart #checkoutDetails button { background: linear-gradient(135deg,#145bea,#548bff) !important; color: #fff !important; }
+        body.customer-cart #locationText { background: rgba(6,25,55,.82) !important; color: #9eb1d5 !important; border: 1px solid rgba(113,161,245,.2); }
+        body.customer-cart button[onclick="showPreviousOrders()"] { background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28) !important; color: #a9d1ff !important; box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
 
         @media (max-width: 600px) {
             .cart-controls input, .cart-controls select, .cart-clear-button { width: 100%; }
@@ -254,7 +261,7 @@
         </button>
 
         <div>
-            <h1>🛍️ الطلبات</h1>
+            <h1>🛍️ السلة</h1>
 
             <p>
                 المنتجات التي اخترتها
