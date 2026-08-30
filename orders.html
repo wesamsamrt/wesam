@@ -232,6 +232,7 @@
         body.customer-cart #locationText { background: rgba(6,25,55,.82) !important; color: #9eb1d5 !important; border: 1px solid rgba(113,161,245,.2); }
         body.customer-cart button[onclick="showPreviousOrders()"] { background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28) !important; color: #a9d1ff !important; box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
         body.customer-cart #notifications, body.customer-cart button[onclick="showPreviousOrders()"], body.customer-cart #checkoutDetails, body.customer-cart #submitOrderButton, body.customer-cart #previousOrders { display: none !important; }
+        body.driver-cart #driverLocationSection { display: none; }
 
         @media (max-width: 600px) {
             .cart-controls input, .cart-controls select, .cart-clear-button { width: 100%; }
@@ -426,6 +427,7 @@
     ></p>
 
 
+    <div id="driverLocationSection">
     <!-- موقع العميل -->
 
     <label
@@ -472,6 +474,7 @@
         "
     >
         لم يتم تحديد الموقع
+    </div>
     </div>
 
 </div>
@@ -716,6 +719,7 @@ async function fillLinkedDriverNumber() {
     const { data: identity, error } = await supabaseClient.rpc("get_my_driver_identity");
     isLinkedDriverCart = Boolean(!error && identity?.is_driver);
     document.body.classList.toggle("customer-cart", !isLinkedDriverCart);
+    document.body.classList.toggle("driver-cart", isLinkedDriverCart);
     if (!isLinkedDriverCart) return;
     driverInput.value = identity.driver_number || "";
     driverInput.readOnly = true;

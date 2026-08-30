@@ -43,10 +43,13 @@ begin
     if nullif(trim(coalesce(p_customer_name, '')), '') is null then
         raise exception 'يجب كتابة اسم العميل';
     end if;
-    if selected_order.customer_phone is null or trim(selected_order.customer_phone) = '' then
+    if nullif(trim(coalesce(p_driver_number, '')), '') is null
+       and (selected_order.customer_phone is null or trim(selected_order.customer_phone) = '') then
         raise exception 'يجب كتابة رقم جوال العميل';
     end if;
-    if p_customer_lat is null or p_customer_lng is null then
+    -- عنوان الخريطة إلزامي للعميل العادي فقط؛ طلب المندوب لا يحتاجه.
+    if nullif(trim(coalesce(p_driver_number, '')), '') is null
+       and (p_customer_lat is null or p_customer_lng is null) then
         raise exception 'يجب تحديد عنوان العميل من الخريطة';
     end if;
 
