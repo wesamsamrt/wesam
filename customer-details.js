@@ -67,7 +67,7 @@ function openCustomerMap() {
     }, 100);
 }
 
-// يبحث في خرائط OpenStreetMap عن موقع أو شارع أو معلم داخل السعودية ويضع المؤشر على النتيجة.
+// يبحث عبر Photon المجاني عن موقع أو شارع أو معلم داخل السعودية ويضع المؤشر على النتيجة.
 async function searchCustomerMap() {
     const input = document.getElementById("mapSearchInput");
     const results = document.getElementById("mapSearchResults");
@@ -75,18 +75,29 @@ async function searchCustomerMap() {
     if (!query || !results || !customerMap) return;
     results.innerHTML = '<div style="padding:10px;color:#4b5d79;font-size:12px">جاري البحث...</div>';
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=sa&accept-language=ar&q=${encodeURIComponent(query)}`);
+        const response = await fetch(`https://photon.komoot.io/api/?limit=5&lang=ar&lat=24.7136&lon=46.6753&q=${encodeURIComponent(query)}`);
         if (!response.ok) throw new Error("SEARCH_FAILED");
-        const places = await response.json();
+        const payload = await response.json();
+        const places = (payload.features || []).filter((place) => {
+            const country = String(place.properties?.country || "").toLowerCase();
+            return !country || country.includes("saudi") || country.includes("arabia") || country.includes("السعود");
+        });
         if (!places.length) { results.innerHTML = '<div style="padding:10px;color:#4b5d79;font-size:12px">لم نجد نتيجة، جرّب اسمًا أو شارعًا آخر.</div>'; return; }
-        results.innerHTML = places.map((place, index) => `<button type="button" data-place-index="${index}" style="display:block;width:100%;border:0;border-bottom:1px solid #edf0f5;padding:10px;background:#fff;color:#18233a;text-align:right;font-family:inherit;font-size:12px;cursor:pointer">${escapeMapHtml(place.display_name)}</button>`).join("");
+        results.innerHTML = places.map((place, index) => {
+            const props = place.properties || {};
+            const label = [props.name, props.street, props.city || props.district, props.state, props.country].filter(Boolean).join("، ");
+            return `<button type="button" data-place-index="${index}" style="display:block;width:100%;border:0;border-bottom:1px solid #edf0f5;padding:10px;background:#fff;color:#18233a;text-align:right;font-family:inherit;font-size:12px;cursor:pointer">${escapeMapHtml(label || "نتيجة على الخريطة")}</button>`;
+        }).join("");
         results.querySelectorAll("[data-place-index]").forEach(button => button.addEventListener("click", () => {
             const place = places[Number(button.dataset.placeIndex)];
-            customerLat = Number(place.lat); customerLng = Number(place.lon);
+            const [lng, lat] = place.geometry?.coordinates || [];
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            customerLat = lat; customerLng = lng;
             customerMap.setView([customerLat, customerLng], 16);
             if (customerMarker) customerMarker.setLatLng([customerLat, customerLng]);
             else customerMarker = L.marker([customerLat, customerLng]).addTo(customerMap);
             results.innerHTML = "";
+            input.value = place.properties?.name || place.properties?.street || "الموقع المختار";
         }));
     } catch (error) {
         console.error("Map search error:", error);
