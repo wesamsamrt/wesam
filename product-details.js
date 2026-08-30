@@ -288,7 +288,26 @@ function playCartAddAnimation(cartQuantity) {
     carton.setAttribute("aria-hidden", "true");
     carton.innerHTML = '<span class="carton-top"></span><strong>WESAM<br>SMART</strong>';
     document.body.appendChild(carton);
-    setTimeout(() => carton.remove(), 1450);
+    const source = document.getElementById("detailChooseButton")?.getBoundingClientRect();
+    const target = document.querySelector(".detail-cart-link")?.getBoundingClientRect();
+    const cartonWidth = 78;
+    const cartonHeight = 58;
+    const startX = source?.width ? source.left + source.width / 2 - cartonWidth / 2 : window.innerWidth * .23;
+    const startY = source?.height ? source.top + source.height / 2 - cartonHeight / 2 : window.innerHeight * .68;
+    const endX = target?.width ? target.left + target.width / 2 - cartonWidth / 2 : window.innerWidth * .70;
+    const endY = target?.height ? target.top + target.height / 2 - cartonHeight / 2 : window.innerHeight * .09;
+    const distanceX = endX - startX;
+    const distanceY = endY - startY;
+    carton.style.left = `${startX}px`;
+    carton.style.top = `${startY}px`;
+    carton.animate([
+        { transform: "translate(0, 0) rotate(-7deg) scale(.72)", opacity: 0 },
+        { transform: "translate(0, 0) rotate(-7deg) scale(1)", opacity: 1, offset: .1 },
+        { transform: `translate(${distanceX * .43}px, ${distanceY * .74}px) rotate(5deg) scale(1)`, opacity: 1, offset: .57 },
+        { transform: `translate(${distanceX * .82}px, ${distanceY * .22}px) rotate(0deg) scale(.55)`, opacity: 1, offset: .88 },
+        { transform: `translate(${distanceX}px, ${distanceY}px) scale(.06)`, opacity: 0 }
+    ], { duration: 2200, easing: "cubic-bezier(.19,.72,.24,1)", fill: "forwards" });
+    setTimeout(() => carton.remove(), 2300);
 }
 
 // يضيف اللون الواحد والكمية المحددة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
