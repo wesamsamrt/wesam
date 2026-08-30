@@ -2,6 +2,8 @@ const detailParams = new URLSearchParams(window.location.search);
 let detailVariants = [];
 let selectedCompany = "";
 let selectedModel = "";
+let selectedColor = "";
+let selectedQuantity = 1;
 let detailWarehouse = "";
 
 // يحمي بيانات المنتج قبل عرضها داخل صفحة التفاصيل.
@@ -85,13 +87,13 @@ function renderProductDetails(warehouse) {
             <h1 class="detail-title">${escapeDetailHtml(productName)}</h1>
             <div class="detail-code">كود المنتج: ${escapeDetailHtml(product.product_code || "غير محدد")}</div>
             <div class="detail-price">${Number(product.price || 0).toFixed(2)} <small>ر.س</small></div>
-            <div class="detail-summary">${escapeDetailHtml(description)}<br>اختر الماركة والموديل المناسبين ثم انتقل لاختيار اللون والكمية.</div>
+            <div class="detail-summary">${escapeDetailHtml(description)}<br>اختر الماركة والموديل المناسبين، ثم اختر لونًا واحدًا وحدد كميته.</div>
             <div class="detail-options">
                 <h2>اختيار المواصفات</h2>
                 ${companies.length ? `<span class="option-label">الماركة</span><div class="option-chips" id="detailCompanies">${companies.map(company => `<button type="button" class="option-chip" data-company="${escapeDetailHtml(company)}">${escapeDetailHtml(company)}</button>`).join("")}</div>` : ""}
                 <span class="option-label">الموديل</span>
                 <div class="option-chips" id="detailModels"><span class="detail-choice-hint">اختر الماركة أولًا لعرض موديلاتها.</span></div>
-                <span class="option-label">اللون والكمية</span>
+                <span class="option-label">اختر لونًا واحدًا</span>
                 <div class="detail-colors" id="detailColors"><span class="detail-choice-hint">اختر الموديل أولًا لعرض الألوان المتوفرة.</span></div>
             </div>
         </section>
@@ -99,6 +101,7 @@ function renderProductDetails(warehouse) {
             <h2>إتمام الاختيار</h2>
             <p>حدد المواصفات والكمية المطلوبة، ثم أضف المنتج إلى سلتك.</p>
             <div class="stock-line" id="detailStock"><strong>${formatDetailStock(totalStock)}</strong></div>
+            <div class="detail-cart-quantity" id="detailCartQuantity"><span>الكمية</span><span class="detail-choice-hint">اختر اللون أولًا</span></div>
             <button class="detail-action" id="detailChooseButton" type="button">🛒 أضف إلى السلة</button>
             <div class="benefits"><div class="benefit"><strong>🚚 شحن سريع</strong>حسب المنطقة</div><div class="benefit"><strong>🛡️ ضمان</strong>لجودة المنتج</div><div class="benefit"><strong>🔒 دفع آمن</strong>عند إتمام الطلب</div></div>
         </aside>`;
@@ -126,6 +129,8 @@ function setupDetailInteractions() {
     document.querySelectorAll("[data-company]").forEach(button => button.addEventListener("click", () => {
         selectedCompany = button.dataset.company;
         selectedModel = "";
+        selectedColor = "";
+        selectedQuantity = 1;
         document.querySelectorAll("[data-company]").forEach(item => item.classList.toggle("active", item === button));
         renderDetailModels();
         updateDetailStock();
@@ -158,13 +163,15 @@ function renderDetailModels() {
 
     container.querySelectorAll("[data-model]").forEach(button => button.addEventListener("click", () => {
         selectedModel = button.dataset.model;
+        selectedColor = "";
+        selectedQuantity = 1;
         container.querySelectorAll("[data-model]").forEach(item => item.classList.toggle("active", item === button));
         renderDetailColors();
         updateDetailStock();
     }));
 }
 
-// يعرض الألوان المتاحة للموديل المحدد مع أزرار زيادة ونقصان كمية كل لون.
+// يعرض الألوان المتاحة أفقيًا ويتيح للعميل اختيار لون واحد فقط لكل إضافة إلى السلة.
 function renderDetailColors() {
     const container = document.getElementById("detailColors");
     if (!container) return;
@@ -193,24 +200,54 @@ function renderDetailColors() {
 
     container.innerHTML = [...colors.entries()].map(([color, products]) => {
         const available = products.reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
-        return `<div class="detail-color-row" data-color="${escapeDetailHtml(color)}" data-available="${available}">
-            <div><strong>${escapeDetailHtml(color)}</strong><small>${formatDetailStock(available)}</small></div>
-            <div class="detail-quantity"><button type="button" data-adjust="-1">−</button><input type="number" min="0" max="${available}" value="0" inputmode="numeric"><button type="button" data-adjust="1">+</button></div>
-        </div>`;
+        return `<button type="button" class="detail-color-choice ${color === selectedColor ? "active" : ""}" data-color="${escapeDetailHtml(color)}" data-available="${available}">
+            <strong>${escapeDetailHtml(color)}</strong><small>${formatDetailStock(available)}</small>
+        </button>`;
     }).join("");
 
-    container.querySelectorAll(".detail-color-row").forEach(row => {
-        const input = row.querySelector("input");
-        const available = Number(row.dataset.available || 0);
-        row.querySelectorAll("[data-adjust]").forEach(button => button.addEventListener("click", () => {
-            input.value = Math.max(0, Math.min(available, Number(input.value || 0) + Number(button.dataset.adjust)));
-            updateDetailStock();
-        }));
-        input.addEventListener("input", () => {
-            input.value = Math.max(0, Math.min(available, Number(input.value || 0)));
+    container.querySelectorAll(".detail-color-choice").forEach(button => {
+        button.addEventListener("click", () => {
+            selectedColor = button.dataset.color;
+            selectedQuantity = 1;
+            container.querySelectorAll(".detail-color-choice").forEach(item => item.classList.toggle("active", item === button));
+            renderDetailPurchaseQuantity(Number(button.dataset.available || 0));
             updateDetailStock();
         });
     });
+
+    if (colors.size === 1 && colors.has("بدون لون")) {
+        const onlyColor = container.querySelector(".detail-color-choice");
+        onlyColor?.click();
+    } else {
+        renderDetailPurchaseQuantity(0);
+    }
+}
+
+// يرسم متحكم الكمية الواحد فوق زر الإضافة وفق اللون المختار والكمية المتوفرة له.
+function renderDetailPurchaseQuantity(available) {
+    const container = document.getElementById("detailCartQuantity");
+    if (!container) return;
+    const safeAvailable = Math.max(0, Number(available || 0));
+    if (!selectedColor || !safeAvailable) {
+        container.innerHTML = '<span>الكمية</span><span class="detail-choice-hint">اختر اللون أولًا</span>';
+        return;
+    }
+
+    selectedQuantity = Math.max(1, Math.min(safeAvailable, Number(selectedQuantity || 1)));
+    container.innerHTML = `<span>الكمية (${escapeDetailHtml(selectedColor)})</span><div class="detail-quantity">
+        <button type="button" data-detail-adjust="-1" aria-label="تقليل الكمية">−</button>
+        <input id="detailSelectedQuantity" type="number" min="1" max="${safeAvailable}" value="${selectedQuantity}" inputmode="numeric" aria-label="الكمية">
+        <button type="button" data-detail-adjust="1" aria-label="زيادة الكمية">+</button>
+    </div>`;
+    const input = container.querySelector("#detailSelectedQuantity");
+    const setQuantity = value => {
+        selectedQuantity = Math.max(1, Math.min(safeAvailable, Number(value || 1)));
+        input.value = selectedQuantity;
+    };
+    container.querySelectorAll("[data-detail-adjust]").forEach(button => button.addEventListener("click", () => {
+        setQuantity(selectedQuantity + Number(button.dataset.detailAdjust));
+    }));
+    input.addEventListener("input", () => setQuantity(input.value));
 }
 
 // يحسب الكمية المعروضة بناءً على الماركة والموديل لتبقى مطابقة لمخزن المنطقة.
@@ -223,32 +260,24 @@ function updateDetailStock() {
     document.getElementById("detailStock").innerHTML = `<strong>${formatDetailStock(quantity)}</strong>`;
 }
 
-// يضيف الألوان والكميات المختارة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
+// يضيف اللون الواحد والكمية المحددة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
 async function addDetailSelectionsToCart() {
     const button = document.getElementById("detailChooseButton");
-    const rows = [...document.querySelectorAll(".detail-color-row")];
-    const selected = rows.map(row => ({
-        color: row.dataset.color,
-        quantity: Math.max(0, Number(row.querySelector("input")?.value || 0))
-    })).filter(item => item.quantity > 0);
-
-    if (!selected.length) {
-        alert("اختر كمية لون واحد على الأقل.");
+    if (!selectedColor || !selectedQuantity) {
+        alert("اختر لونًا واحدًا وحدد كميته أولًا.");
         return;
     }
 
     const items = [];
-    selected.forEach(selection => {
-        let remaining = selection.quantity;
-        detailVariants.filter(product =>
-            (!selectedCompany || String(product.company || "").trim() === selectedCompany) &&
-            (!selectedModel || String(product.model || "").trim() === selectedModel) &&
-            (String(product.color || "بدون لون").trim() || "بدون لون") === selection.color
-        ).forEach(product => {
-            const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
-            if (quantity > 0) items.push({ product, quantity });
-            remaining -= quantity;
-        });
+    let remaining = selectedQuantity;
+    detailVariants.filter(product =>
+        (!selectedCompany || String(product.company || "").trim() === selectedCompany) &&
+        (!selectedModel || String(product.model || "").trim() === selectedModel) &&
+        (String(product.color || "بدون لون").trim() || "بدون لون") === selectedColor
+    ).forEach(product => {
+        const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
+        if (quantity > 0) items.push({ product, quantity });
+        remaining -= quantity;
     });
 
     if (!items.length) {
@@ -321,7 +350,9 @@ async function addDetailSelectionsToCart() {
         if (totalError) throw totalError;
 
         alert("تمت إضافة المنتجات المختارة إلى السلة.");
-        rows.forEach(row => { row.querySelector("input").value = 0; });
+        selectedQuantity = 1;
+        const selectedColorButton = document.querySelector(`.detail-color-choice[data-color="${CSS.escape(selectedColor)}"]`);
+        renderDetailPurchaseQuantity(Number(selectedColorButton?.dataset.available || 0));
     } catch (error) {
         console.error("Detail cart error:", error);
         if (error.message === "LOGIN_REQUIRED") {

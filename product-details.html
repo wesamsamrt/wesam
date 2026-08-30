@@ -7,11 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="product-details.css?v=20260829-site-layout">
+    <link rel="stylesheet" href="product-details.css?v=20260830-single-color">
     <style>
         .detail-choice-hint{color:#9eb1d5;font-size:12px;padding:8px 0}
-        .detail-colors{display:grid;gap:10px}.detail-color-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid rgba(113,161,245,.25);border-radius:13px;background:rgba(10,34,76,.72)}
-        .detail-color-row strong{display:block;color:#f3f7ff;font-size:14px}.detail-color-row small{color:#9eb1d5;font-size:11px}.detail-quantity{display:flex;align-items:center;gap:7px}.detail-quantity button{width:32px;height:32px;border:0;border-radius:9px;background:#236ee8;color:#fff;font-size:20px;cursor:pointer}.detail-quantity input{width:47px;height:32px;border:1px solid rgba(113,161,245,.3);border-radius:8px;background:#061937;color:#fff;text-align:center;font:inherit}
+        .detail-colors{display:flex;flex-wrap:wrap;gap:9px}.detail-color-choice{min-width:92px;padding:10px 13px;border:1px solid rgba(113,161,245,.32);border-radius:12px;background:rgba(10,34,76,.72);color:#f3f7ff;font:inherit;cursor:pointer;text-align:center}.detail-color-choice strong{display:block;font-size:13px}.detail-color-choice small{display:block;margin-top:3px;color:#9eb1d5;font-size:10px}.detail-color-choice.active{border-color:#4e9cff;background:rgba(35,110,232,.35);box-shadow:0 0 0 2px rgba(78,156,255,.16)}
+        .detail-cart-quantity{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0;padding:12px;border:1px solid rgba(113,161,245,.22);border-radius:13px;background:rgba(6,24,58,.55)}.detail-cart-quantity>span{color:#cfe0ff;font-size:13px;font-weight:800}.detail-quantity{display:flex;align-items:center;gap:7px}.detail-quantity button{width:34px;height:34px;border:0;border-radius:9px;background:#236ee8;color:#fff;font-size:20px;cursor:pointer}.detail-quantity input{width:50px;height:34px;border:1px solid rgba(113,161,245,.3);border-radius:8px;background:#061937;color:#fff;text-align:center;font:inherit}
         .detail-main-image{padding:12px!important}.detail-main-image img{width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;padding:0!important;object-fit:contain!important;display:block}
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -33,6 +33,6 @@
         <section id="productDetail" class="detail-loading">جاري تحميل تفاصيل المنتج...</section>
     </main>
 
-    <script src="product-details.js?v=20260829-site-layout"></script>
+    <script src="product-details.js?v=20260830-single-color"></script>
 </body>
 </html>
