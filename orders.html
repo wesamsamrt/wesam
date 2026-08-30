@@ -193,11 +193,49 @@
         .cart-total-box { background: #25203f; color: #fff; border-radius: 20px; padding: 18px 20px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
         .cart-total-box strong:last-child { color: #d9d3ff; font-size: 21px; }
 
+        /* تخطيط سلة العملاء: منتجات واسعة مع ملخص ثابت بجانبها، دون تغيير سلة المندوب. */
+        .cart-page-layout { display: block; }
+        .customer-cart-summary { display: none; }
+        body.customer-cart { background: #f6f7fa; }
+        body.customer-cart .header { width: min(1450px, calc(100% - 48px)); }
+        body.customer-cart .content { width: min(1450px, calc(100% - 48px)); }
+        body.customer-cart .cart-page-layout { display: grid; grid-template-columns: minmax(0, 1fr) 385px; align-items: start; gap: 20px; direction: ltr; }
+        body.customer-cart .cart-items-column, body.customer-cart .customer-cart-summary { direction: rtl; }
+        body.customer-cart .customer-cart-summary { display: block; position: sticky; top: 18px; overflow: hidden; border: 1px solid #e5e7ee; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(23,33,58,.08); }
+        body.customer-cart .cart-tools { display: none !important; }
+        body.customer-cart .orders { gap: 14px; }
+        body.customer-cart .order-card.customer-cart-item { min-height: 150px; padding: 16px; border: 1px solid #e1e4eb; border-radius: 14px; box-shadow: 0 3px 8px rgba(23,33,58,.12); align-items: flex-start; }
+        body.customer-cart .customer-cart-item .order-image { width: 96px; height: 96px; border-radius: 10px; background: #fff; }
+        body.customer-cart .customer-cart-item .order-image img { object-fit: contain; }
+        body.customer-cart .customer-cart-item .order-info h3 { font-size: 14px; margin-bottom: 4px; }
+        body.customer-cart .customer-cart-item .order-info p { display: inline; padding: 2px 6px; border: 1px solid #e0e3ea; border-radius: 5px; color: #65708a; font-size: 10px; }
+        body.customer-cart .customer-cart-item .price { color: #e10019; font-size: 15px; }
+        body.customer-cart .customer-cart-item .delete-button { order: 3; margin-right: auto; background: #f4f5f7; color: #536178; }
+        body.customer-cart .customer-cart-item .quantity-controls { display: flex; align-items: center; gap: 7px; margin: auto 0 0; }
+        body.customer-cart .customer-cart-item .quantity-controls button { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f0f1f3; color: #18233a; font-size: 23px; cursor: pointer; }
+        body.customer-cart .customer-cart-item .quantity-controls button:last-child { background: #1367df; color: #fff; }
+        body.customer-cart .customer-cart-item .quantity-controls strong { min-width: 30px; text-align: center; }
+        .customer-summary-delivery { padding: 18px 20px; border-bottom: 1px solid #e5e7ee; }
+        .customer-summary-delivery strong { display: block; padding: 12px 14px; border-radius: 22px; background: #edf0f4; color: #263956; font-size: 13px; }
+        .customer-summary-delivery p { margin-top: 13px; color: #159a52; font-size: 13px; font-weight: 800; }
+        .customer-summary-delivery small { display: block; margin-top: 5px; color: #68748a; font-size: 11px; }
+        .customer-summary-totals { padding: 15px 20px; }.customer-summary-row { display:flex; justify-content:space-between; gap:12px; margin:10px 0; color:#344460; font-size:13px; font-weight:700; }.customer-summary-row strong { font-size:17px; }.customer-summary-total { margin:14px -20px -15px; padding:17px 20px; border-top:1px solid #e5e7ee; color:#db0017; font-size:20px; font-weight:800; }
+        .customer-summary-actions { padding: 16px 20px; border-top: 1px solid #e5e7ee; }.customer-summary-actions button { width:100%; min-height:48px; border:0; border-radius:8px; background:#e60012; color:#fff; font-family:inherit; font-weight:800; font-size:15px; cursor:pointer; }.customer-summary-actions .summary-clear-cart { margin-top:9px; min-height:38px; background:#f4f5f7; color:#d30016; font-size:12px; }
+
         @media (max-width: 600px) {
             .cart-controls input, .cart-controls select, .cart-clear-button { width: 100%; }
             .order-card { align-items: flex-start; padding: 14px; }
             .order-image { width: 60px; height: 60px; font-size: 28px; }
             .order-info h3 { font-size: 14px; }
+            body.customer-cart .header, body.customer-cart .content { width: calc(100% - 24px); }
+            body.customer-cart .cart-page-layout { grid-template-columns: 1fr; gap: 12px; }
+            body.customer-cart .customer-cart-summary { position: static; order: 2; }
+            body.customer-cart .order-card.customer-cart-item { min-height: 126px; padding: 11px; gap: 9px; }
+            body.customer-cart .customer-cart-item .order-image { width: 68px; height: 68px; }
+            body.customer-cart .customer-cart-item .order-info h3 { font-size: 11px; }
+            body.customer-cart .customer-cart-item .price { font-size: 12px; }
+            body.customer-cart .customer-cart-item .quantity-controls button { width: 29px; height: 29px; font-size: 18px; }
+            body.customer-cart .customer-cart-item .delete-button { width: 32px; height: 32px; font-size: 14px; }
         }
 
     </style>
@@ -236,6 +274,9 @@
 
    <main class="content">
 
+    <div class="cart-page-layout">
+      <div class="cart-items-column">
+
     <div
         class="orders"
         id="orders"
@@ -253,6 +294,11 @@
             <button type="button" class="cart-clear-button" onclick="clearCart()">🗑️ إفراغ السلة</button>
         </div>
     </section>
+
+      </div>
+
+      <aside class="customer-cart-summary" id="customerCartSummary" aria-label="ملخص الطلب"></aside>
+    </div>
 
 
 
@@ -284,6 +330,7 @@
 
 
 <div
+    id="checkoutDetails"
     style="
         background:white;
         border-radius:22px;
@@ -448,6 +495,7 @@
 
 let cartOrder = null;
 let cartItems = [];
+let isLinkedDriverCart = false;
 const quantitySaveTimers = new Map();
 
 function escapeCartHtml(value) {
@@ -478,6 +526,61 @@ async function saveCartItemsTotal(order = cartOrder, items = cartItems) {
     return total;
 }
 
+// يعرض ملخص الطلب الجانبي المخصص للعميل، ويأخذه مباشرة إلى بيانات إتمام الطلب عند المتابعة.
+function renderCustomerCartSummary(total, totalQuantity) {
+    const summary = document.getElementById("customerCartSummary");
+    if (!summary) return;
+    if (isLinkedDriverCart) {
+        summary.innerHTML = "";
+        return;
+    }
+
+    const warehouse = localStorage.getItem("customer_warehouse") || "المنطقة المختارة";
+    summary.innerHTML = `
+        <div class="customer-summary-delivery">
+            <strong>📍 التوصيل من: ${escapeCartHtml(warehouse)}</strong>
+            <p>🚚 تجهيز سريع للطلب</p>
+            <small>سيتم تأكيد بيانات العميل والتوصيل قبل تقديم الطلب.</small>
+        </div>
+        <div class="customer-summary-totals">
+            <div class="customer-summary-row"><span>عدد القطع</span><strong>${totalQuantity}</strong></div>
+            <div class="customer-summary-row"><span>الإجمالي الفرعي</span><strong>${total.toFixed(2)} ر.س</strong></div>
+            <div class="customer-summary-row customer-summary-total"><span>إجمالي الطلب</span><strong>${total.toFixed(2)} ر.س</strong></div>
+        </div>
+        <div class="customer-summary-actions">
+            <button type="button" onclick="scrollToCheckoutDetails()">🛒 متابعة تقديم الطلب</button>
+            <button type="button" class="summary-clear-cart" onclick="clearCart()">إفراغ السلة</button>
+        </div>`;
+}
+
+// ينقل العميل إلى النموذج الحالي لإكمال بياناته دون تجاوز شروط تقديم الطلب.
+function scrollToCheckoutDetails() {
+    document.getElementById("checkoutDetails")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ينشئ بطاقة منتج عريضة لسلة العميل مع أزرار الكمية والحذف.
+function createCustomerCartItemCard(item) {
+    const itemTotal = Number(item.price || 0) * Number(item.quantity || 0);
+    const card = document.createElement("article");
+    card.className = "order-card customer-cart-item";
+    card.innerHTML = `
+        <div class="order-image">${item.image ? `<img src="${escapeCartHtml(item.image)}" alt="">` : "📱"}</div>
+        <div class="order-info">
+            <h3>${escapeCartHtml(item.type || item.product_type || item.model || "منتج")}</h3>
+            <p>${escapeCartHtml([item.company, item.model, item.color].filter(Boolean).join(" • ")) || "تفاصيل المنتج"}</p>
+            ${item.product_code ? `<p>كود المنتج: ${escapeCartHtml(item.product_code)}</p>` : ""}
+            <div class="price">${itemTotal.toFixed(2)} ر.س</div>
+        </div>
+        <div class="quantity-controls">
+            <button onclick="changeQuantity(${item.id}, -1)" aria-label="تقليل الكمية">−</button>
+            <strong>${item.quantity || 1}</strong>
+            <button onclick="changeQuantity(${item.id}, 1)" aria-label="زيادة الكمية">+</button>
+        </div>
+        <button class="delete-button" onclick="removeOrderItem(${item.id})" aria-label="حذف المنتج">🗑️</button>`;
+    return card;
+}
+
+// يرسم عناصر السلة بحسب نوع الحساب: واجهة العميل الحديثة أو واجهة المندوب الحالية.
 function renderCartView() {
     const container = document.getElementById("orders");
     const tools = document.getElementById("cartTools");
@@ -487,14 +590,22 @@ function renderCartView() {
         .filter(Boolean).join(" ").toLowerCase().includes(search));
     const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
-    tools.style.display = "block";
+    tools.style.display = isLinkedDriverCart ? "block" : "none";
+    const cartTotal = Number(cartOrder?.total || 0);
     document.getElementById("cartSummary").innerHTML = `
         <span>${cartItems.length} صنف</span>
         <span>${totalQuantity} قطعة</span>
-        <span>الإجمالي: ${Number(cartOrder.total || 0).toFixed(2)} ر.س</span>`;
+        <span>الإجمالي: ${cartTotal.toFixed(2)} ر.س</span>`;
+    renderCustomerCartSummary(cartTotal, totalQuantity);
 
     if (!visibleItems.length) {
         container.innerHTML = '<div class="cart-empty-filter">لا توجد منتجات مطابقة للبحث.</div>';
+        return;
+    }
+
+    if (!isLinkedDriverCart) {
+        container.innerHTML = "";
+        visibleItems.forEach(item => container.appendChild(createCustomerCartItemCard(item)));
         return;
     }
 
@@ -547,13 +658,15 @@ function renderCartView() {
 document.getElementById("cartSearch")?.addEventListener("input", renderCartView);
 document.getElementById("cartGroupBy")?.addEventListener("change", renderCartView);
 
-// يملأ رقم المندوب تلقائياً عندما يكون البريد الحالي مربوطاً بسجل مندوب في الإدارة.
+// يحدد نوع الحساب ويملأ رقم المندوب تلقائياً عندما يكون البريد الحالي مربوطاً بسجل مندوب في الإدارة.
 async function fillLinkedDriverNumber() {
     const driverInput = document.getElementById("driverNumber");
     const driverMessage = document.getElementById("driverMessage");
     if (!driverInput) return;
     const { data: identity, error } = await supabaseClient.rpc("get_my_driver_identity");
-    if (error || !identity?.is_driver) return;
+    isLinkedDriverCart = Boolean(!error && identity?.is_driver);
+    document.body.classList.toggle("customer-cart", !isLinkedDriverCart);
+    if (!isLinkedDriverCart) return;
     driverInput.value = identity.driver_number || "";
     driverInput.readOnly = true;
     driverInput.style.background = "#f4f3ff";
@@ -678,6 +791,7 @@ async function loadOrders() {
     if (!orders || orders.length === 0) {
 
         document.getElementById("cartTools").style.display = "none";
+        renderCustomerCartSummary(0, 0);
 
         container.innerHTML = `
             <div class="empty">
@@ -737,6 +851,7 @@ async function loadOrders() {
     if (!items || items.length === 0) {
 
         document.getElementById("cartTools").style.display = "none";
+        renderCustomerCartSummary(0, 0);
 
         container.innerHTML = `
             <div class="empty">
@@ -2290,6 +2405,7 @@ async function clearCart() {
             .select("id")
             .eq("user_id", user.id)
             .eq("status", "جديد")
+            .eq("warehouse", localStorage.getItem("customer_warehouse") || "")
             .order("id", {
                 ascending: false
             })
@@ -2308,7 +2424,7 @@ async function clearCart() {
         }
 
 
-        const orderId = orders[0].id;
+        const orderId = cartOrder?.id || orders[0].id;
 
         console.log("رقم السلة:", orderId);
 
