@@ -4,6 +4,12 @@ let customerLng = null;
 let customerMap = null;
 let customerMarker = null;
 
+// يقرأ بيانات العنوان الإضافية المحفوظة محليًا دون إيقاف الصفحة عند تلف البيانات القديمة.
+function getSavedDeliveryDetails() {
+    try { return JSON.parse(localStorage.getItem("customer_delivery_details") || "{}"); }
+    catch { return {}; }
+}
+
 // يعرض رسالة واضحة أسفل نموذج العميل مع لون يناسب حالة العملية.
 function setCheckoutMessage(text = "", isError = true) {
     const message = document.getElementById("formMessage");
@@ -20,8 +26,16 @@ async function loadCustomerCheckout() {
     const { data: orders, error } = await supabaseClient.from("orders").select("*").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", checkoutWarehouse).order("id", { ascending: false }).limit(1);
     if (error || !orders?.length) { setCheckoutMessage("السلة فارغة، أضف منتجًا أولًا ثم أتمم البيانات."); document.getElementById("submitButton").disabled = true; return; }
     const order = orders[0];
-    document.getElementById("customerName").value = order.customer_name || user.user_metadata?.name || "";
+    const savedDetails = getSavedDeliveryDetails();
+    const savedName = order.customer_name || user.user_metadata?.name || "";
+    const nameParts = savedName.trim().split(/\s+/);
+    document.getElementById("firstName").value = savedDetails.firstName || nameParts.shift() || "";
+    document.getElementById("lastName").value = savedDetails.lastName || nameParts.join(" ");
+    document.getElementById("deliveryRegion").value = checkoutWarehouse;
+    document.getElementById("district").value = savedDetails.district || "";
+    document.getElementById("street").value = savedDetails.street || "";
     document.getElementById("customerPhone").value = order.customer_phone || user.user_metadata?.phone || "";
+    document.getElementById("additionalPhone").value = savedDetails.additionalPhone || "";
     customerLat = Number.isFinite(Number(order.customer_lat)) ? Number(order.customer_lat) : null;
     customerLng = Number.isFinite(Number(order.customer_lng)) ? Number(order.customer_lng) : null;
     updateLocationStatus();
@@ -71,10 +85,17 @@ function updateLocationStatus() {
 // يحفظ بيانات وعنوان الاستلام في السلة الحالية قبل العودة إلى صفحة العميل.
 async function saveCustomerDeliveryDetails(event) {
     event.preventDefault();
-    const name = document.getElementById("customerName").value.trim();
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const region = document.getElementById("deliveryRegion").value.trim();
+    const district = document.getElementById("district").value.trim();
+    const street = document.getElementById("street").value.trim();
     const phone = document.getElementById("customerPhone").value.trim();
-    if (!name || !phone || customerLat === null || customerLng === null) { setCheckoutMessage("أدخل اسم العميل ورقم جواله وحدد موقعه من الخريطة أولًا."); return; }
+    const additionalPhone = document.getElementById("additionalPhone").value.trim();
+    const name = `${firstName} ${lastName}`.trim();
+    if (!firstName || !lastName || !region || !phone || customerLat === null || customerLng === null) { setCheckoutMessage("أدخل الاسم الأول والأخير والمنطقة ورقم الجوال وحدد موقعه من الخريطة أولًا."); return; }
     if (!/^0?5\d{8}$/.test(phone.replace(/\s|-/g, ""))) { setCheckoutMessage("اكتب رقم جوال سعودي صحيحًا."); return; }
+    if (additionalPhone && !/^0?5\d{8}$/.test(additionalPhone.replace(/\s|-/g, ""))) { setCheckoutMessage("اكتب رقم الجوال الإضافي بصيغة صحيحة أو اتركه فارغًا."); return; }
     const button = document.getElementById("submitButton");
     button.disabled = true; button.textContent = "جاري حفظ العنوان..."; setCheckoutMessage("", false);
     try {
@@ -86,7 +107,9 @@ async function saveCustomerDeliveryDetails(event) {
         const location = `${customerLat},${customerLng}`;
         const { error: detailsError } = await supabaseClient.from("orders").update({ customer_name: name, customer_phone: phone, customer_location: location, customer_lat: customerLat, customer_lng: customerLng }).eq("id", order.id).eq("user_id", user.id);
         if (detailsError) throw detailsError;
-        localStorage.setItem("customer_delivery_address", `موقع محدد: ${customerLat.toFixed(5)}, ${customerLng.toFixed(5)}`);
+        const addressSummary = [region, district, street].filter(Boolean).join(" - ");
+        localStorage.setItem("customer_delivery_address", addressSummary || `موقع محدد: ${customerLat.toFixed(5)}, ${customerLng.toFixed(5)}`);
+        localStorage.setItem("customer_delivery_details", JSON.stringify({ firstName, lastName, region, district, street, additionalPhone }));
         window.location.href = "orders.html";
     } catch (error) {
         console.error("Customer checkout error:", error);
