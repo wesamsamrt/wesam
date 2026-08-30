@@ -278,23 +278,17 @@ function updateDetailCartBadge(quantity) {
     badge.hidden = count === 0;
 }
 
-// يشغّل فيديو الكرتون فوق الصفحة دون حجبها، ثم يزيله تلقائيًا بعد انتهاء الحركة.
+// يعرض كرتونًا متحركًا فوق الصفحة دون حجب التصميم ثم يزيله تلقائيًا عند وصوله إلى السلة.
 function playCartAddAnimation(cartQuantity) {
     updateDetailCartBadge(cartQuantity);
     document.getElementById("cartAddAnimation")?.remove();
-    const video = document.createElement("video");
-    video.id = "cartAddAnimation";
-    video.className = "cart-add-animation";
-    video.src = "cart-add-animation.mp4";
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute("aria-hidden", "true");
-    const removeAnimation = () => video.remove();
-    video.addEventListener("ended", removeAnimation, { once: true });
-    video.addEventListener("error", removeAnimation, { once: true });
-    document.body.appendChild(video);
-    video.play().catch(removeAnimation);
-    setTimeout(removeAnimation, 5000);
+    const carton = document.createElement("div");
+    carton.id = "cartAddAnimation";
+    carton.className = "cart-add-animation";
+    carton.setAttribute("aria-hidden", "true");
+    carton.innerHTML = '<span class="carton-top"></span><strong>WESAM<br>SMART</strong>';
+    document.body.appendChild(carton);
+    setTimeout(() => carton.remove(), 1450);
 }
 
 // يضيف اللون الواحد والكمية المحددة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
