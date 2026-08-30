@@ -269,6 +269,34 @@ function updateDetailStock() {
     document.getElementById("detailStock").innerHTML = `<strong>${formatDetailStock(quantity)}</strong>`;
 }
 
+// يحدّث شارة السلة في رأس الصفحة بعد إضافة المنتج ويعرض عدد القطع الحالي.
+function updateDetailCartBadge(quantity) {
+    const badge = document.getElementById("detailCartCount");
+    if (!badge) return;
+    const count = Math.max(0, Number(quantity || 0));
+    badge.textContent = count;
+    badge.hidden = count === 0;
+}
+
+// يشغّل فيديو الكرتون فوق الصفحة دون حجبها، ثم يزيله تلقائيًا بعد انتهاء الحركة.
+function playCartAddAnimation(cartQuantity) {
+    updateDetailCartBadge(cartQuantity);
+    document.getElementById("cartAddAnimation")?.remove();
+    const video = document.createElement("video");
+    video.id = "cartAddAnimation";
+    video.className = "cart-add-animation";
+    video.src = "cart-add-animation.mp4";
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("aria-hidden", "true");
+    const removeAnimation = () => video.remove();
+    video.addEventListener("ended", removeAnimation, { once: true });
+    video.addEventListener("error", removeAnimation, { once: true });
+    document.body.appendChild(video);
+    video.play().catch(removeAnimation);
+    setTimeout(removeAnimation, 5000);
+}
+
 // يضيف اللون الواحد والكمية المحددة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
 async function addDetailSelectionsToCart() {
     const button = document.getElementById("detailChooseButton");
@@ -358,7 +386,8 @@ async function addDetailSelectionsToCart() {
         const { error: totalError } = await supabaseClient.from("orders").update({ total }).eq("id", order.id);
         if (totalError) throw totalError;
 
-        alert("تمت إضافة المنتجات المختارة إلى السلة.");
+        const cartQuantity = (cartItems || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        playCartAddAnimation(cartQuantity);
         selectedQuantity = 1;
         const selectedColorButton = document.querySelector(`.detail-color-choice[data-color="${CSS.escape(selectedColor)}"]`);
         renderDetailPurchaseQuantity(Number(selectedColorButton?.dataset.available || 0));

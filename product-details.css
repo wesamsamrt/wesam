@@ -10,3 +10,5 @@
 .detail-purchase .detail-action{padding:16px}.detail-purchase .benefits{grid-template-columns:repeat(3,1fr);gap:7px}.detail-purchase .benefit{padding:9px 5px;font-size:9px}.detail-purchase .benefit strong{font-size:10px}
 @media(max-width:1180px){.product-detail-layout{grid-template-columns:minmax(350px,1fr) minmax(370px,1fr)}.detail-purchase{position:static;grid-column:1/-1}.detail-main-image{height:460px}}
 @media(max-width:800px){.detail-page{width:calc(100% - 24px)}.product-detail-layout{display:flex;flex-direction:column}.detail-gallery,.detail-info,.detail-purchase{width:100%}.detail-main-image{height:320px}.detail-purchase .benefits{grid-template-columns:repeat(3,1fr)}}
+
+.detail-cart-link{position:relative}.detail-cart-count{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;margin-inline-start:4px;border-radius:999px;background:#2977ff;color:#fff;font-size:11px;line-height:1;box-shadow:0 0 12px rgba(41,119,255,.8)}.cart-add-animation{position:fixed;inset:0;z-index:10000;width:100vw;height:100vh;pointer-events:none;object-fit:cover;mix-blend-mode:screen}

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="product-details.css?v=20260830-single-color">
+    <link rel="stylesheet" href="product-details.css?v=20260830-cart-animation">
     <style>
         .detail-choice-hint{color:#9eb1d5;font-size:12px;padding:8px 0}
         .detail-colors{display:flex;flex-wrap:wrap;gap:9px}.detail-color-choice{min-width:92px;padding:10px 13px;border:1px solid rgba(113,161,245,.32);border-radius:12px;background:rgba(10,34,76,.72);color:#f3f7ff;font:inherit;cursor:pointer;text-align:center}.detail-color-choice strong{display:block;font-size:13px}.detail-color-choice small{display:block;margin-top:3px;color:#9eb1d5;font-size:10px}.detail-color-choice.active{border-color:#4e9cff;background:rgba(35,110,232,.35);box-shadow:0 0 0 2px rgba(78,156,255,.16)}
@@ -23,7 +23,7 @@
         <nav aria-label="التنقل الرئيسي">
             <a href="index.html">الرئيسية</a>
             <a href="products.html" class="active">المنتجات</a>
-            <a href="orders.html">السلة</a>
+            <a href="orders.html" class="detail-cart-link">السلة <span id="detailCartCount" class="detail-cart-count" hidden>0</span></a>
         </nav>
         <a class="back-link" href="products.html">← العودة للمنتجات</a>
     </header>
@@ -33,6 +33,6 @@
         <section id="productDetail" class="detail-loading">جاري تحميل تفاصيل المنتج...</section>
     </main>
 
-    <script src="product-details.js?v=20260830-single-color"></script>
+    <script src="product-details.js?v=20260830-cart-animation"></script>
 </body>
 </html>
