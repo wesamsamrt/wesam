@@ -553,8 +553,11 @@ function renderCustomerCartSummary(total, totalQuantity) {
 
     const warehouse = localStorage.getItem("customer_warehouse") || "المنطقة المختارة";
     const savedDeliveryDetails = getStoredCustomerDeliveryDetails();
-    const hasSavedDelivery = hasCompleteCustomerDelivery(cartOrder) || hasCompleteCustomerDelivery(savedDeliveryDetails);
-    const savedAddress = localStorage.getItem("customer_delivery_address") || (hasSavedDelivery ? `موقع محدد: ${Number(cartOrder.customer_lat).toFixed(5)}, ${Number(cartOrder.customer_lng).toFixed(5)}` : "");
+    const cartHasDelivery = hasCompleteCustomerDelivery(cartOrder);
+    const hasSavedDelivery = cartHasDelivery || hasCompleteCustomerDelivery(savedDeliveryDetails);
+    const savedLatitude = cartHasDelivery ? cartOrder.customer_lat : savedDeliveryDetails.latitude;
+    const savedLongitude = cartHasDelivery ? cartOrder.customer_lng : savedDeliveryDetails.longitude;
+    const savedAddress = localStorage.getItem("customer_delivery_address") || (hasSavedDelivery ? `موقع محدد: ${Number(savedLatitude).toFixed(5)}, ${Number(savedLongitude).toFixed(5)}` : "");
     summary.innerHTML = `
         <div class="customer-summary-delivery">
             <strong>📍 التوصيل من مخزن ${escapeCartHtml(warehouse)}</strong>
