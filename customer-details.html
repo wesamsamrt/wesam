@@ -20,13 +20,13 @@
         <header class="top"><a class="back" href="orders.html">← العودة للسلة</a><img src="logo.png" alt="WESAM SMART"></header>
         <section class="panel">
             <h1>عنوان الاستلام</h1>
-            <p class="intro">احفظ عنوان الاستلام أولًا. الحي والشارع اختياريان، بينما الاسم ورقم الجوال والموقع مطلوبة لتقديم الطلب.</p>
+            <p class="intro">أكمل عنوان الاستلام بالكامل. الاسم والمنطقة والحي والشارع ورقم الجوال والموقع من الخريطة مطلوبة لتقديم الطلب.</p>
             <form id="customerDetailsForm">
                 <div class="fields-row"><div class="field"><label for="firstName">👤 الاسم الأول</label><input id="firstName" required autocomplete="given-name" placeholder="الاسم الأول"></div><div class="field"><label for="lastName">👤 الاسم الأخير</label><input id="lastName" required autocomplete="family-name" placeholder="الاسم الأخير"></div></div>
                 <div class="field"><label for="deliveryRegion">📍 المنطقة</label><input id="deliveryRegion" required readonly></div>
-                <div class="fields-row"><div class="field"><label for="district">الحي <span class="optional">(اختياري)</span></label><input id="district" autocomplete="address-level2" placeholder="مثال: النرجس"></div><div class="field"><label for="street">الشارع <span class="optional">(اختياري)</span></label><input id="street" autocomplete="street-address" placeholder="مثال: طريق الملك"></div></div>
+                <div class="fields-row"><div class="field"><label for="district">الحي</label><input id="district" required autocomplete="address-level2" placeholder="مثال: النرجس"></div><div class="field"><label for="street">الشارع</label><input id="street" required autocomplete="street-address" placeholder="مثال: طريق الملك"></div></div>
                 <div class="fields-row"><div class="field"><label for="customerPhone">📱 رقم الجوال</label><input id="customerPhone" required inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx"></div><div class="field"><label for="additionalPhone">☎️ رقم إضافي <span class="optional">(اختياري)</span></label><input id="additionalPhone" inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx"></div></div>
-                <div class="field"><label>📍 عنوان العميل</label><button type="button" class="location-button" onclick="openCustomerMap()">تحديد الموقع من الخريطة</button><div id="locationStatus" class="location-status">لم يتم تحديد الموقع بعد</div></div>
+                <div class="field"><label>📍 موقع العميل على الخريطة</label><button type="button" class="location-button" onclick="openCustomerMap()">تحديد الموقع من الخريطة</button><div id="locationStatus" class="location-status">لم تحدد الموقع</div></div>
                 <div id="formMessage" class="message" aria-live="polite"></div>
                 <button id="submitButton" class="submit" type="submit">حفظ عنوان الاستلام</button>
             </form>
