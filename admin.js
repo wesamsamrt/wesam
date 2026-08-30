@@ -4302,6 +4302,13 @@ Object.entries(typeCodes).forEach(
 </p>
 
 <p style="margin-top:8px;">
+    🏠 عنوان الاستلام:
+    <strong>
+        ${escapeHtmlAttribute(order.customer_location || "لم يتم تسجيل العنوان")}
+    </strong>
+</p>
+
+<p style="margin-top:8px;">
     📍 الموقع:
 
     ${

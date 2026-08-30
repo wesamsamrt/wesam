@@ -104,10 +104,10 @@ async function saveCustomerDeliveryDetails(event) {
         const { data: orders, error: orderError } = await supabaseClient.from("orders").select("id").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", checkoutWarehouse).order("id", { ascending: false }).limit(1);
         if (orderError || !orders?.length) throw new Error("لم يتم العثور على سلة قابلة للتقديم.");
         const order = orders[0];
-        const location = `${customerLat},${customerLng}`;
+        const addressSummary = [region, district && `حي ${district}`, street && `شارع ${street}`].filter(Boolean).join(" - ");
+        const location = `${addressSummary || region} • الموقع: ${customerLat.toFixed(6)},${customerLng.toFixed(6)}`;
         const { error: detailsError } = await supabaseClient.from("orders").update({ customer_name: name, customer_phone: phone, customer_location: location, customer_lat: customerLat, customer_lng: customerLng }).eq("id", order.id).eq("user_id", user.id);
         if (detailsError) throw detailsError;
-        const addressSummary = [region, district, street].filter(Boolean).join(" - ");
         localStorage.setItem("customer_delivery_address", addressSummary || `موقع محدد: ${customerLat.toFixed(5)}, ${customerLng.toFixed(5)}`);
         localStorage.setItem("customer_delivery_details", JSON.stringify({ firstName, lastName, region, district, street, additionalPhone }));
         window.location.href = "orders.html";
