@@ -552,7 +552,8 @@ function renderCustomerCartSummary(total, totalQuantity) {
     }
 
     const warehouse = localStorage.getItem("customer_warehouse") || "المنطقة المختارة";
-    const hasSavedDelivery = Boolean(cartOrder?.customer_name && cartOrder?.customer_phone && cartOrder?.customer_lat !== null && cartOrder?.customer_lat !== undefined && cartOrder?.customer_lng !== null && cartOrder?.customer_lng !== undefined);
+    const savedDeliveryDetails = getStoredCustomerDeliveryDetails();
+    const hasSavedDelivery = hasCompleteCustomerDelivery(cartOrder) || hasCompleteCustomerDelivery(savedDeliveryDetails);
     const savedAddress = localStorage.getItem("customer_delivery_address") || (hasSavedDelivery ? `موقع محدد: ${Number(cartOrder.customer_lat).toFixed(5)}, ${Number(cartOrder.customer_lng).toFixed(5)}` : "");
     summary.innerHTML = `
         <div class="customer-summary-delivery">
@@ -572,36 +573,57 @@ function renderCustomerCartSummary(total, totalQuantity) {
         </div>`;
 }
 
-// يتحقق من عنوان العميل المحفوظ ثم يقدّم السلة مباشرة إلى مخزن المنطقة المختارة.
-async function continueCustomerCheckout() {
-    const hasSavedDelivery = Boolean(cartOrder?.customer_name && cartOrder?.customer_phone && cartOrder?.customer_lat !== null && cartOrder?.customer_lat !== undefined && cartOrder?.customer_lng !== null && cartOrder?.customer_lng !== undefined);
-    if (!hasSavedDelivery) {
-        alert("الرجاء تسجيل عنوان التوصيل أولًا.");
-        window.location.href = "customer-details.html";
-        return;
-    }
+// يقرأ العنوان الافتراضي المخزن على الجهاز مع حماية الصفحة من البيانات التالفة.
+function getStoredCustomerDeliveryDetails() {
+    try { return JSON.parse(localStorage.getItem("customer_delivery_details") || "{}"); }
+    catch { return {}; }
+}
 
+// يتحقق من اكتمال بيانات العنوان قبل إرفاقها بالطلب أو إرساله إلى المخزن.
+function hasCompleteCustomerDelivery(delivery) {
+    const latitude = delivery?.customer_lat ?? delivery?.latitude;
+    const longitude = delivery?.customer_lng ?? delivery?.longitude;
+    return Boolean(delivery?.customer_name || (delivery?.firstName && delivery?.lastName)) && Boolean(delivery?.customer_phone || delivery?.phone) && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude));
+}
+
+// يربط العنوان الافتراضي بالسلة الجديدة ثم يقدّمها مباشرة إلى مخزن المنطقة المختارة.
+async function continueCustomerCheckout() {
     const button = document.querySelector(".customer-summary-actions button");
     if (button) { button.disabled = true; button.textContent = "جاري تقديم الطلب..."; }
     try {
         const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
         if (userError || !user) throw new Error("يجب تسجيل الدخول أولًا.");
         const warehouse = localStorage.getItem("customer_warehouse") || "";
-        const { data: orders, error: orderError } = await supabaseClient.from("orders").select("id, customer_name, customer_location, customer_lat, customer_lng").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", warehouse).order("id", { ascending: false }).limit(1);
+        const { data: orders, error: orderError } = await supabaseClient.from("orders").select("id, customer_name, customer_phone, customer_location, customer_lat, customer_lng").eq("user_id", user.id).eq("status", "جديد").eq("warehouse", warehouse).order("id", { ascending: false }).limit(1);
         if (orderError || !orders?.length) throw new Error("السلة فارغة أو لم تعد متاحة.");
         const order = orders[0];
+        const savedDelivery = { ...(user.user_metadata?.delivery_address || {}), ...getStoredCustomerDeliveryDetails() };
+        const orderHasDelivery = hasCompleteCustomerDelivery(order);
+        if (!orderHasDelivery && !hasCompleteCustomerDelivery(savedDelivery)) {
+            alert("الرجاء تسجيل عنوان التوصيل أولًا.");
+            window.location.href = "customer-details.html";
+            return;
+        }
+        const customerName = orderHasDelivery ? order.customer_name : `${savedDelivery.firstName} ${savedDelivery.lastName}`.trim();
+        const customerPhone = orderHasDelivery ? order.customer_phone : savedDelivery.phone;
+        const customerLat = orderHasDelivery ? Number(order.customer_lat) : Number(savedDelivery.latitude);
+        const customerLng = orderHasDelivery ? Number(order.customer_lng) : Number(savedDelivery.longitude);
+        const customerLocation = orderHasDelivery ? order.customer_location : `${savedDelivery.region} - حي ${savedDelivery.district} - شارع ${savedDelivery.street} • الموقع: ${customerLat.toFixed(6)},${customerLng.toFixed(6)}`;
+        if (!orderHasDelivery) {
+            const { error: addressError } = await supabaseClient.from("orders").update({ customer_name: customerName, customer_phone: customerPhone, customer_location: customerLocation, customer_lat: customerLat, customer_lng: customerLng }).eq("id", order.id).eq("user_id", user.id);
+            if (addressError) throw addressError;
+        }
         const { error: submitError } = await supabaseClient.rpc("submit_customer_order", {
             p_order_id: order.id,
             p_driver_number: null,
             p_driver_name: null,
-            p_customer_name: order.customer_name,
-            p_customer_location: order.customer_location,
-            p_customer_lat: order.customer_lat,
-            p_customer_lng: order.customer_lng,
+            p_customer_name: customerName,
+            p_customer_location: customerLocation,
+            p_customer_lat: customerLat,
+            p_customer_lng: customerLng,
             p_warehouse: warehouse
         });
         if (submitError) throw submitError;
-        localStorage.removeItem("customer_delivery_address");
         alert("تم تقديم الطلب بنجاح ✅");
         window.location.href = "customer-orders.html";
     } catch (error) {
