@@ -200,8 +200,8 @@ async function saveCustomerDeliveryDetails(event) {
     const additionalPhone = document.getElementById("additionalPhone").value.trim();
     const name = `${firstName} ${lastName}`.trim();
     if (!firstName || !lastName || !region || !district || !street || !phone || customerLat === null || customerLng === null) { setCheckoutMessage("أدخل الاسم الأول والأخير والمنطقة والحي والشارع ورقم الجوال وحدد موقعه من الخريطة أولًا."); return; }
-    if (!/^0?5\d{8}$/.test(phone.replace(/\s|-/g, ""))) { setCheckoutMessage("اكتب رقم جوال سعودي صحيحًا."); return; }
-    if (additionalPhone && !/^0?5\d{8}$/.test(additionalPhone.replace(/\s|-/g, ""))) { setCheckoutMessage("اكتب رقم الجوال الإضافي بصيغة صحيحة أو اتركه فارغًا."); return; }
+    if (!/^0?5\d{8}$/.test(phone.replace(/\s|-/g, ""))) { setCheckoutMessage("الرجاء كتابة الرقم بشكل صحيح."); return; }
+    if (additionalPhone && !/^0?5\d{8}$/.test(additionalPhone.replace(/\s|-/g, ""))) { setCheckoutMessage("الرجاء كتابة الرقم بشكل صحيح."); return; }
     const button = document.getElementById("submitButton");
     button.disabled = true; button.textContent = "جاري حفظ العنوان..."; setCheckoutMessage("", false);
     try {
