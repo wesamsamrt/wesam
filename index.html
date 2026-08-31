@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#2f4ff0">
 <title>WESAM SMART</title>
+<script>document.documentElement.classList.add("home-theme-pending");</script>
+<style>html{background:#020817}html.home-theme-pending body{visibility:hidden}</style>
 
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3863,12 +3865,14 @@ async function searchProducts(value) {
             const darkThemeStyles = document.getElementById("darkTechThemeStyles");
 
             if (!darkThemeStyles) {
+                document.documentElement.classList.remove("home-theme-pending");
                 return;
             }
 
             // حساب المندوب يستخدم التصميم الكلاسيكي الأصلي، وبقية الحسابات تستخدم التصميم الداكن.
             darkThemeStyles.media = isLinkedDriver ? "not all" : "all";
             document.body.classList.toggle("driver-classic-theme", Boolean(isLinkedDriver));
+            document.documentElement.classList.remove("home-theme-pending");
 
         }
 
@@ -4002,6 +4006,13 @@ async function searchProducts(value) {
 
 
         checkLoginStatus();
+
+        // يعيد فحص الثيم عند الرجوع للصفحة من ذاكرة المتصفح حتى لا يظهر ثيم قديم للحظة.
+        window.addEventListener("pageshow", event => {
+            if (!event.persisted) return;
+            document.documentElement.classList.add("home-theme-pending");
+            checkLoginStatus();
+        });
 
         updateAdminLinkVisibility();
 
