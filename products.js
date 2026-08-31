@@ -374,6 +374,20 @@ function groupProductsByCode(products) {
     return groups;
 }
 
+// يجمع بطاقات العملاء حسب كود المنتج والماركة، بينما يبقي بطاقات المندوب مجمعة بالكود فقط.
+function groupProductsForCurrentShopper(products) {
+    if (isLinkedDriverShopping) return groupProductsByCode(products);
+    const groups = {};
+    products.forEach(product => {
+        const code = String(product.product_code || "").trim() || `product_${product.id}`;
+        const company = String(product.company || "").trim().toLowerCase() || "general";
+        const groupKey = `${code}__${company}`;
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(product);
+    });
+    return groups;
+}
+
 
 /* =========================================================
    عرض المنتجات
@@ -478,7 +492,7 @@ function renderProducts(products) {
        تصبح بطاقة واحدة
     */
 
-    const groups = groupProductsByCode(products);
+    const groups = groupProductsForCurrentShopper(products);
 
 Object.keys(groups).forEach(groupKey => {
 
@@ -491,6 +505,8 @@ Object.keys(groups).forEach(groupKey => {
 
     const type =
         (firstProduct.type || "منتج").trim();
+
+    const company = String(firstProduct.company || "").trim();
 
         const compatibilityText =
     getProductCompatibilityText(firstProduct);
@@ -537,7 +553,7 @@ Object.keys(groups).forEach(groupKey => {
 </div>
 
 <h3>
-    ${type}
+    ${!isLinkedDriverShopping && company ? escapeHtml(company) : escapeHtml(type)}
 </h3>
 
 ${
@@ -557,7 +573,9 @@ ${
 
 
            <div class="product-compatibility-wrapper">
-    ${compatibilityText}
+    ${!isLinkedDriverShopping && company
+        ? `<span class="product-compatibility">${uniqueModels.length ? `موديلات متاحة: ${escapeHtml(uniqueModels.slice(0, 3).join(" • "))}${uniqueModels.length > 3 ? " ..." : ""}` : "اختر المنتج"}</span>`
+        : compatibilityText}
 </div>
 
 
@@ -637,6 +655,7 @@ function openProductExperience(variants) {
     const firstProduct = variants[0];
     const params = new URLSearchParams();
     if (firstProduct.product_code) params.set("code", firstProduct.product_code);
+    if (firstProduct.company) params.set("company", firstProduct.company);
     params.set("id", firstProduct.id);
     window.location.href = `product-details.html?${params.toString()}`;
 }

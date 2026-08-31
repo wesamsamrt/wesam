@@ -42,6 +42,7 @@ async function loadProductDetails() {
 
     const code = detailParams.get("code");
     const id = detailParams.get("id");
+    const company = detailParams.get("company");
     if (!code && !id) {
         container.className = "detail-error";
         container.textContent = "لم يتم تحديد المنتج.";
@@ -50,6 +51,7 @@ async function loadProductDetails() {
 
     let query = supabaseClient.from("products").select("*").eq("warehouse", warehouse);
     query = code ? query.eq("product_code", code) : query.eq("id", id);
+    if (company) query = query.eq("company", company);
     const { data, error } = await query.order("id", { ascending: true });
 
     if (error || !data?.length) {
