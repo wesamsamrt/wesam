@@ -1106,7 +1106,7 @@ const accountsSummary = document.getElementById("accountsSummary");
 
 // يحول رمز الدور إلى اسم عربي مفهوم داخل واجهة الحسابات.
 function accountRoleLabel(role) {
-    return ({ owner: "مدير عام", warehouse_manager: "مدير مخزن", orders_staff: "موظف طلبات", viewer: "مشاهد" })[role] || "مستخدم";
+    return ({ owner: "كامل الصلاحيات", warehouse_manager: "مدير مخزن", orders_staff: "موظف طلبات", viewer: "مشاهد" })[role] || "مستخدم";
 }
 
 // يعرض خانات اختيار المخازن التي يمكن منحها للحساب عند حفظ صلاحياته.
