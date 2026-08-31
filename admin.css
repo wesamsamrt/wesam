@@ -854,6 +854,8 @@ body {
 .category-admin-icon {
     width: 50px;
     height: 50px;
+    flex: 0 0 50px;
+    overflow: hidden;
 
     background: #eeecff;
     border-radius: 15px;
@@ -863,6 +865,14 @@ body {
     justify-content: center;
 
     font-size: 25px;
+}
+
+.category-admin-icon img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+    object-fit: contain;
 }
 
 .category-admin-info {
