@@ -4,7 +4,7 @@ const trackingOrderId = new URLSearchParams(window.location.search).get("id");
 function escapeTrackingHtml(value) { return String(value ?? "").replace(/[&<>"']/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[character])); }
 
 // يحول حالة الطلب المخزنة إلى رقم المرحلة التي ينبغي إضاءتها في شريط التتبع.
-function getTrackingStep(status) { return ({ "جديد":0, "قيد التجهيز":1, "تم شحن الطلب":2, "تم استلام طلبك":3 })[status] ?? 0; }
+function getTrackingStep(status) { return ({ "جديد":0, "قيد التجهيز":1, "تم شحن الطلب":2, "تم التسليم":3, "تم استلام طلبك":3 })[status] ?? 0; }
 
 // يرجع موقع المخزن التقريبي لتوفير رابط خريطة عملي في صفحة التتبع.
 function getWarehouseCoordinates(warehouse) { return warehouse === "جدة" ? [21.4858, 39.1925] : [24.7136, 46.6753]; }
@@ -12,7 +12,7 @@ function getWarehouseCoordinates(warehouse) { return warehouse === "جدة" ? [2
 // ينشئ شكل كل مرحلة وبياناتها وفق حالة الطلب الحالية.
 function renderTrackingStages(order) {
   const active = getTrackingStep(order.status);
-  const stages = [{ label:"تم استلام الطلب", icon:"✓" },{ label:"قيد التجهيز", icon:"⌘" },{ label:"تم الشحن", icon:"🚚" },{ label:"تم الاستلام", icon:"✓" }];
+  const stages = [{ label:"تم استلام الطلب", icon:"✓" },{ label:"قيد التجهيز", icon:"⌘" },{ label:"تم الشحن", icon:"🚚" },{ label:"تم التسليم", icon:"✓" }];
   return `<div class="stages">${stages.map((stage,index) => `<div class="stage ${index < active ? "done" : ""} ${index === active ? "current" : ""}"><div class="stage-icon">${stage.icon}</div><strong>${stage.label}</strong><small>${index <= active ? formatTrackingDate(order.created_at) : "—"}</small></div>`).join("")}</div>`;
 }
 
@@ -32,8 +32,8 @@ async function loadOrderTracking() {
   const [latitude, longitude] = getWarehouseCoordinates(order.warehouse || "الرياض");
   const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
   const active = getTrackingStep(order.status);
-  const eventLabels = ["تم استلام الطلب", "قيد التجهيز", "تم الشحن", "تم الاستلام"];
-  const eventNotes = ["تم استلام طلبك بنجاح", "جار تجهيز طلبك في المخزن", "سيتم تحديث الحالة عند إرسال الشحنة", "سيتم تحديث الحالة عند استلام الطلب"];
+  const eventLabels = ["تم استلام الطلب", "قيد التجهيز", "تم الشحن", "تم التسليم"];
+  const eventNotes = ["تم استلام طلبك بنجاح", "جار تجهيز طلبك في المخزن", "سيتم تحديث الحالة عند إرسال الشحنة", "تم تسليم الطلب بنجاح"];
   const timeline = eventLabels.map((label,index) => `<div class="timeline-row ${index < active ? "done" : ""} ${index === active ? "current" : ""}"><span class="timeline-time">${index <= active ? formatTrackingDate(order.created_at) : "—"}</span><div class="timeline-copy"><strong>${label}</strong><small>${eventNotes[index]}</small></div><span class="timeline-dot">${index < active ? "✓" : index === active ? "⌘" : "○"}</span></div>`).join("");
   const products = (items || []).map(item => `<div class="invoice-item">${item.image ? `<img src="${escapeTrackingHtml(item.image)}" alt="">` : '<div class="fallback">📦</div>'}<div class="invoice-info"><strong>${escapeTrackingHtml(item.type || item.product_type || item.model || "منتج")}</strong><small>الكمية: ${Number(item.quantity || 1)}</small></div><strong class="invoice-price">${(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)} ر.س</strong></div>`).join("") || '<p class="error">لا توجد منتجات.</p>';
   document.getElementById("trackingTitle").textContent = `تتبع الطلب #${order.id}`;

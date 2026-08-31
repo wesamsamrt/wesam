@@ -1357,7 +1357,7 @@ async function loadDashboardData() {
         document.getElementById("dashboardSalesSummary").textContent = formatAdminCurrency(monthSales);
 
         const lowStock = safeProducts.filter(product => Number(product.quantity || 0) <= 5);
-        const followUpOrders = safeOrders.filter(order => !["تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
+        const followUpOrders = safeOrders.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
         if (alerts) {
             alerts.innerHTML = `
                 <button type="button" class="dashboard-alert new-orders-alert" id="dashboardNewOrdersAlert">
@@ -1475,7 +1475,7 @@ async function loadSalesReport() {
     const from = salesDateFrom.value ? new Date(`${salesDateFrom.value}T00:00:00`) : null;
     const to = salesDateTo.value ? new Date(`${salesDateTo.value}T23:59:59.999`) : null;
     // تعد المبيعات فقط بعد شحن الطلب أو تأكيد استلامه؛ الطلبات المعلقة لا تدخل في الإيراد.
-    const allSales = (Array.isArray(data) ? data : []).filter(order => ["تم شحن الطلب", "تم استلام طلبك"].includes(order.status));
+    const allSales = (Array.isArray(data) ? data : []).filter(order => ["تم شحن الطلب", "تم التسليم", "تم استلام طلبك"].includes(order.status));
     const drivers = [...new Set(allSales.map(order => order.driver_name || order.driver_number).filter(Boolean))].sort();
     const selectedDriver = salesDriverFilter.value;
     salesDriverFilter.innerHTML = `<option value="">كل المناديب</option>${drivers.map(driver => `<option value="${transferText(driver)}" ${driver === selectedDriver ? "selected" : ""}>${transferText(driver)}</option>`).join("")}`;
@@ -1488,7 +1488,7 @@ async function loadSalesReport() {
 
     const revenue = salesOrdersCache.reduce((sum, order) => sum + Number(order.total || 0), 0);
     const average = salesOrdersCache.length ? revenue / salesOrdersCache.length : 0;
-    const delivered = salesOrdersCache.filter(order => order.status === "تم استلام طلبك").length;
+    const delivered = salesOrdersCache.filter(order => ["تم التسليم", "تم استلام طلبك"].includes(order.status)).length;
     metrics.innerHTML = `
         <div class="sales-metric"><span>إجمالي المبيعات</span><strong>${formatAdminCurrency(revenue)}</strong></div>
         <div class="sales-metric"><span>الطلبات المباعة</span><strong>${salesOrdersCache.length}</strong></div>
@@ -3854,7 +3854,7 @@ function renderAdminOrdersList() {
 // يحسب ملخص عدد الطلبات والمبيعات والطلبات قيد المتابعة للمخزن الحالي.
 function updateOrdersSummary() {
     if (!ordersSummary) return;
-    const activeOrders = adminOrdersData.filter(order => !["تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
+    const activeOrders = adminOrdersData.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
     const total = adminOrdersData.reduce((sum, order) => sum + Number(order.total || 0), 0);
     ordersSummary.innerHTML = `<span><strong>${adminOrdersData.length}</strong> إجمالي الطلبات</span><span><strong>${activeOrders.length}</strong> قيد المتابعة</span><span><strong>${total.toFixed(2)}</strong> ر.س إجمالي المبيعات</span>`;
 }
@@ -4409,10 +4409,10 @@ Object.entries(typeCodes).forEach(
 
 
                 <option
-                    value="تم استلام طلبك"
-                    ${order.status === "تم استلام طلبك" ? "selected" : ""}
+                    value="تم التسليم"
+                    ${["تم التسليم", "تم استلام طلبك"].includes(order.status) ? "selected" : ""}
                 >
-                    تم استلام طلبك
+                    تم التسليم
                 </option>
 
 
