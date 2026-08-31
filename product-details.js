@@ -5,6 +5,9 @@ let selectedModel = "";
 let selectedColor = "";
 let selectedQuantity = 1;
 let detailWarehouse = "";
+let cachedDetailCartUser = null;
+let cachedDetailOpenOrder = null;
+let detailOpenOrderRequest = null;
 
 // يحمي بيانات المنتج قبل عرضها داخل صفحة التفاصيل.
 function escapeDetailHtml(value) {
@@ -23,6 +26,7 @@ function formatDetailStock(quantity) {
 async function resolveDetailWarehouse() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return localStorage.getItem("customer_warehouse") || "الرياض";
+    cachedDetailCartUser = user;
 
     const { data: identity } = await supabaseClient.rpc("get_my_driver_identity");
     if (identity?.is_driver) {
@@ -33,12 +37,54 @@ async function resolveDetailWarehouse() {
     return localStorage.getItem("customer_warehouse") || "الرياض";
 }
 
+// يجهّز طلب العميل المفتوح مرة واحدة بدل إعادة جلبه مع كل ضغطة إضافة.
+async function getDetailOpenOrder() {
+    const user = cachedDetailCartUser;
+    if (!user) throw new Error("LOGIN_REQUIRED");
+    if (cachedDetailOpenOrder?.user_id === user.id && cachedDetailOpenOrder?.warehouse === detailWarehouse) {
+        return cachedDetailOpenOrder;
+    }
+    if (detailOpenOrderRequest) return detailOpenOrderRequest;
+
+    detailOpenOrderRequest = loadDetailOpenOrder(user);
+    try {
+        return await detailOpenOrderRequest;
+    } finally {
+        detailOpenOrderRequest = null;
+    }
+}
+
+async function loadDetailOpenOrder(user) {
+
+    const { data: orders, error } = await supabaseClient.from("orders")
+        .select("id, user_id, warehouse").eq("user_id", user.id)
+        .eq("status", "جديد").eq("warehouse", detailWarehouse)
+        .order("id", { ascending: false }).limit(1);
+    if (error) throw error;
+    if (orders?.length) {
+        cachedDetailOpenOrder = orders[0];
+        return cachedDetailOpenOrder;
+    }
+
+    const { data: order, error: createError } = await supabaseClient.from("orders").insert({
+        user_id: user.id,
+        customer_name: user.user_metadata?.name || user.email || "عميل",
+        customer_phone: user.user_metadata?.phone || "",
+        status: "جديد", total: 0, warehouse: detailWarehouse
+    }).select("id, user_id, warehouse").single();
+    if (createError) throw createError;
+    cachedDetailOpenOrder = order;
+    return order;
+}
+
 // يجلب المنتج وكل ألوانه وموديلاته من مخزن المنطقة الحالية.
 async function loadProductDetails() {
     const container = document.getElementById("productDetail");
     const warehouse = await resolveDetailWarehouse();
     if (!warehouse) return;
     detailWarehouse = warehouse;
+    // يبدأ تجهيز السلة أثناء عرض المنتج حتى تكون أول إضافة سريعة جدًا.
+    if (cachedDetailCartUser) getDetailOpenOrder().catch(error => console.warn("تعذر تجهيز سلة العميل مسبقًا:", error));
 
     const code = detailParams.get("code");
     const id = detailParams.get("id");
@@ -353,28 +399,7 @@ async function addDetailSelectionsToCart() {
     button.disabled = true;
     button.textContent = "جاري الإضافة للسلة...";
     try {
-        const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-        if (userError || !user) throw new Error("LOGIN_REQUIRED");
-
-        const { data: existingOrders, error: ordersError } = await supabaseClient
-            .from("orders").select("id, user_id").eq("user_id", user.id)
-            .eq("status", "جديد").eq("warehouse", detailWarehouse)
-            .order("id", { ascending: false }).limit(1);
-        if (ordersError) throw ordersError;
-
-        let order = existingOrders?.[0];
-        if (!order) {
-            const { data, error } = await supabaseClient.from("orders").insert({
-                user_id: user.id,
-                customer_name: user.user_metadata?.name || user.email || "عميل",
-                customer_phone: user.user_metadata?.phone || "",
-                status: "جديد",
-                total: 0,
-                warehouse: detailWarehouse
-            }).select("id, user_id").single();
-            if (error) throw error;
-            order = data;
-        }
+        const order = await getDetailOpenOrder();
 
         const productIds = items.map(item => item.product.id);
         const { data: existingItems, error: existingError } = await supabaseClient
@@ -399,11 +424,9 @@ async function addDetailSelectionsToCart() {
                     price: Number(product.price || 0), image: product.image });
             }
         });
-        if (inserts.length) {
-            const { error } = await supabaseClient.from("order_items").insert(inserts);
-            if (error) throw error;
-        }
-        const updateResults = await Promise.all(updates);
+        const writes = [...updates];
+        if (inserts.length) writes.push(supabaseClient.from("order_items").insert(inserts));
+        const updateResults = await Promise.all(writes);
         const updateError = updateResults.find(result => result.error)?.error;
         if (updateError) throw updateError;
 

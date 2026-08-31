@@ -179,6 +179,7 @@ function detectCustomerWarehouse() {
 // مع كل ضغطة على زر الإضافة.
 let cachedCartUser = null;
 let cachedOpenOrder = null;
+let openOrderRequest = null;
 
 // رسالة خفيفة لا توقف الواجهة مثل alert، وتسمح للمندوب بمتابعة الإضافة مباشرة.
 function showCartNotice(message, isError = false) {
@@ -215,6 +216,17 @@ async function getOpenOrder(user) {
     if (cachedOpenOrder && cachedOpenOrder.user_id === user.id) {
         return cachedOpenOrder;
     }
+    if (openOrderRequest) return openOrderRequest;
+
+    openOrderRequest = loadOpenOrder(user);
+    try {
+        return await openOrderRequest;
+    } finally {
+        openOrderRequest = null;
+    }
+}
+
+async function loadOpenOrder(user) {
 
     const { data: orders, error } = await supabaseClient
         .from("orders")
@@ -2101,13 +2113,14 @@ plus.addEventListener("pointerdown", function (e) {
             return;
         }
 
-        // استجابة فورية: نغلق النافذة ونترك الحفظ يتم دون تجميد رحلة المندوب.
+        // استجابة فورية مع إبقاء النافذة مفتوحة ليواصل المندوب إضافة منتجات أخرى.
         addButton.disabled = true;
-        closeProductModal();
         showCartNotice("تمت الإضافة للسلة ⚡");
 
         try {
             await addProductsBatch(selectedItems);
+            rows.forEach(row => { row.querySelector(".color-quantity-input").value = 0; });
+            updateStockSummary();
         } catch (error) {
             console.error("خطأ إضافة المنتجات:", error);
             if (error.message === "LOGIN_REQUIRED") {
@@ -2116,6 +2129,9 @@ plus.addEventListener("pointerdown", function (e) {
             } else {
                 showCartNotice("تعذر الحفظ، حاول مرة أخرى", true);
             }
+        } finally {
+            addButton.disabled = false;
+            addButton.textContent = "إضافة للسلة";
         }
     };
 
