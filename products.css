@@ -307,6 +307,8 @@ body.modal-open {
 
     font-weight: 800;
 
+    color: var(--text);
+
     margin-bottom: 4px;
 }
 
@@ -734,6 +736,10 @@ body.modal-open {
 .modal-price strong {
     font-size: 22px;
 }
+
+/* يحافظ على وضوح النص إذا ظهرت البطاقة البيضاء في تصميم المندوب الكلاسيكي. */
+body.driver-classic-theme .product-card h3 { color: #171827 !important; }
+body.driver-classic-theme .product-card .product-compatibility { color: #5f6674 !important; }
 
 /* خانة سعر البيع المؤقت الخاصة بسلة الموظف، ولا تغيّر سعر المنتج الأساسي. */
 .order-price-override {

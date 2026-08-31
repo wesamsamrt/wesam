@@ -374,9 +374,8 @@ function groupProductsByCode(products) {
     return groups;
 }
 
-// يجمع بطاقات العملاء حسب كود المنتج والماركة، بينما يبقي بطاقات المندوب مجمعة بالكود فقط.
+// كل ماركة لها بطاقة مستقلة، حتى عند اشتراكها مع ماركات أخرى في كود المنتج نفسه.
 function groupProductsForCurrentShopper(products) {
-    if (isLinkedDriverShopping) return groupProductsByCode(products);
     const groups = {};
     products.forEach(product => {
         const code = String(product.product_code || "").trim() || `product_${product.id}`;
@@ -553,7 +552,7 @@ Object.keys(groups).forEach(groupKey => {
 </div>
 
 <h3>
-    ${!isLinkedDriverShopping && company ? escapeHtml(company) : escapeHtml(type)}
+    ${company ? escapeHtml(company) : escapeHtml(type)}
 </h3>
 
 ${
@@ -573,7 +572,7 @@ ${
 
 
            <div class="product-compatibility-wrapper">
-    ${!isLinkedDriverShopping && company
+    ${company
         ? `<span class="product-compatibility">${uniqueModels.length ? `موديلات متاحة: ${escapeHtml(uniqueModels.slice(0, 3).join(" • "))}${uniqueModels.length > 3 ? " ..." : ""}` : "اختر المنتج"}</span>`
         : compatibilityText}
 </div>
