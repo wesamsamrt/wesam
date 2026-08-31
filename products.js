@@ -243,7 +243,16 @@ async function getOpenOrder(user) {
 
 // يظهر أو يخفي مقطع التحميل حتى لا تظهر رسالة نصية عند بطء الإنترنت.
 function setProductsLoadingScreen(visible) {
-    document.getElementById("productsLoadingScreen")?.classList.toggle("is-hidden", !visible);
+    const loader = document.getElementById("productsLoadingScreen");
+    if (!loader) return;
+    const video = loader.querySelector("video");
+    if (isLinkedDriverShopping) {
+        loader.classList.add("is-hidden");
+        video?.pause();
+        return;
+    }
+    loader.classList.toggle("is-hidden", !visible);
+    if (visible) video?.play().catch(() => {});
 }
 
 async function loadProducts() {
@@ -252,9 +261,9 @@ async function loadProducts() {
 
     if (!container) return;
 
-    setProductsLoadingScreen(true);
-
     await resolveCustomerWarehouseAccess();
+
+    setProductsLoadingScreen(true);
 
     if (!customerWarehouse) {
         setProductsLoadingScreen(false);

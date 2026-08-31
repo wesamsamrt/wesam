@@ -2117,6 +2117,7 @@ body.driver-classic-theme .home-product-types {
 }
 body.driver-classic-theme .brand-logo-image{content:url("logo.png")}
 .store-intro-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 50% 45%,#092d69 0,#020b20 48%,#010511 100%);opacity:1;visibility:visible;transition:opacity .55s ease,visibility .55s ease}
+.store-intro-overlay.waiting-account{opacity:0;visibility:hidden;pointer-events:none}
 .store-intro-overlay.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 .store-intro-video{display:block;width:min(560px,88vw);max-height:78vh;border:1px solid rgba(74,153,255,.55);border-radius:28px;background:#020817;object-fit:contain;box-shadow:0 0 42px rgba(24,130,255,.34),0 28px 70px rgba(0,0,0,.52)}
 .store-intro-skip{position:absolute;top:24px;left:24px;padding:8px 13px;border:1px solid rgba(160,194,242,.3);border-radius:10px;background:rgba(5,21,50,.72);color:#c9d8ee;font:600 11px Cairo,sans-serif;cursor:pointer}
@@ -2257,7 +2258,7 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
 
 <body>
 
-<div class="store-intro-overlay" id="storeIntroOverlay" role="dialog" aria-label="مقدمة متجر وسام سمارت">
+<div class="store-intro-overlay waiting-account" id="storeIntroOverlay" role="dialog" aria-label="مقدمة متجر وسام سمارت">
   <video class="store-intro-video" id="storeIntroVideo" autoplay playsinline preload="auto">
     <source src="store-intro.mp4" type="video/mp4">
   </video>
@@ -2278,32 +2279,40 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
     window.setTimeout(() => overlay.remove(), 650);
   }
 
-  if (sessionStorage.getItem(introKey) === "1") {
-    overlay.remove();
-    return;
+  function startStoreIntro() {
+    if (!overlay || overlay.dataset.started === "1") return;
+    overlay.dataset.started = "1";
+    if (sessionStorage.getItem(introKey) === "1") {
+      overlay.remove();
+      return;
+    }
+    overlay.classList.remove("waiting-account");
+    document.body.classList.add("store-intro-open");
+    video.muted = false;
+    video.volume = 1;
+    const playback = video.play();
+    if (playback && typeof playback.catch === "function") {
+      playback.catch(() => {
+        const resumeWithSound = async function (event) {
+          if (event.target === skipButton) return;
+          video.muted = false;
+          video.volume = 1;
+          try {
+            await video.play();
+            overlay.removeEventListener("pointerdown", resumeWithSound);
+          } catch (error) {
+            console.warn("تعذر تشغيل مقدمة المتجر بالصوت", error);
+          }
+        };
+        overlay.addEventListener("pointerdown", resumeWithSound);
+      });
+    }
   }
 
-  document.body.classList.add("store-intro-open");
-  video.muted = false;
-  video.volume = 1;
-
-  const playback = video.play();
-  if (playback && typeof playback.catch === "function") {
-    playback.catch(() => {
-      const resumeWithSound = async function (event) {
-        if (event.target === skipButton) return;
-        video.muted = false;
-        video.volume = 1;
-        try {
-          await video.play();
-          overlay.removeEventListener("pointerdown", resumeWithSound);
-        } catch (error) {
-          console.warn("تعذر تشغيل مقدمة المتجر بالصوت", error);
-        }
-      };
-      overlay.addEventListener("pointerdown", resumeWithSound);
-    });
-  }
+  document.addEventListener("homepage-account-ready", event => {
+    if (event.detail?.isDriver) closeStoreIntro();
+    else startStoreIntro();
+  }, { once: true });
   skipButton.addEventListener("click", closeStoreIntro);
   video.addEventListener("ended", closeStoreIntro);
   video.addEventListener("error", closeStoreIntro);
@@ -3870,6 +3879,7 @@ async function searchProducts(value) {
             darkThemeStyles.media = isLinkedDriver ? "not all" : "all";
             document.body.classList.toggle("driver-classic-theme", Boolean(isLinkedDriver));
             document.documentElement.classList.remove("home-theme-pending");
+            document.dispatchEvent(new CustomEvent("homepage-account-ready", { detail: { isDriver: Boolean(isLinkedDriver) } }));
 
         }
 
