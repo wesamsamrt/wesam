@@ -3552,13 +3552,14 @@ async function searchProducts(value) {
     ========================================= */
 
     const groups = {};
+    const isDriverSearch = document.body.classList.contains("driver-classic-theme");
 
     data.forEach(product => {
 
         const code =
             (product.product_code || "").trim();
 
-        const brand = getHomepageSearchBrand(product);
+        const brand = isDriverSearch ? "" : getHomepageSearchBrand(product);
         // عند غياب الماركة تمامًا لا ندمج موديلات مجهولة ببعضها.
         const groupKey = `${code || `product_${product.id}`}__${brand.toLowerCase() || `unknown_${product.id}`}`;
 
@@ -3595,6 +3596,7 @@ async function searchProducts(value) {
             (firstProduct.type || "منتج").trim();
 
         const brand = getHomepageSearchBrand(firstProduct);
+        const showBrand = !isDriverSearch && Boolean(brand);
 
 
         const models = [
@@ -3642,8 +3644,8 @@ async function searchProducts(value) {
                     flex:1;
                 ">
 
-                    <div class="home-search-result-title">${escapeHtml(brand || type)}</div>
-                    ${brand ? `<div class="home-search-result-type">${escapeHtml(type)}</div>` : ""}
+                    <div class="home-search-result-title">${escapeHtml(showBrand ? brand : type)}</div>
+                    ${showBrand ? `<div class="home-search-result-type">${escapeHtml(type)}</div>` : ""}
 
 
                     ${
