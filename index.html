@@ -334,6 +334,27 @@ a{
   margin-bottom:14px;
 }
 
+/* نتائج البحث: نص واضح وبطاقة متناسقة مع الهوية الداكنة. */
+#searchResults .home-search-result-card{
+  border:1px solid rgba(92,151,245,.42);
+  border-radius:20px;
+  padding:15px;
+  margin-bottom:10px;
+  background:linear-gradient(145deg,#0d2859,#061733);
+  color:#f4f7ff;
+  box-shadow:0 12px 28px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.06);
+  cursor:pointer;
+  transition:.2s;
+}
+#searchResults .home-search-result-card:hover{border-color:#5da1ff;transform:translateY(-2px)}
+#searchResults .home-search-result-image{width:55px;height:55px;border-radius:15px;background:#f2f6ff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+#searchResults .home-search-result-image img{width:100%;height:100%;object-fit:contain}
+#searchResults .home-search-result-title{font-size:16px;font-weight:800;color:#f5f8ff}
+#searchResults .home-search-result-type{font-size:11px;color:#a8c9ff;margin-top:2px}
+#searchResults .home-search-result-code{font-size:13px;color:#6fafff;font-weight:700;margin-top:3px}
+#searchResults .home-search-result-models{font-size:11px;color:#c2d0e8;margin-top:4px}
+#searchResults .home-search-result-arrow{width:38px;height:38px;border-radius:50%;background:#216cf5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px rgba(33,108,245,.32)}
+
 
 /* =========================================================
    HERO
@@ -3371,6 +3392,22 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
         ===================================================== */
 let searchRequestId = 0;
 
+// يرجع الماركة المخزنة، أو يستنتجها من اسم الموديل للمنتجات القديمة التي لم يُعبأ فيها حقل الماركة.
+function getHomepageSearchBrand(product) {
+    const company = String(product.company || "").trim();
+    if (company) return company;
+
+    const model = String(product.model || "").trim().toLowerCase();
+    const brands = [
+        ["iphone", "آيفون"], ["ايفون", "آيفون"], ["samsung", "سامسونج"], ["سامسونج", "سامسونج"],
+        ["huawei", "هواوي"], ["هواوي", "هواوي"], ["honor", "هونر"], ["هونر", "هونر"],
+        ["infinix", "إنفنيكس"], ["انفنيكس", "إنفنيكس"], ["itel", "ايتل"], ["ايتل", "ايتل"],
+        ["realme", "ريلمي"], ["ريلمي", "ريلمي"], ["redmi", "ريدمي"], ["ريدمي", "ريدمي"],
+        ["tecno", "تكنو"], ["تكنو", "تكنو"], ["vivo", "فيفو"], ["فيفو", "فيفو"]
+    ];
+    return brands.find(([term]) => model.includes(term))?.[1] || "";
+}
+
 async function searchProducts(value) {
 
     const requestId = ++searchRequestId;
@@ -3511,7 +3548,7 @@ async function searchProducts(value) {
 
 
     /* =========================================
-       تجميع النتائج حسب product_code
+       تجميع النتائج حسب كود المنتج والماركة
     ========================================= */
 
     const groups = {};
@@ -3521,8 +3558,9 @@ async function searchProducts(value) {
         const code =
             (product.product_code || "").trim();
 
-        const groupKey =
-            code || `product_${product.id}`;
+        const brand = getHomepageSearchBrand(product);
+        // عند غياب الماركة تمامًا لا ندمج موديلات مجهولة ببعضها.
+        const groupKey = `${code || `product_${product.id}`}__${brand.toLowerCase() || `unknown_${product.id}`}`;
 
         if (!groups[groupKey]) {
             groups[groupKey] = [];
@@ -3556,6 +3594,8 @@ async function searchProducts(value) {
         const type =
             (firstProduct.type || "منتج").trim();
 
+        const brand = getHomepageSearchBrand(firstProduct);
+
 
         const models = [
             ...new Set(
@@ -3572,15 +3612,7 @@ async function searchProducts(value) {
             document.createElement("div");
 
 
-        card.style.cssText = `
-            background:white;
-            border-radius:20px;
-            padding:15px;
-            margin-bottom:10px;
-            box-shadow:0 10px 30px rgba(52,48,110,.07);
-            cursor:pointer;
-            transition:.2s;
-        `;
+        card.className = "home-search-result-card";
 
 
         card.innerHTML = `
@@ -3591,28 +3623,13 @@ async function searchProducts(value) {
                 gap:12px;
             ">
 
-                <div style="
-                    width:55px;
-                    height:55px;
-                    border-radius:15px;
-                    background:#f0ecff;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    overflow:hidden;
-                    flex-shrink:0;
-                ">
+                <div class="home-search-result-image">
 
                     ${
                         firstProduct.image
                         ?
                         `<img
                             src="${escapeHtml(firstProduct.image)}"
-                            style="
-                                width:100%;
-                                height:100%;
-                                object-fit:cover;
-                            "
                         >`
                         :
                         "📱"
@@ -3625,24 +3642,15 @@ async function searchProducts(value) {
                     flex:1;
                 ">
 
-                    <div style="
-                        font-size:16px;
-                        font-weight:800;
-                    ">
-                        ${escapeHtml(type)}
-                    </div>
+                    <div class="home-search-result-title">${escapeHtml(brand || type)}</div>
+                    ${brand ? `<div class="home-search-result-type">${escapeHtml(type)}</div>` : ""}
 
 
                     ${
                         code
                         ?
                         `
-                        <div style="
-                            font-size:13px;
-                            color:#6557ed;
-                            font-weight:700;
-                            margin-top:3px;
-                        ">
+                        <div class="home-search-result-code">
                             كود المنتج: ${escapeHtml(code)}
                         </div>
                         `
@@ -3651,29 +3659,12 @@ async function searchProducts(value) {
                     }
 
 
-                    <div style="
-                        font-size:11px;
-                        color:#858796;
-                        margin-top:3px;
-                    ">
-                        ${models.length}
-                        موديل متوفر
-                    </div>
+                    <div class="home-search-result-models">${models.length} موديل متوفر${models.length ? `: ${escapeHtml(models.slice(0, 3).join(" • "))}${models.length > 3 ? " ..." : ""}` : ""}</div>
 
                 </div>
 
 
-                <div style="
-                    width:38px;
-                    height:38px;
-                    border-radius:50%;
-                    background:#6557ed;
-                    color:white;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    font-size:20px;
-                ">
+                <div class="home-search-result-arrow">
                     ←
                 </div>
 
