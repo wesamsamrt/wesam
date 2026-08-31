@@ -4,10 +4,18 @@
 <head>
 
 
+    <script>document.documentElement.classList.add("cart-theme-pending");</script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 
     <title>السلة</title>
+
+    <style>
+        /* لا نعرض النمط الافتراضي لحظةً قبل معرفة هل الحساب عميل أم مندوب. */
+        html.cart-theme-pending { background: #020d24; }
+        html.cart-theme-pending body { visibility: hidden; }
+    </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
@@ -754,18 +762,21 @@ document.getElementById("cartGroupBy")?.addEventListener("change", renderCartVie
 async function fillLinkedDriverNumber() {
     const driverInput = document.getElementById("driverNumber");
     const driverMessage = document.getElementById("driverMessage");
-    if (!driverInput) return;
-    const { data: identity, error } = await supabaseClient.rpc("get_my_driver_identity");
-    isLinkedDriverCart = Boolean(!error && identity?.is_driver);
-    document.body.classList.toggle("customer-cart", !isLinkedDriverCart);
-    document.body.classList.toggle("driver-cart", isLinkedDriverCart);
-    if (!isLinkedDriverCart) return;
-    driverInput.value = identity.driver_number || "";
-    driverInput.readOnly = true;
-    driverInput.style.background = "#f4f3ff";
-    if (driverMessage) {
-        driverMessage.textContent = `المندوب المرتبط بالحساب: ${identity.driver_name || "مندوب"}`;
-        driverMessage.style.color = "#6557ed";
+    try {
+        const { data: identity, error } = await supabaseClient.rpc("get_my_driver_identity");
+        isLinkedDriverCart = Boolean(!error && identity?.is_driver);
+        document.body.classList.toggle("customer-cart", !isLinkedDriverCart);
+        document.body.classList.toggle("driver-cart", isLinkedDriverCart);
+        if (!isLinkedDriverCart || !driverInput) return;
+        driverInput.value = identity.driver_number || "";
+        driverInput.readOnly = true;
+        driverInput.style.background = "#f4f3ff";
+        if (driverMessage) {
+            driverMessage.textContent = `المندوب المرتبط بالحساب: ${identity.driver_name || "مندوب"}`;
+            driverMessage.style.color = "#6557ed";
+        }
+    } finally {
+        document.documentElement.classList.remove("cart-theme-pending");
     }
 }
 
@@ -791,6 +802,8 @@ async function loadOrders() {
 
 
     if (userError || !user) {
+
+        document.documentElement.classList.remove("cart-theme-pending");
 
         container.innerHTML = `
             <div class="empty">
@@ -835,6 +848,9 @@ async function loadOrders() {
     // جلب طلب المستخدم
     // =========================
 
+    // نحدد النمط أولاً حتى لا يومض تصميم المندوب عند دخول العميل للسلة.
+    await fillLinkedDriverNumber();
+
     // نعرض سلة منطقة العميل الحالية فقط حتى لا تختلط سلال مخازن مختلفة.
     const selectedCustomerWarehouse =
         localStorage.getItem("customer_warehouse") || "";
@@ -849,8 +865,6 @@ async function loadOrders() {
         `;
         return;
     }
-
-    await fillLinkedDriverNumber();
 
     const {
         data: orders,
