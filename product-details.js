@@ -396,8 +396,14 @@ async function addDetailSelectionsToCart() {
         return;
     }
 
+    // نظهر التنفيذ فورًا مثل تصميم المندوب، بينما يكتمل الحفظ في الخلفية.
+    const badge = document.getElementById("detailCartCount");
+    const previousCartQuantity = Number(badge?.textContent || 0);
+    const optimisticCartQuantity = previousCartQuantity + items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     button.disabled = true;
-    button.textContent = "جاري الإضافة للسلة...";
+    button.textContent = "تمت الإضافة ⚡";
+    playCartAddAnimation(optimisticCartQuantity);
+    showDetailNotice("تمت إضافة المنتج إلى السلة ⚡");
     try {
         const order = await getDetailOpenOrder();
 
@@ -438,13 +444,13 @@ async function addDetailSelectionsToCart() {
         if (totalError) throw totalError;
 
         const cartQuantity = (cartItems || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        playCartAddAnimation(cartQuantity);
-        showDetailNotice("تمت إضافة المنتج إلى السلة بنجاح ✅");
+        updateDetailCartBadge(cartQuantity);
         selectedQuantity = 1;
         const selectedColorButton = document.querySelector(`.detail-color-choice[data-color="${CSS.escape(selectedColor)}"]`);
         renderDetailPurchaseQuantity(Number(selectedColorButton?.dataset.available || 0));
     } catch (error) {
         console.error("Detail cart error:", error);
+        updateDetailCartBadge(previousCartQuantity);
         if (error.message === "LOGIN_REQUIRED") {
             showDetailNotice("يجب تسجيل الدخول أولًا لإضافة المنتج للسلة.", "error");
             setTimeout(() => { window.location.href = "login.html"; }, 900);
