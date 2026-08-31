@@ -187,7 +187,8 @@ function showCartNotice(message, isError = false) {
     if (!notice) {
         notice = document.createElement("div");
         notice.id = "fastCartNotice";
-        notice.style.cssText = "position:fixed;z-index:30000;left:50%;bottom:24px;transform:translateX(-50%);padding:12px 18px;border-radius:12px;background:#123f91;color:#fff;font:700 14px Cairo,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.25);transition:opacity .18s;pointer-events:none";
+        // أعلى من مودال اختيار الكمية (z-index: 999999) لتظهر الرسالة فوق النافذة نفسها.
+        notice.style.cssText = "position:fixed;z-index:1000001;left:50%;top:22px;bottom:auto;transform:translateX(-50%);max-width:calc(100% - 28px);padding:12px 18px;border-radius:12px;background:#123f91;color:#fff;font:700 14px Cairo,sans-serif;text-align:center;white-space:nowrap;box-shadow:0 10px 28px rgba(0,0,0,.25);transition:opacity .18s;pointer-events:none";
         document.body.appendChild(notice);
     }
     notice.textContent = message;
