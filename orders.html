@@ -250,6 +250,7 @@
             body.customer-cart .customer-cart-item .delete-button { width: 32px; height: 32px; font-size: 14px; }
         }
 
+        .cart-site-notice{position:fixed;z-index:20000;left:50%;bottom:28px;max-width:min(450px,calc(100% - 28px));padding:15px 20px;border:1px solid rgba(94,156,255,.5);border-radius:16px;background:rgba(8,29,68,.97);color:#fff;font:700 14px "Cairo",sans-serif;text-align:center;box-shadow:0 16px 42px rgba(0,0,0,.34);transform:translate(-50%,25px);opacity:0;transition:opacity .24s ease,transform .24s ease;pointer-events:none;white-space:pre-line}.cart-site-notice.is-visible{transform:translate(-50%,0);opacity:1}.cart-site-notice.error{border-color:rgba(255,128,145,.65);background:rgba(102,25,49,.97)}
     </style>
 
 </head>
@@ -576,6 +577,19 @@ function renderCustomerCartSummary(total, totalQuantity) {
         </div>`;
 }
 
+// يعرض رسالة قصيرة من تصميم السلة بدل نوافذ التنبيه التابعة للمتصفح.
+function showCartNotice(message, type = "success") {
+    document.getElementById("cartSiteNotice")?.remove();
+    const notice = document.createElement("div");
+    notice.id = "cartSiteNotice";
+    notice.className = `cart-site-notice ${type}`;
+    notice.setAttribute("role", "status");
+    notice.textContent = message;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.classList.add("is-visible"), 20);
+    setTimeout(() => { notice.classList.remove("is-visible"); setTimeout(() => notice.remove(), 260); }, 3500);
+}
+
 // يقرأ العنوان الافتراضي المخزن على الجهاز مع حماية الصفحة من البيانات التالفة.
 function getStoredCustomerDeliveryDetails() {
     try { return JSON.parse(localStorage.getItem("customer_delivery_details") || "{}"); }
@@ -627,8 +641,8 @@ async function continueCustomerCheckout() {
             p_warehouse: warehouse
         });
         if (submitError) throw submitError;
-        alert("تم تقديم الطلب بنجاح ✅");
-        window.location.href = "customer-orders.html";
+        showCartNotice("تم تقديم الطلب بنجاح ✅");
+        setTimeout(() => { window.location.href = "customer-orders.html"; }, 1300);
     } catch (error) {
         console.error("Customer cart submit error:", error);
         alert("تعذر تقديم الطلب: " + (error.message || "حاول مرة أخرى."));
@@ -1599,13 +1613,8 @@ if (!customerName) {
         // نجاح
         // =========================
 
-        alert(
-            "تم تقديم الطلب بنجاح ✅\n\n" +
-            "رقم الطلب: " +
-            order.id +
-            "\n" +
-            "المندوب: " +
-            driver.name
+        showCartNotice(
+            "تم تقديم الطلب بنجاح ✅\nرقم الطلب: " + order.id + "\nالمندوب: " + driver.name
         );
 
 
@@ -1613,7 +1622,7 @@ if (!customerName) {
         // إعادة التحميل
         // =========================
 
-        location.reload();
+        setTimeout(() => location.reload(), 1500);
 
 
     }
