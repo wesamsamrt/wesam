@@ -80,6 +80,9 @@ async function resolveCustomerWarehouseAccess() {
     if (isLinkedDriverShopping) {
         customerWarehouse = driverIdentity.warehouse;
         localStorage.setItem("customer_warehouse", customerWarehouse);
+        // نجهّز جلسة السلة والطلب المفتوح أثناء تحميل الصفحة، قبل أول ضغطة إضافة.
+        cachedCartUser = user;
+        getOpenOrder(user).catch(error => console.warn("تعذر تجهيز سلة المندوب مسبقًا:", error));
         const changeButton = document.getElementById("changeCustomerWarehouse");
         if (changeButton) changeButton.style.display = "none";
         const modal = document.getElementById("customerWarehouseModal");
@@ -176,6 +179,22 @@ function detectCustomerWarehouse() {
 // مع كل ضغطة على زر الإضافة.
 let cachedCartUser = null;
 let cachedOpenOrder = null;
+
+// رسالة خفيفة لا توقف الواجهة مثل alert، وتسمح للمندوب بمتابعة الإضافة مباشرة.
+function showCartNotice(message, isError = false) {
+    let notice = document.getElementById("fastCartNotice");
+    if (!notice) {
+        notice = document.createElement("div");
+        notice.id = "fastCartNotice";
+        notice.style.cssText = "position:fixed;z-index:30000;left:50%;bottom:24px;transform:translateX(-50%);padding:12px 18px;border-radius:12px;background:#123f91;color:#fff;font:700 14px Cairo,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.25);transition:opacity .18s;pointer-events:none";
+        document.body.appendChild(notice);
+    }
+    notice.textContent = message;
+    notice.style.background = isError ? "#a52235" : "#123f91";
+    notice.style.opacity = "1";
+    clearTimeout(showCartNotice.timer);
+    showCartNotice.timer = setTimeout(() => { notice.style.opacity = "0"; }, 1800);
+}
 
 async function getCartUser() {
     if (cachedCartUser) {
@@ -2082,25 +2101,21 @@ plus.addEventListener("pointerdown", function (e) {
             return;
         }
 
+        // استجابة فورية: نغلق النافذة ونترك الحفظ يتم دون تجميد رحلة المندوب.
         addButton.disabled = true;
-        addButton.textContent = "جاري الإضافة...";
+        closeProductModal();
+        showCartNotice("تمت الإضافة للسلة ⚡");
 
         try {
             await addProductsBatch(selectedItems);
-            alert("تمت إضافة المنتجات المختارة إلى السلة بنجاح");
-            rows.forEach(row => { row.querySelector(".color-quantity-input").value = 0; });
-            updateStockSummary();
         } catch (error) {
             console.error("خطأ إضافة المنتجات:", error);
             if (error.message === "LOGIN_REQUIRED") {
-                alert("يجب تسجيل الدخول أولاً");
+                showCartNotice("يجب تسجيل الدخول أولاً", true);
                 window.location.href = "login.html";
             } else {
-                alert("حدث خطأ أثناء إضافة المنتجات");
+                showCartNotice("تعذر الحفظ، حاول مرة أخرى", true);
             }
-        } finally {
-            addButton.disabled = false;
-            addButton.textContent = "إضافة للسلة";
         }
     };
 
@@ -2748,40 +2763,18 @@ async function addProductsBatch(items) {
        تنفيذ الإضافات الجديدة دفعة واحدة
     ========================================== */
 
+    /* ننفذ الإضافات والتحديثات كلها بالتوازي بدل مرحلتين متتاليتين. */
+    const writeRequests = [];
     if (inserts.length > 0) {
-
-        const {
-            error: insertError
-        } = await supabaseClient
-            .from("order_items")
-            .insert(inserts);
-
-        if (insertError) {
-            throw insertError;
-        }
-
+        writeRequests.push(
+            supabaseClient.from("order_items").insert(inserts).then(({ error }) => {
+                if (error) throw error;
+            })
+        );
     }
-
-
-    /* ==========================================
-       تحديث المنتجات الموجودة
-    ========================================== */
-
-    /*
-       Supabase لا يدعم تحديث عدة صفوف
-       بقيم مختلفة في طلب update واحد بسهولة.
-
-       لذلك نستخدم Promise.all
-       حتى تحدث بالتوازي بدل الانتظار بالتسلسل.
-    */
-
-    if (updates.length > 0) {
-
-        await Promise.all(
-
-            updates.map(item =>
-
-                supabaseClient
+    updates.forEach(item => {
+        writeRequests.push(
+            supabaseClient
                     .from("order_items")
                     .update({
 
@@ -2800,19 +2793,10 @@ async function addProductsBatch(items) {
                         item.id
                     )
 
-                    .then(({ error }) => {
-
-                        if (error) {
-                            throw error;
-                        }
-
-                    })
-
-            )
-
+                    .then(({ error }) => { if (error) throw error; })
         );
-
-    }
+    });
+    await Promise.all(writeRequests);
 
     // يعيد حفظ إجمالي السلة وفق سعر البيع المؤقت الذي اختاره الموظف لهذا الطلب.
     const { data: cartItems, error: cartItemsError } = await supabaseClient
