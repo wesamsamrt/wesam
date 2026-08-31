@@ -310,11 +310,24 @@ function playCartAddAnimation(cartQuantity) {
     setTimeout(() => carton.remove(), 2300);
 }
 
+// يعرض رسالة قصيرة داخل صفحة المنتج بدل نافذة تنبيه المتصفح.
+function showDetailNotice(message, type = "success") {
+    document.getElementById("detailSiteNotice")?.remove();
+    const notice = document.createElement("div");
+    notice.id = "detailSiteNotice";
+    notice.className = `detail-site-notice ${type}`;
+    notice.setAttribute("role", "status");
+    notice.textContent = message;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.classList.add("is-visible"), 20);
+    setTimeout(() => { notice.classList.remove("is-visible"); setTimeout(() => notice.remove(), 260); }, 3400);
+}
+
 // يضيف اللون الواحد والكمية المحددة إلى سلة الحساب الحالي ويحفظ إجمالي الطلب المفتوح.
 async function addDetailSelectionsToCart() {
     const button = document.getElementById("detailChooseButton");
     if (!selectedColor || !selectedQuantity) {
-        alert("اختر اللون وحدد الكمية أولًا.");
+        showDetailNotice("اختر اللون وحدد الكمية أولًا.", "error");
         return;
     }
 
@@ -331,7 +344,7 @@ async function addDetailSelectionsToCart() {
     });
 
     if (!items.length) {
-        alert("الكمية المختارة غير متوفرة حاليًا.");
+        showDetailNotice("الكمية المختارة غير متوفرة حاليًا.", "error");
         return;
     }
 
@@ -401,16 +414,17 @@ async function addDetailSelectionsToCart() {
 
         const cartQuantity = (cartItems || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         playCartAddAnimation(cartQuantity);
+        showDetailNotice("تمت إضافة المنتج إلى السلة بنجاح ✅");
         selectedQuantity = 1;
         const selectedColorButton = document.querySelector(`.detail-color-choice[data-color="${CSS.escape(selectedColor)}"]`);
         renderDetailPurchaseQuantity(Number(selectedColorButton?.dataset.available || 0));
     } catch (error) {
         console.error("Detail cart error:", error);
         if (error.message === "LOGIN_REQUIRED") {
-            alert("يجب تسجيل الدخول أولًا لإضافة المنتج للسلة.");
-            window.location.href = "login.html";
+            showDetailNotice("يجب تسجيل الدخول أولًا لإضافة المنتج للسلة.", "error");
+            setTimeout(() => { window.location.href = "login.html"; }, 900);
         } else {
-            alert("تعذر إضافة المنتج للسلة: " + (error.message || "حاول مرة أخرى."));
+            showDetailNotice("تعذر إضافة المنتج للسلة: " + (error.message || "حاول مرة أخرى."), "error");
         }
     } finally {
         button.disabled = false;
