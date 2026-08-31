@@ -3676,8 +3676,12 @@ async function searchProducts(value) {
         card.addEventListener(
             "click",
             function() {
-
-                openProductModal(variants);
+                // نتيجة البحث تفتح صفحة المنتج مباشرة، مع إبقاء الماركة المختارة فقط.
+                const params = new URLSearchParams();
+                if (code) params.set("code", code);
+                if (firstProduct.company) params.set("company", firstProduct.company);
+                params.set("id", firstProduct.id);
+                window.location.href = `product-details.html?${params.toString()}`;
 
             }
         );
