@@ -4272,6 +4272,17 @@ async function loadDashboardLatestOrders() {
 
 }
 
+function toggleAdminOrderItems(orderId) {
+    const items = document.getElementById(`admin-order-items-${orderId}`);
+    const button = document.querySelector(`[data-order-toggle="${orderId}"]`);
+    if (!items || !button) return;
+    const willShow = items.hidden;
+    items.hidden = !willShow;
+    button.setAttribute("aria-expanded", String(willShow));
+    const count = items.querySelectorAll(".admin-order-item").length;
+    button.textContent = willShow ? "إخفاء المنتجات" : `عرض المنتجات (${count})`;
+}
+
 /* عرض طلب واحد */
 
 function renderAdminOrder(order, items = []) {
@@ -4566,7 +4577,11 @@ Object.entries(typeCodes).forEach(
         </div>
 
 
-        <div class="admin-order-items">
+        <button type="button" class="admin-order-items-toggle" onclick="toggleAdminOrderItems(${order.id})" aria-expanded="false" data-order-toggle="${order.id}">
+            عرض المنتجات (${items.length})
+        </button>
+
+        <div class="admin-order-items" id="admin-order-items-${order.id}" hidden>
 
             ${productsHTML}
 

@@ -1113,6 +1113,25 @@ body {
 .admin-order-items {
     display: grid;
     gap: 10px;
+    margin-top: 12px;
+}
+
+.admin-order-items[hidden] {
+    display: none;
+}
+
+.admin-order-items-toggle {
+    width: 100%;
+    min-height: 40px;
+    margin-top: 12px;
+    border: 1px solid #d8d3ff;
+    border-radius: 11px;
+    background: #f5f3ff;
+    color: #5c4fe5;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
 }
 
 .admin-order-item {
