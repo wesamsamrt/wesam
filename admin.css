@@ -1520,10 +1520,14 @@ body {
     display: grid;
 
     grid-template-columns:
-        1.5fr
+        1fr
+        1.1fr
+        1fr
+        1.25fr
         1fr
         0.7fr
         0.8fr
+        0.9fr
         auto;
 
     gap: 10px;
@@ -2637,6 +2641,21 @@ body {
 
 .product-compatibility.general {
     color: #6557ed;
+}
+
+.edit-order-item-field input[readonly] {
+    background: #f7f7fb;
+    color: #5c5c6c;
+    cursor: default;
+}
+
+@media (max-width: 1100px) {
+    .edit-order-item-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .remove-order-item { align-self: end; }
+}
+
+@media (max-width: 620px) {
+    .edit-order-item-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* قسم رفع وإدارة صور عروض اليوم. */

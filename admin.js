@@ -5635,6 +5635,21 @@ function renderEditOrderItems() {
                 <div class="edit-order-item-grid">
 
                     <div class="edit-order-item-field">
+                        <label>كود المنتج</label>
+                        <input type="text" value="${escapeHtmlAttribute(item.product_code || "")}" readonly>
+                    </div>
+
+                    <div class="edit-order-item-field">
+                        <label>النوع</label>
+                        <input type="text" value="${escapeHtmlAttribute(item.type || item.product_type || "")}" readonly>
+                    </div>
+
+                    <div class="edit-order-item-field">
+                        <label>الماركة</label>
+                        <input type="text" value="${escapeHtmlAttribute(item.company || "")}" readonly>
+                    </div>
+
+                    <div class="edit-order-item-field">
 
                         <label>
                             الموديل
@@ -5683,7 +5698,7 @@ function renderEditOrderItems() {
                     <div class="edit-order-item-field">
 
                         <label>
-                            السعر
+                            سعر الوحدة
                         </label>
 
                         <input
@@ -5694,6 +5709,11 @@ function renderEditOrderItems() {
                             onchange="changeEditOrderItem(${index}, 'price', this.value)"
                         >
 
+                    </div>
+
+                    <div class="edit-order-item-field">
+                        <label>الإجمالي</label>
+                        <input id="editOrderItemTotal-${index}" type="text" value="${(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)} ر.س" readonly>
                     </div>
 
 
@@ -5766,6 +5786,13 @@ function changeEditOrderItem(
 
     editingOrderItems[index][field] =
         value;
+
+
+    const itemTotalInput = document.getElementById(`editOrderItemTotal-${index}`);
+    if (itemTotalInput) {
+        const currentItem = editingOrderItems[index];
+        itemTotalInput.value = `${(Number(currentItem.price || 0) * Number(currentItem.quantity || 1)).toFixed(2)} ر.س`;
+    }
 
 
     calculateEditOrderTotal();
