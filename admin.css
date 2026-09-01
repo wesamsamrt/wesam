@@ -610,6 +610,9 @@ body {
 .sales-report-card h3 { margin: 0 0 12px; font-size: 15px; }
 .sales-report-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f5; font-size: 13px; }
 .sales-report-row:last-child { border-bottom: 0; }
+.sales-order-row > div { display:flex; align-items:center; gap:9px; }
+.open-invoice-button,.invoice-toolbar-print { border:1px solid #cfc8ff; border-radius:9px; background:#f3f1ff; color:#594bd2; padding:7px 10px; font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+.invoice-toolbar-print { margin-left:8px; }
 .sales-orders-card { margin-top: 16px; }
 
 .admin-product-price {

@@ -1528,7 +1528,7 @@ async function loadSalesReport() {
     );
     document.getElementById("salesRecentOrders").innerHTML = renderRows(
         [...salesOrdersCache].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 12),
-        order => `<div class="sales-report-row"><span>طلب #${order.id} · ${transferText(order.driver_name || "بدون مندوب")}<br><small>${new Date(order.created_at).toLocaleString("ar-SA")} · ${transferText(order.status || "—")}</small></span><strong>${formatAdminCurrency(order.total)}</strong></div>`,
+        order => `<div class="sales-report-row sales-order-row"><span>طلب #${order.id} · ${transferText(order.driver_name || "بدون مندوب")}<br><small>${new Date(order.created_at).toLocaleString("ar-SA", { timeZone:"Asia/Riyadh" })} · ${transferText(order.status || "—")}</small></span><div><strong>${formatAdminCurrency(order.total)}</strong><button type="button" class="open-invoice-button" onclick="openInvoice(${order.id})">فتح الفاتورة</button></div></div>`,
         "لا توجد مبيعات ضمن الفترة المحددة."
     );
 }
@@ -4493,6 +4493,13 @@ Object.entries(typeCodes).forEach(
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
 
     <button
+        class="open-invoice-button"
+        onclick="openInvoice(${order.id})"
+    >
+        👁 فتح الفاتورة
+    </button>
+
+    <button
         class="edit-order-button"
         onclick="editOrder(${order.id})"
     >
@@ -5434,6 +5441,16 @@ Object.entries(typeCodes).forEach(
 ========================================================= */
 
 let editingOrderId = null;
+
+// يفتح نموذج الفاتورة الموحد من قائمة الطلبات أو تقرير المبيعات.
+window.openInvoice = function (orderId) {
+    editOrder(orderId);
+};
+
+window.printEditingOrder = function () {
+    if (!editingOrderId) return;
+    printOrder(editingOrderId);
+};
 let editingOrderItems = [];
 
 

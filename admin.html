@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260901-order-items-toggle"
+        href="admin.css?v=20260901-invoice-open"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1404,6 +1404,14 @@
 
             <button
                 type="button"
+                class="invoice-toolbar-print"
+                onclick="printEditingOrder()"
+            >
+                🖨️ طباعة
+            </button>
+
+            <button
+                type="button"
                 id="closeEditOrderButton"
                 class="close-edit-order"
             >
@@ -1563,7 +1571,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260901-order-items-toggle"></script>
+    <script src="admin.js?v=20260901-invoice-open"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
