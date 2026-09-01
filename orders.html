@@ -881,8 +881,10 @@ async function loadOrders() {
     await fillLinkedDriverNumber();
 
     // نعرض سلة منطقة العميل الحالية فقط حتى لا تختلط سلال مخازن مختلفة.
+    const requestedCartEditId = new URLSearchParams(window.location.search).get("editOrder");
+    const requestedCartWarehouse = new URLSearchParams(window.location.search).get("warehouse");
     const selectedCustomerWarehouse =
-        localStorage.getItem("customer_warehouse") || "";
+        requestedCartWarehouse || localStorage.getItem("customer_warehouse") || "";
 
     if (!selectedCustomerWarehouse) {
         container.innerHTML = `
@@ -895,10 +897,7 @@ async function loadOrders() {
         return;
     }
 
-    const {
-        data: orders,
-        error: ordersError
-    } = await supabaseClient
+    let cartOrderQuery = supabaseClient
         .from("orders")
         .select("*")
         .eq("user_id", user.id)
@@ -906,8 +905,12 @@ async function loadOrders() {
         .eq("warehouse", selectedCustomerWarehouse)
         .order("id", {
             ascending: false
-        })
-        .limit(1);
+        });
+    if (requestedCartEditId) cartOrderQuery = cartOrderQuery.eq("id", requestedCartEditId);
+    const {
+        data: orders,
+        error: ordersError
+    } = await cartOrderQuery.limit(1);
 
 
     if (ordersError) {
