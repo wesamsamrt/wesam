@@ -965,6 +965,11 @@ document.getElementById("createTransferButton")?.addEventListener("click", async
         p_creation_mode: transferMode
     });
     if (error) { setTransferMessage(`تعذر إنشاء التحويل: ${error.message}`, true); return; }
+    const shortageIds = transferDraft.map(item => item.shortage_id).filter(Boolean);
+    if (shortageIds.length) {
+        const { error: shortagesError } = await supabaseClient.rpc("mark_shortages_requested", { p_shortage_ids: shortageIds, p_transfer_id: data });
+        if (shortagesError) console.warn("تعذر تعليم النواقص كتم الطلب:", shortagesError);
+    }
     transferDraft = [];
     transferNotes.value = "";
     renderTransferDraft();
@@ -4137,7 +4142,7 @@ async function loadAdminShortages() {
     const { data, error } = await supabaseClient.rpc("list_warehouse_shortages", { p_warehouse: selectedWarehouse });
     if (error) { shortagesList.innerHTML = `<div class="message error">تعذر تحميل النواقص: ${transferText(error.message)}</div>`; return; }
     adminShortagesData = data || [];
-    shortagesList.innerHTML = adminShortagesData.length ? adminShortagesData.map(item => `<article class="customer-admin-card"><div class="customer-admin-card-top"><label><input type="checkbox" data-shortage-id="${item.id}"> تحديد</label><div><h3>${transferText(item.type || item.product_type || "منتج")}</h3><p>${transferText([item.company,item.model,item.color].filter(Boolean).join(" · "))}</p></div><span class="customer-orders-count">طلب #${item.order_id}</span></div><div class="customer-admin-card-bottom"><span>كود: ${transferText(item.product_code || "—")} · الكمية المطلوبة: ${Number(item.quantity || 0)}</span><strong>${item.price || 0} ر.س</strong></div></article>`).join("") : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
+    shortagesList.innerHTML = adminShortagesData.length ? adminShortagesData.map(item => `<article class="customer-admin-card"><div class="customer-admin-card-top"><label><input type="checkbox" data-shortage-id="${item.id}" ${item.status === "تم الطلب" ? "disabled" : ""}> تحديد</label><div><h3>${transferText(item.type || item.product_type || "منتج")}</h3><p>${transferText([item.company,item.model,item.color].filter(Boolean).join(" · "))}</p></div><span class="customer-orders-count">${transferText(item.status || "جديد")}</span></div><div class="customer-admin-card-bottom"><span>كود: ${transferText(item.product_code || "—")} · الكمية المطلوبة: ${Number(item.quantity || 0)}${item.transfer_id ? ` · تحويل #${item.transfer_id}` : ""}</span><strong>${item.price || 0} ر.س</strong></div></article>`).join("") : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
 }
 
 document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {
@@ -4167,7 +4172,7 @@ document.getElementById("requestShortagesTransfer")?.addEventListener("click", a
     selectedItems.forEach(shortage => {
         const product = transferSourceProducts.find(item => String(item.product_code || "") === String(shortage.product_code || "") && String(item.company || "") === String(shortage.company || "") && String(item.model || "") === String(shortage.model || "") && String(item.color || "") === String(shortage.color || ""));
         if (!product) return;
-        transferDraft.push({ product_id: product.id, product_code: product.product_code, company: product.company, model: product.model, color: product.color, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
+        transferDraft.push({ product_id: product.id, shortage_id: shortage.id, product_code: product.product_code, company: product.company, model: product.model, color: product.color, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
     });
     renderTransferDraft();
     setTransferMessage(transferDraft.length ? "تمت إضافة النواقص المتوفرة إلى مسودة التحويل. عدّل الكميات ثم أرسل الطلب." : "لم نجد هذه الأصناف في المخزن المصدر المختار. اختر مخزن مصدر آخر.", !transferDraft.length);

@@ -21,6 +21,9 @@ create table if not exists public.order_shortages (
 );
 
 create index if not exists order_shortages_warehouse_created_idx on public.order_shortages (warehouse, created_at desc);
+alter table public.order_shortages add column if not exists status text not null default 'جديد';
+alter table public.order_shortages add column if not exists transfer_id bigint;
+alter table public.order_shortages add column if not exists requested_at timestamptz;
 alter table public.order_shortages enable row level security;
 
 create or replace function public.report_order_shortage(p_order_id bigint, p_item jsonb)
@@ -40,10 +43,20 @@ returns setof public.order_shortages language sql security definer set search_pa
   select * from public.order_shortages where warehouse = p_warehouse and public.team_can_access_warehouse(p_warehouse, 'orders') order by created_at desc;
 $$;
 
+create or replace function public.mark_shortages_requested(p_shortage_ids bigint[], p_transfer_id bigint)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.order_shortages shortage
+  set status = 'تم الطلب', transfer_id = p_transfer_id, requested_at = now()
+  where shortage.id = any(p_shortage_ids)
+    and public.team_can_access_warehouse(shortage.warehouse, 'orders');
+end; $$;
+
 -- كان الشرط التالي يخفي أي طلب يعاد إلى «جديد» من صفحة الإدارة.
 -- احذفه من دالة list_warehouse_orders الموجودة لديك ثم نفّذ نسخة الدالة المناسبة من ملف fix-team-warehouse-orders-access.sql
 -- بعد إزالة السطر: and coalesce(order_row.status, 'جديد') <> 'جديد'
 
 grant execute on function public.report_order_shortage(bigint,jsonb) to authenticated;
 grant execute on function public.list_warehouse_shortages(text) to authenticated;
+grant execute on function public.mark_shortages_requested(bigint[],bigint) to authenticated;
 notify pgrst, 'reload schema';
