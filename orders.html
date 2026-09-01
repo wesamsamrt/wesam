@@ -901,12 +901,16 @@ async function loadOrders() {
         .from("orders")
         .select("*")
         .eq("user_id", user.id)
-        .eq("status", "جديد")
         .eq("warehouse", selectedCustomerWarehouse)
         .order("id", {
             ascending: false
         });
-    if (requestedCartEditId) cartOrderQuery = cartOrderQuery.eq("id", requestedCartEditId);
+    // بعض السجلات القديمة تعرض «متقدم» للعميل بينما تظهر «جديد» في الإدارة.
+    if (requestedCartEditId) {
+        cartOrderQuery = cartOrderQuery.in("status", ["جديد", "متقدم"]).eq("id", requestedCartEditId);
+    } else {
+        cartOrderQuery = cartOrderQuery.eq("status", "جديد");
+    }
     const {
         data: orders,
         error: ordersError
