@@ -4752,6 +4752,12 @@ async function printOrder(orderId) {
         }
 
         const items = order.items || [];
+        // ترتيب الطباعة: الشركة ثم النوع ثم الموديل ثم اللون، ليأتي كل موديل متشابه متتابعًا.
+        const printItems = [...items].sort((first, second) => {
+            const firstKey = [first.company, first.product_type, first.type, first.model, first.color].filter(Boolean).join(" ");
+            const secondKey = [second.company, second.product_type, second.type, second.model, second.color].filter(Boolean).join(" ");
+            return firstKey.localeCompare(secondKey, "ar-SA", { numeric: true, sensitivity: "base" });
+        });
 
 
         const date =
@@ -4771,7 +4777,7 @@ async function printOrder(orderId) {
 
         const typeCodes = {};
 
-(items || []).forEach(item => {
+(printItems || []).forEach(item => {
 
     const code =
         item.product_code?.trim() ||
@@ -4801,7 +4807,7 @@ Object.entries(typeCodes).forEach(
 );
 
 
-        (items || []).forEach(
+        (printItems || []).forEach(
             (item, index) => {
 
                 const quantity =
