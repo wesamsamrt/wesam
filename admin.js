@@ -4144,8 +4144,25 @@ document.getElementById("requestShortagesTransfer")?.addEventListener("click", a
     const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
     const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
     if (!selectedItems.length) { alert("حدد صنفًا واحدًا على الأقل من النواقص."); return; }
+    // نختار تلقائياً المخزن الذي يملك أكبر مجموع من كميات الأصناف المحددة.
+    const productCodes = [...new Set(selectedItems.map(item => item.product_code).filter(Boolean))];
+    const { data: candidates, error: candidatesError } = productCodes.length
+        ? await supabaseClient.from("products").select("warehouse, product_code, company, model, color, quantity").in("product_code", productCodes).gt("quantity", 0)
+        : { data: [], error: null };
+    if (candidatesError) { alert(`تعذر تحديد المخزن الأنسب: ${candidatesError.message}`); return; }
+    const warehouseScores = new Map();
+    (candidates || []).forEach(product => {
+        if (product.warehouse === selectedWarehouse) return;
+        const shortage = selectedItems.find(item => String(item.product_code || "") === String(product.product_code || "") && String(item.company || "") === String(product.company || "") && String(item.model || "") === String(product.model || "") && String(item.color || "") === String(product.color || ""));
+        if (shortage) warehouseScores.set(product.warehouse, (warehouseScores.get(product.warehouse) || 0) + Number(product.quantity || 0));
+    });
+    const bestSourceWarehouse = [...warehouseScores.entries()].sort((first, second) => second[1] - first[1])[0]?.[0] || "";
     transfersButton?.click();
     await new Promise(resolve => setTimeout(resolve, 350));
+    if (bestSourceWarehouse && transferSourceWarehouse) {
+        transferSourceWarehouse.value = bestSourceWarehouse;
+        await loadTransferSourceProducts();
+    }
     transferDraft = [];
     selectedItems.forEach(shortage => {
         const product = transferSourceProducts.find(item => String(item.product_code || "") === String(shortage.product_code || "") && String(item.company || "") === String(shortage.company || "") && String(item.model || "") === String(shortage.model || "") && String(item.color || "") === String(shortage.color || ""));
