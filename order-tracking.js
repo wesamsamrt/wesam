@@ -1,4 +1,7 @@
 const trackingOrderId = new URLSearchParams(window.location.search).get("id");
+const trackingFromDriver = new URLSearchParams(window.location.search).get("from") === "driver";
+const trackingBack = document.getElementById("trackingBack");
+if (trackingFromDriver && trackingBack) trackingBack.href = "driver-orders.html";
 
 // يحمي بيانات الطلب والنصوص قبل إدراجها في واجهة التتبع.
 function escapeTrackingHtml(value) { return String(value ?? "").replace(/[&<>"']/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[character])); }

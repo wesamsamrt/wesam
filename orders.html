@@ -240,6 +240,11 @@
         body.customer-cart #locationText { background: rgba(6,25,55,.82) !important; color: #9eb1d5 !important; border: 1px solid rgba(113,161,245,.2); }
         body.customer-cart button[onclick="showPreviousOrders()"] { background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28) !important; color: #a9d1ff !important; box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
         body.customer-cart #notifications, body.customer-cart button[onclick="showPreviousOrders()"], body.customer-cart #checkoutDetails, body.customer-cart #submitOrderButton, body.customer-cart #previousOrders { display: none !important; }
+        .driver-orders-link { display:none; }
+        body.driver-cart .driver-orders-link { display:inline-flex;align-items:center;margin-right:0;padding:9px 12px;border:1px solid #dedafc;border-radius:11px;background:#faf9ff;color:#6557ed;text-decoration:none;font-size:11px;font-weight:800; }
+        body.driver-cart #previousOrdersButton { display:none; }
+        body.customer-cart #previousOrdersButton { background: linear-gradient(145deg, rgba(15,43,91,.92), rgba(5,19,49,.96)) !important; border: 1px solid rgba(105,164,255,.28) !important; color: #a9d1ff !important; box-shadow: 0 14px 30px rgba(0,0,0,.22) !important; }
+        body.customer-cart #previousOrdersButton { display:none !important; }
         body.driver-cart #driverLocationSection { display: none; }
 
         @media (max-width: 600px) {
@@ -283,6 +288,7 @@
         </div>
 
         <a class="customer-orders-link" href="customer-orders.html">📋 طلباتي السابقة</a>
+        <a class="driver-orders-link" href="driver-orders.html">📋 طلباتي السابقة</a>
 
         <button
             type="button"
@@ -332,7 +338,8 @@
     "
 ></div>
 <button
-    onclick="showPreviousOrders()"
+    id="previousOrdersButton"
+    onclick="openPreviousOrders()"
     style="
         width:100%;
         height:55px;
@@ -1667,6 +1674,14 @@ if (!customerName) {
 // =========================
 // الطلبات السابقة
 // =========================
+
+function openPreviousOrders() {
+    if (isLinkedDriverCart) {
+        window.location.href = "driver-orders.html";
+        return;
+    }
+    showPreviousOrders();
+}
 
 async function showPreviousOrders() {
 
