@@ -719,33 +719,46 @@ window.removeTransferDraftItem = function (index) {
     renderTransferDraft();
 };
 
+// يجلب كل منتجات مخزن التحويل على دفعات؛ Supabase يعيد ألف صف فقط افتراضياً.
+async function loadAllTransferWarehouseProducts(warehouse, fields, onlyAvailable = false) {
+    const pageSize = 1000;
+    const products = [];
+    for (let from = 0; ; from += pageSize) {
+        let query = supabaseClient
+            .from("products")
+            .select(fields)
+            .eq("warehouse", warehouse)
+            .order("id", { ascending: true })
+            .range(from, from + pageSize - 1);
+        if (onlyAvailable) query = query.gt("quantity", 0);
+        const { data, error } = await query;
+        if (error) throw error;
+        products.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+    return products;
+}
+
 // يجلب أصناف المخزن المصدر ويقارن كمياتها بكميات المخزن الوجهة.
 async function loadTransferSourceProducts() {
     if (!transferSourceWarehouse || !transferProductSelect) return;
     transferProductSelect.innerHTML = "<option value=\"\">جاري تحميل منتجات المخزن...</option>";
-    const [{ data, error }, { data: destinationProducts, error: destinationError }] = await Promise.all([
-        supabaseClient
-        .from("products")
-        .select("id, product_code, company, model, color, type, product_type, storage_location, quantity, inventory_key")
-        .eq("warehouse", transferSourceWarehouse.value)
-        .gt("quantity", 0)
-        .order("model"),
-        supabaseClient
-        .from("products")
-        .select("id, quantity, inventory_key")
-        .eq("warehouse", transferDestinationWarehouse.value)
-    ]);
-    if (error || destinationError) {
+    try {
+        const [sourceProducts, destinationProducts] = await Promise.all([
+            loadAllTransferWarehouseProducts(transferSourceWarehouse.value, "id, product_code, company, model, color, type, product_type, storage_location, quantity, inventory_key", true),
+            loadAllTransferWarehouseProducts(transferDestinationWarehouse.value, "id, quantity, inventory_key")
+        ]);
+        const destinationByInventoryKey = new Map((destinationProducts || []).map(product => [String(product.inventory_key), product]));
+        transferSourceProducts = (sourceProducts || []).map(product => {
+            const counterpart = destinationByInventoryKey.get(String(product.inventory_key));
+            return { ...product, destination_quantity: Number(counterpart?.quantity || 0) };
+        });
+    } catch (error) {
         console.error("Load transfer source products error:", error);
         transferProductSelect.innerHTML = "<option value=\"\">تعذر تحميل المنتجات</option>";
-        setTransferMessage((error || destinationError).message, true);
+        setTransferMessage(error.message, true);
         return;
     }
-    const destinationByInventoryKey = new Map((destinationProducts || []).map(product => [String(product.inventory_key), product]));
-    transferSourceProducts = (data || []).map(product => {
-        const counterpart = destinationByInventoryKey.get(String(product.inventory_key));
-        return { ...product, destination_quantity: Number(counterpart?.quantity || 0) };
-    });
     selectedTransferProductId = null;
     renderSelectedTransferProduct();
     renderTransferProductOptions();
