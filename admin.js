@@ -3983,6 +3983,9 @@ async function loadAdminOrders() {
    العملاء — تُبنى ملفاتهم من بيانات الفواتير نفسها
 ========================================================= */
 const customersButton = document.getElementById("customersButton");
+const shortagesButton = document.getElementById("shortagesButton");
+const shortagesAdmin = document.getElementById("shortagesAdmin");
+const shortagesList = document.getElementById("shortagesList");
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -4095,6 +4098,24 @@ customersButton?.addEventListener("click", async () => {
     customersAdmin.style.display = "block";
     await loadAdminCustomers();
 });
+
+async function loadAdminShortages() {
+    if (!shortagesList) return;
+    shortagesList.innerHTML = '<div class="message">جاري تحميل النواقص...</div>';
+    const { data, error } = await supabaseClient.rpc("list_warehouse_shortages", { p_warehouse: selectedWarehouse });
+    if (error) { shortagesList.innerHTML = `<div class="message error">تعذر تحميل النواقص: ${transferText(error.message)}</div>`; return; }
+    shortagesList.innerHTML = (data || []).length ? data.map(item => `<article class="customer-admin-card"><div class="customer-admin-card-top"><div><h3>${transferText(item.type || item.product_type || "منتج")}</h3><p>${transferText([item.company,item.model,item.color].filter(Boolean).join(" · "))}</p></div><span class="customer-orders-count">طلب #${item.order_id}</span></div><div class="customer-admin-card-bottom"><span>كود: ${transferText(item.product_code || "—")} · الكمية المطلوبة: ${Number(item.quantity || 0)}</span><strong>${item.price || 0} ر.س</strong></div></article>`).join("") : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
+}
+
+shortagesButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
+    shortagesAdmin.style.display = "block";
+    await loadAdminShortages();
+});
+document.getElementById("backFromShortages")?.addEventListener("click", () => { shortagesAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+["dashboardButton", "productsButton", "ordersButton", "customersButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
+    if (shortagesAdmin) shortagesAdmin.style.display = "none";
+}));
 document.getElementById("backFromCustomers")?.addEventListener("click", () => { customersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
 adminCustomerSearch?.addEventListener("input", renderAdminCustomers);
 document.getElementById("refreshAdminCustomers")?.addEventListener("click", loadAdminCustomers);
@@ -5752,6 +5773,8 @@ function renderEditOrderItems() {
                         🗑️
                     </button>
 
+                    <button type="button" class="mark-unavailable-item" onclick="markEditOrderItemUnavailable(${index})">غير متوفر</button>
+
                 </div>
 
             `;
@@ -5862,6 +5885,18 @@ function removeEditOrderItem(index) {
     renderEditOrderItems();
 
 }
+
+window.markEditOrderItemUnavailable = async function (index) {
+    const item = editingOrderItems[index];
+    if (!item || !editingOrderId) return;
+    if (!confirm("سيُنقل الصنف إلى صفحة النواقص ويُحذف من الفاتورة. متابعة؟")) return;
+    const { error } = await supabaseClient.rpc("report_order_shortage", { p_order_id: editingOrderId, p_item: item });
+    if (error) { alert(`تعذر تسجيل النقص: ${error.message}`); return; }
+    editingOrderItems.splice(index, 1);
+    renderEditOrderItems();
+    editOrderMessage.textContent = "تم نقل الصنف إلى النواقص. احفظ التعديلات لتحديث الفاتورة.";
+    editOrderMessage.style.color = "#2e9d69";
+};
 
 
 /* =========================================================

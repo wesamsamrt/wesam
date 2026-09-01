@@ -60,6 +60,7 @@ begin
             order by order_row.id desc
         )
         from public.orders order_row
+        -- تظهر كل حالات الطلب، بما فيها «جديد» عند إعادة الطلب للتعديل من الإدارة.
         where trim(order_row.warehouse) = trim(p_warehouse)
     ), '[]'::jsonb);
 end;
