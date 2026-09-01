@@ -3986,6 +3986,7 @@ const customersButton = document.getElementById("customersButton");
 const shortagesButton = document.getElementById("shortagesButton");
 const shortagesAdmin = document.getElementById("shortagesAdmin");
 const shortagesList = document.getElementById("shortagesList");
+let adminShortagesData = [];
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -4104,8 +4105,25 @@ async function loadAdminShortages() {
     shortagesList.innerHTML = '<div class="message">جاري تحميل النواقص...</div>';
     const { data, error } = await supabaseClient.rpc("list_warehouse_shortages", { p_warehouse: selectedWarehouse });
     if (error) { shortagesList.innerHTML = `<div class="message error">تعذر تحميل النواقص: ${transferText(error.message)}</div>`; return; }
-    shortagesList.innerHTML = (data || []).length ? data.map(item => `<article class="customer-admin-card"><div class="customer-admin-card-top"><div><h3>${transferText(item.type || item.product_type || "منتج")}</h3><p>${transferText([item.company,item.model,item.color].filter(Boolean).join(" · "))}</p></div><span class="customer-orders-count">طلب #${item.order_id}</span></div><div class="customer-admin-card-bottom"><span>كود: ${transferText(item.product_code || "—")} · الكمية المطلوبة: ${Number(item.quantity || 0)}</span><strong>${item.price || 0} ر.س</strong></div></article>`).join("") : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
+    adminShortagesData = data || [];
+    shortagesList.innerHTML = adminShortagesData.length ? adminShortagesData.map(item => `<article class="customer-admin-card"><div class="customer-admin-card-top"><label><input type="checkbox" data-shortage-id="${item.id}"> تحديد</label><div><h3>${transferText(item.type || item.product_type || "منتج")}</h3><p>${transferText([item.company,item.model,item.color].filter(Boolean).join(" · "))}</p></div><span class="customer-orders-count">طلب #${item.order_id}</span></div><div class="customer-admin-card-bottom"><span>كود: ${transferText(item.product_code || "—")} · الكمية المطلوبة: ${Number(item.quantity || 0)}</span><strong>${item.price || 0} ر.س</strong></div></article>`).join("") : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
 }
+
+document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {
+    const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
+    const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
+    if (!selectedItems.length) { alert("حدد صنفًا واحدًا على الأقل من النواقص."); return; }
+    transfersButton?.click();
+    await new Promise(resolve => setTimeout(resolve, 350));
+    transferDraft = [];
+    selectedItems.forEach(shortage => {
+        const product = transferSourceProducts.find(item => String(item.product_code || "") === String(shortage.product_code || "") && String(item.company || "") === String(shortage.company || "") && String(item.model || "") === String(shortage.model || "") && String(item.color || "") === String(shortage.color || ""));
+        if (!product) return;
+        transferDraft.push({ product_id: product.id, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
+    });
+    renderTransferDraft();
+    setTransferMessage(transferDraft.length ? "تمت إضافة النواقص المتوفرة إلى مسودة التحويل. عدّل الكميات ثم أرسل الطلب." : "لم نجد هذه الأصناف في المخزن المصدر المختار. اختر مخزن مصدر آخر.", !transferDraft.length);
+});
 
 shortagesButton?.addEventListener("click", async () => {
     ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
