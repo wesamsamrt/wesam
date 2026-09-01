@@ -3992,7 +3992,8 @@ function customerOrderDate(value) {
 function buildAdminCustomers(orders) {
     const groups = new Map();
     (orders || [])
-        .filter(order => order.status !== "جديد" && !order.driver_number && String(order.customer_name || "").trim())
+        // الفاتورة قد ينشئها العميل أو المندوب؛ اسم العميل فيها هو المرجع في الحالتين.
+        .filter(order => order.status !== "جديد" && String(order.customer_name || "").trim())
         .forEach(order => {
             const key = customerKeyFromOrder(order);
             const customer = groups.get(key) || {
