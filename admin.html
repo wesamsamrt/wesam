@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260831-category-images"
+        href="admin.css?v=20260901-customers"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -167,6 +167,11 @@
             >
                 <span>📋</span>
                 <strong>الطلبات</strong>
+            </button>
+
+            <button class="admin-nav-item" id="customersButton">
+                <span>👤</span>
+                <strong>العملاء</strong>
             </button>
 
             <button class="admin-nav-item" id="salesButton">
@@ -1181,6 +1186,22 @@
 
 </section>
 
+<section class="customers-admin" id="customersAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromCustomers">← رجوع</button>
+        <div><h2>العملاء</h2><p>ملفات العملاء مبنية تلقائيًا من بيانات الفواتير والطلبات المكتملة.</p></div>
+    </div>
+    <div class="customers-summary" id="customersSummary">جاري تحميل بيانات العملاء...</div>
+    <div class="customers-toolbar">
+        <input id="adminCustomerSearch" type="search" placeholder="ابحث باسم العميل أو رقم جواله أو عنوانه" autocomplete="off">
+        <button type="button" id="refreshAdminCustomers">↻ تحديث</button>
+    </div>
+    <div class="customers-admin-layout">
+        <div class="customers-list" id="customersList"><div class="message">جاري تحميل العملاء...</div></div>
+        <aside class="customer-profile-panel" id="customerProfilePanel"><div class="customer-profile-empty">اختر عميلًا لعرض ملفه وسجل طلباته.</div></aside>
+    </div>
+</section>
+
 <section class="accounts-admin" id="accountsAdmin" style="display:none;">
     <div class="orders-admin-header">
         <button class="back-admin" id="backFromAccounts">← رجوع</button>
@@ -1207,6 +1228,7 @@
                 <label><input type="checkbox" value="dashboard" checked> الرئيسية</label>
                 <label><input type="checkbox" value="products"> المنتجات</label>
                 <label><input type="checkbox" value="orders"> الطلبات</label>
+                <label><input type="checkbox" value="customers"> العملاء</label>
                 <label><input type="checkbox" value="sales"> المبيعات</label>
                 <label><input type="checkbox" value="offers"> عروض اليوم</label>
                 <label><input type="checkbox" value="drivers"> المناديب</label>
@@ -1541,7 +1563,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260901-order-item-details"></script>
+    <script src="admin.js?v=20260901-customers"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

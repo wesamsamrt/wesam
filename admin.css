@@ -906,6 +906,32 @@ body {
     color: #e05265;
 }
 
+/* =========================================================
+   العملاء
+========================================================= */
+.customers-summary { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0; }
+.customers-summary span { flex:1 1 170px; padding:14px 16px; border:1px solid #ebeef6; border-radius:14px; background:#fff; color:#7a8091; font-size:12px; box-shadow:0 6px 18px rgba(35,45,90,.04); }
+.customers-summary strong { display:block; margin-bottom:3px; color:#2e45a6; font-size:21px; }
+.customers-toolbar { display:flex; gap:10px; margin-bottom:16px; }
+.customers-toolbar input { flex:1; min-height:46px; border:1px solid #e0e4ef; border-radius:12px; padding:0 14px; font:inherit; outline:0; }
+.customers-toolbar input:focus { border-color:#6557ed; }
+.customers-toolbar button { min-width:104px; border:0; border-radius:12px; background:#6557ed; color:#fff; font:700 12px Cairo,sans-serif; cursor:pointer; }
+.customers-admin-layout { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr); gap:18px; align-items:start; }
+.customers-list { display:grid; gap:10px; }
+.customer-admin-card { width:100%; border:1px solid #edf0f6; border-radius:16px; padding:15px; background:#fff; text-align:right; font-family:inherit; cursor:pointer; transition:.2s; }
+.customer-admin-card:hover,.customer-admin-card.active { border-color:#8a7dff; box-shadow:0 10px 24px rgba(87,74,211,.1); transform:translateY(-1px); }
+.customer-admin-card-top,.customer-admin-card-bottom { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.customer-admin-card h3 { margin:0; color:#252945; font-size:15px; }.customer-admin-card p { margin:4px 0 0; color:#81889b; font-size:11px; }
+.customer-orders-count { padding:5px 9px; border-radius:9px; background:#f0edff; color:#6252d9; font-size:10px; font-weight:800; white-space:nowrap; }
+.customer-admin-card-bottom { margin-top:11px; padding-top:10px; border-top:1px solid #f0f1f6; color:#72798d; font-size:10px; }.customer-admin-card-bottom strong { color:#2f47ad; font-size:13px; }
+.customer-profile-panel { position:sticky; top:18px; min-height:220px; overflow:hidden; border:1px solid #e8ebf3; border-radius:18px; background:#fff; box-shadow:0 8px 22px rgba(35,45,90,.045); }
+.customer-profile-empty { padding:45px 22px; color:#9399aa; text-align:center; font-size:12px; }
+.customer-profile-head { padding:18px; color:#fff; background:linear-gradient(135deg,#6557ed,#3f77ee); }.customer-profile-head h3{margin:0;font-size:19px}.customer-profile-head p{margin:5px 0 0;font-size:11px;color:#e9e6ff}
+.customer-profile-body { padding:16px; }.customer-profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }.customer-profile-field { padding:10px; border-radius:11px; background:#f7f8fc; color:#777e90; font-size:10px; }.customer-profile-field strong { display:block; margin-top:3px; color:#2c3146; font-size:11px; word-break:break-word; }
+.customer-order-history { margin-top:16px; border-top:1px solid #eceef5; padding-top:13px; }.customer-order-history h4 { margin:0 0 8px; color:#30364c; font-size:13px; }.customer-history-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid #f0f1f5; font-size:10px; color:#7b8192; }.customer-history-row strong { display:block; color:#30364c; font-size:11px; }.customer-history-row b { color:#5747d1; white-space:nowrap; }
+
+@media (max-width:800px) { .customers-admin-layout { grid-template-columns:1fr; }.customer-profile-panel { position:static; }.customers-toolbar { flex-direction:column; }.customers-toolbar button { min-height:44px; }.customer-profile-grid { grid-template-columns:1fr; } }
+
 @media (max-width: 600px) {
 
     .categories-admin-header {

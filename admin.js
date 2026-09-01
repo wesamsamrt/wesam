@@ -178,6 +178,7 @@ function applyTeamAccessToInterface() {
         dashboardButton: "dashboard",
         productsButton: "products",
         ordersButton: "orders",
+        customersButton: "customers",
         salesButton: "sales",
         offersButton: "offers",
         driversButton: "drivers",
@@ -321,6 +322,8 @@ function showAdmin() {
     if (salesPage) salesPage.style.display = "none";
     const driversPage = document.getElementById("driversAdmin");
     if (driversPage) driversPage.style.display = "none";
+    const customersPage = document.getElementById("customersAdmin");
+    if (customersPage) customersPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
@@ -1143,7 +1146,7 @@ async function loadAccounts() {
     accountsList.innerHTML = accounts.map(account => {
         const permissions = account.permissions || {};
         const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
-        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", sales: "المبيعات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", customers: "العملاء", sales: "المبيعات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
         return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
     }).join("");
 }
@@ -1725,7 +1728,7 @@ window.deleteDailyOffer = async function (id) {
 
 // يفتح قسم عروض اليوم ويخفي أقسام الإدارة الأخرى لتبقى الشاشة واضحة.
 offersButton?.addEventListener("click", async () => {
-    ["adminPage", "productsAdmin", "ordersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
     offersAdmin.style.display = "block";
     await loadDailyOffersAdmin();
 });
@@ -3962,6 +3965,128 @@ async function loadAdminOrders() {
     renderAdminOrdersList();
 
 }
+
+/* =========================================================
+   العملاء — تُبنى ملفاتهم من بيانات الفواتير نفسها
+========================================================= */
+const customersButton = document.getElementById("customersButton");
+const customersAdmin = document.getElementById("customersAdmin");
+const customersList = document.getElementById("customersList");
+const customersSummary = document.getElementById("customersSummary");
+const customerProfilePanel = document.getElementById("customerProfilePanel");
+const adminCustomerSearch = document.getElementById("adminCustomerSearch");
+let adminCustomersData = [];
+let selectedAdminCustomerKey = "";
+
+function customerKeyFromOrder(order) {
+    const name = String(order.customer_name || "").trim().toLocaleLowerCase("ar-SA");
+    const phone = String(order.customer_phone || "").replace(/\s+/g, "");
+    return `${name}__${phone || "no-phone"}`;
+}
+
+function customerOrderDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short" });
+}
+
+function buildAdminCustomers(orders) {
+    const groups = new Map();
+    (orders || [])
+        .filter(order => order.status !== "جديد" && !order.driver_number && String(order.customer_name || "").trim())
+        .forEach(order => {
+            const key = customerKeyFromOrder(order);
+            const customer = groups.get(key) || {
+                key,
+                name: String(order.customer_name || "عميل").trim(),
+                phone: String(order.customer_phone || "").trim(),
+                orders: [],
+                total: 0,
+                latestOrder: order,
+                address: order.customer_location || "",
+                warehouse: order.warehouse || selectedWarehouse || "—"
+            };
+            customer.orders.push(order);
+            customer.total += Number(order.total || 0);
+            if (new Date(order.created_at) > new Date(customer.latestOrder.created_at)) customer.latestOrder = order;
+            if (order.customer_location) customer.address = order.customer_location;
+            groups.set(key, customer);
+        });
+    return [...groups.values()]
+        .map(customer => ({ ...customer, total: Math.round(customer.total * 100) / 100 }))
+        .sort((a, b) => new Date(b.latestOrder.created_at) - new Date(a.latestOrder.created_at));
+}
+
+function renderCustomerProfile(customer) {
+    if (!customerProfilePanel) return;
+    if (!customer) {
+        customerProfilePanel.innerHTML = '<div class="customer-profile-empty">اختر عميلًا لعرض ملفه وسجل طلباته.</div>';
+        return;
+    }
+    const activeOrders = customer.orders.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد")).length;
+    const history = [...customer.orders]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .map(order => `<div class="customer-history-row"><div><strong>طلب #${transferText(order.id)}</strong><span>${transferText(order.status || "جديد")} · ${customerOrderDate(order.created_at)}</span></div><b>${Number(order.total || 0).toFixed(2)} ر.س</b></div>`)
+        .join("");
+    customerProfilePanel.innerHTML = `
+        <div class="customer-profile-head"><h3>${transferText(customer.name)}</h3><p>${transferText(customer.phone || "لم يسجل رقم جوال")}</p></div>
+        <div class="customer-profile-body">
+            <div class="customer-profile-grid">
+                <div class="customer-profile-field">إجمالي الطلبات<strong>${customer.orders.length} طلب</strong></div>
+                <div class="customer-profile-field">إجمالي المشتريات<strong>${customer.total.toFixed(2)} ر.س</strong></div>
+                <div class="customer-profile-field">طلبات قيد المتابعة<strong>${activeOrders} طلب</strong></div>
+                <div class="customer-profile-field">المخزن<strong>${transferText(customer.warehouse)}</strong></div>
+                <div class="customer-profile-field" style="grid-column:1/-1;">عنوان الاستلام<strong>${transferText(customer.address || "لم يتم تسجيل عنوان")}</strong></div>
+            </div>
+            <div class="customer-order-history"><h4>سجل الطلبات</h4>${history || '<div class="customer-profile-empty">لا توجد طلبات مكتملة.</div>'}</div>
+        </div>`;
+}
+
+function renderAdminCustomers() {
+    if (!customersList) return;
+    const search = String(adminCustomerSearch?.value || "").trim().toLocaleLowerCase("ar-SA");
+    const customers = adminCustomersData.filter(customer => !search || [customer.name, customer.phone, customer.address, customer.warehouse]
+        .filter(Boolean).join(" ").toLocaleLowerCase("ar-SA").includes(search));
+    customersList.innerHTML = customers.length ? customers.map(customer => `
+        <button type="button" class="customer-admin-card ${customer.key === selectedAdminCustomerKey ? "active" : ""}" data-customer-key="${transferText(customer.key)}">
+            <div class="customer-admin-card-top"><div><h3>${transferText(customer.name)}</h3><p>${transferText(customer.phone || "بدون رقم جوال")} · آخر طلب: ${customerOrderDate(customer.latestOrder.created_at)}</p></div><span class="customer-orders-count">${customer.orders.length} طلب</span></div>
+            <div class="customer-admin-card-bottom"><span>${transferText(customer.address || "لا يوجد عنوان مسجل")}</span><strong>${customer.total.toFixed(2)} ر.س</strong></div>
+        </button>`).join("") : '<div class="message">لا يوجد عملاء مطابقون في فواتير هذا المخزن.</div>';
+    customersList.querySelectorAll("[data-customer-key]").forEach(button => button.addEventListener("click", () => {
+        selectedAdminCustomerKey = button.dataset.customerKey;
+        renderAdminCustomers();
+        renderCustomerProfile(adminCustomersData.find(customer => customer.key === selectedAdminCustomerKey));
+    }));
+    renderCustomerProfile(adminCustomersData.find(customer => customer.key === selectedAdminCustomerKey));
+}
+
+async function loadAdminCustomers() {
+    if (!customersList) return;
+    customersList.innerHTML = '<div class="message">جاري تحميل العملاء...</div>';
+    const { data, error } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
+    if (error) {
+        console.error("Customers load error:", error);
+        customersList.innerHTML = `<div class="message error">تعذر تحميل العملاء: ${transferText(error.message)}</div>`;
+        return;
+    }
+    adminCustomersData = buildAdminCustomers(data || []);
+    const totalOrders = adminCustomersData.reduce((sum, customer) => sum + customer.orders.length, 0);
+    const totalSales = adminCustomersData.reduce((sum, customer) => sum + customer.total, 0);
+    if (customersSummary) customersSummary.innerHTML = `<span><strong>${adminCustomersData.length}</strong> عميل مسجل من الفواتير</span><span><strong>${totalOrders}</strong> إجمالي الطلبات</span><span><strong>${totalSales.toFixed(2)} ر.س</strong> إجمالي مشتريات العملاء</span>`;
+    if (!adminCustomersData.some(customer => customer.key === selectedAdminCustomerKey)) selectedAdminCustomerKey = "";
+    renderAdminCustomers();
+}
+
+customersButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
+    customersAdmin.style.display = "block";
+    await loadAdminCustomers();
+});
+document.getElementById("backFromCustomers")?.addEventListener("click", () => { customersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+adminCustomerSearch?.addEventListener("input", renderAdminCustomers);
+document.getElementById("refreshAdminCustomers")?.addEventListener("click", loadAdminCustomers);
+[
+    "dashboardButton", "productsButton", "ordersButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"
+].forEach(id => document.getElementById(id)?.addEventListener("click", () => { if (customersAdmin) customersAdmin.style.display = "none"; }));
 
 
 const dashboardOrdersButton =
