@@ -4199,16 +4199,19 @@ function renderAdminOrder(order, items = []) {
                 <div class="admin-order-item-info">
 
                     <h4>
-                        ${item.model || "بدون موديل"}
+                        ${item.type || item.product_type || "بدون نوع"}
                     </h4>
 
                     <p>
-                        ${item.company || ""}
-                        ${
-                            item.color
-                            ? " • " + item.color
-                            : ""
-                        }
+                        كود المنتج: ${item.product_code || "بدون كود"}
+                    </p>
+
+                    <p>
+                        ${[
+                            item.company ? "الماركة: " + item.company : "",
+                            item.model ? "الموديل: " + item.model : "",
+                            item.color ? "اللون: " + item.color : ""
+                        ].filter(Boolean).join(" • ") || "بدون تفاصيل إضافية"}
                     </p>
 
                     <span>
