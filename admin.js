@@ -4848,6 +4848,10 @@ Object.entries(typeCodes).forEach(
                         </td>
 
                         <td>
+                            ${price.toFixed(2)} ر.س
+                        </td>
+
+                        <td>
                             ${total.toFixed(2)} ر.س
                         </td>
 
@@ -5338,6 +5342,10 @@ Object.entries(typeCodes).forEach(
 
                 <th>
                     الكمية
+                </th>
+
+                <th>
+                    سعر الوحدة
                 </th>
 
                 <th>
