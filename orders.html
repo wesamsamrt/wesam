@@ -694,7 +694,7 @@ function createCustomerCartItemCard(item) {
         <div class="order-image">${item.image ? `<img src="${escapeCartHtml(item.image)}" alt="">` : "📱"}</div>
         <div class="order-info">
             <h3>${escapeCartHtml(item.type || item.product_type || item.model || "منتج")}</h3>
-            <p>${escapeCartHtml([item.company, item.model, item.color].filter(Boolean).join(" • ")) || "تفاصيل المنتج"}</p>
+            <p>${escapeCartHtml([item.company, item.model ? `موديل الجهاز: ${item.model}` : "", item.color].filter(Boolean).join(" • ")) || "تفاصيل المنتج"}</p>
             ${item.product_code ? `<p>كود المنتج: ${escapeCartHtml(item.product_code)}</p>` : ""}
             <div class="price">${itemTotal.toFixed(2)} ر.س</div>
         </div>
@@ -763,7 +763,7 @@ function renderCartView() {
                 <div class="order-image">${item.image ? `<img src="${escapeCartHtml(item.image)}" alt="">` : "📱"}</div>
                 <div class="order-info">
                     <h3>${escapeCartHtml(item.type || item.product_type || item.model || "منتج")}</h3>
-                    <p>${escapeCartHtml([item.company, item.type, item.color].filter(Boolean).join(" • "))}</p>
+                    <p>${escapeCartHtml([item.company, item.type, item.model ? `موديل الجهاز: ${item.model}` : "", item.color].filter(Boolean).join(" • "))}</p>
                     <p>${item.product_code ? `كود المنتج: ${escapeCartHtml(item.product_code)}` : ""}</p>
                     <div class="price">${itemTotal.toFixed(2)} ر.س</div>
                     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
