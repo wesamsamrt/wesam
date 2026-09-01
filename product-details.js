@@ -259,12 +259,19 @@ function renderDetailColors() {
     }
 
     if (colorLabel) colorLabel.style.display = "block";
-    container.innerHTML = [...colors.entries()].map(([color, products]) => {
+    const colorChoicesHtml = [...colors.entries()].map(([color, products]) => {
         const available = products.reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
         return `<button type="button" class="detail-color-choice ${color === selectedColor ? "active" : ""}" data-color="${escapeDetailHtml(color)}" data-available="${available}">
             <strong>${escapeDetailHtml(color)}</strong><small>${formatDetailStock(available)}</small>
         </button>`;
     }).join("");
+    // خيار الألوان المختلفة يظهر فقط عند وجود أكثر من لون حقيقي لهذا الصنف.
+    const coloredVariants = [...colors.keys()].filter(color => color !== "بدون لون");
+    const mixedColorsAvailable = coloredVariants.reduce((sum, color) => sum + (colors.get(color) || []).reduce((inner, product) => inner + Math.max(0, Number(product.quantity || 0)), 0), 0);
+    const mixedColorsHtml = coloredVariants.length > 1 ? `<button type="button" class="detail-color-choice detail-mixed-color-choice ${selectedColor === "__mixed__" ? "active" : ""}" data-color="__mixed__" data-available="${mixedColorsAvailable}">
+        <strong>ألوان مختلفة</strong><small>توزيع من الألوان المتوفرة</small>
+    </button>` : "";
+    container.innerHTML = colorChoicesHtml + mixedColorsHtml;
 
     container.querySelectorAll(".detail-color-choice").forEach(button => {
         button.addEventListener("click", () => {
@@ -290,7 +297,7 @@ function renderDetailPurchaseQuantity(available) {
     }
 
     selectedQuantity = Math.max(1, Math.min(safeAvailable, Number(selectedQuantity || 1)));
-    const quantityLabel = selectedColor === "بدون لون" ? "الكمية" : `الكمية (${escapeDetailHtml(selectedColor)})`;
+    const quantityLabel = selectedColor === "بدون لون" ? "الكمية" : selectedColor === "__mixed__" ? "الكمية (ألوان مختلفة)" : `الكمية (${escapeDetailHtml(selectedColor)})`;
     container.innerHTML = `<span>${quantityLabel}</span><div class="detail-quantity">
         <button type="button" data-detail-adjust="-1" aria-label="تقليل الكمية">−</button>
         <input id="detailSelectedQuantity" type="number" min="1" max="${safeAvailable}" value="${selectedQuantity}" inputmode="numeric" aria-label="الكمية">
@@ -384,7 +391,9 @@ async function addDetailSelectionsToCart() {
     detailVariants.filter(product =>
         (!selectedCompany || String(product.company || "").trim() === selectedCompany) &&
         (!selectedModel || String(product.model || "").trim() === selectedModel) &&
-        (String(product.color || "بدون لون").trim() || "بدون لون") === selectedColor
+        (selectedColor === "__mixed__"
+            ? (String(product.color || "بدون لون").trim() || "بدون لون") !== "بدون لون"
+            : (String(product.color || "بدون لون").trim() || "بدون لون") === selectedColor)
     ).forEach(product => {
         const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
         if (quantity > 0) items.push({ product, quantity });
