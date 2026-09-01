@@ -4287,6 +4287,7 @@ function renderAdminOrder(order, items = []) {
     const date =
         new Date(order.created_at)
             .toLocaleString("ar-SA", {
+                timeZone: "Asia/Riyadh",
                 dateStyle: "medium",
                 timeStyle: "short"
             });
@@ -4723,6 +4724,7 @@ async function printOrder(orderId) {
                 .toLocaleString(
                     "ar-SA",
                     {
+                        timeZone: "Asia/Riyadh",
                         dateStyle: "medium",
                         timeStyle: "short"
                     }

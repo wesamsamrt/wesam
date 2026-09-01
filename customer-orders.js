@@ -15,7 +15,11 @@ async function loadCustomerPreviousOrders() {
     container.innerHTML = "";
     for (const order of orders) {
         const { data: items, error: itemsError } = await supabaseClient.from("order_items").select("*").eq("order_id", order.id).order("id", { ascending: true });
-        const date = new Date(order.created_at).toLocaleDateString("ar-SA");
+        const date = new Date(order.created_at).toLocaleString("ar-SA", {
+            timeZone: "Asia/Riyadh",
+            dateStyle: "medium",
+            timeStyle: "short"
+        });
         const card = document.createElement("article");
         card.className = "order";
         const renderedItems = itemsError ? '<p class="meta">تعذر تحميل المنتجات.</p>' : (items || []).map(item => `<div class="item"><div>${item.image ? `<img src="${escapeOrdersHtml(item.image)}" alt="">` : '<div class="fallback">📱</div>'}</div><div class="item-info"><strong>${escapeOrdersHtml(item.type || item.product_type || item.model || "منتج")}</strong><span>${escapeOrdersHtml([item.company, item.model, item.color].filter(Boolean).join(" • "))}</span><span>الكمية: ${Number(item.quantity || 1)}</span></div><strong class="item-price">${(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)} ر.س</strong></div>`).join("") || '<p class="meta">لا توجد منتجات لهذا الطلب.</p>';

@@ -17,7 +17,7 @@ function renderTrackingStages(order) {
 }
 
 // يعرض وقت الطلب بصيغة عربية مختصرة داخل مراحل وسجل النشاط.
-function formatTrackingDate(value) { return value ? new Date(value).toLocaleString("ar-SA", { dateStyle:"medium", timeStyle:"short" }) : "—"; }
+function formatTrackingDate(value) { return value ? new Date(value).toLocaleString("ar-SA", { timeZone:"Asia/Riyadh", dateStyle:"medium", timeStyle:"short" }) : "—"; }
 
 // يحمّل الطلب المملوك للحساب الحالي وعناصره ثم يرسم لوحة التتبع كاملة.
 async function loadOrderTracking() {

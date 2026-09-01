@@ -522,6 +522,7 @@ let cartOrder = null;
 let cartItems = [];
 let isLinkedDriverCart = false;
 const quantitySaveTimers = new Map();
+const CUSTOMER_TAX_RATE = 0.15;
 
 function escapeCartHtml(value) {
     return String(value || "").replace(/[&<>'"]/g, char => ({
@@ -538,10 +539,23 @@ function calculateCartItemsTotal(items = cartItems) {
     }, 0);
 }
 
+function roundCartMoney(value) {
+    return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+// يحسب ملخص العميل من مصدر واحد: إجمالي فرعي + ضريبة 15٪ - خصم (جاهز للكوبونات لاحقًا).
+function calculateCartPricing(items = cartItems) {
+    const subtotal = roundCartMoney(calculateCartItemsTotal(items));
+    const tax = isLinkedDriverCart ? 0 : roundCartMoney(subtotal * CUSTOMER_TAX_RATE);
+    const discount = 0;
+    return { subtotal, tax, discount, total: roundCartMoney(subtotal + tax - discount) };
+}
+
 // يحدّث إجمالي الطلب في قاعدة البيانات بعد احتسابه من عناصر السلة المعروضة.
 async function saveCartItemsTotal(order = cartOrder, items = cartItems) {
     if (!order?.id) return 0;
-    const total = calculateCartItemsTotal(items);
+    const pricing = calculateCartPricing(items);
+    const total = pricing.total;
     order.total = total;
     const { error } = await supabaseClient
         .from("orders")
@@ -552,13 +566,17 @@ async function saveCartItemsTotal(order = cartOrder, items = cartItems) {
 }
 
 // يعرض ملخص الطلب الجانبي للعميل مع حالة عنوان الاستلام والمخزن المختار.
-function renderCustomerCartSummary(total, totalQuantity) {
+function renderCustomerCartSummary(pricing, totalQuantity) {
     const summary = document.getElementById("customerCartSummary");
     if (!summary) return;
     if (isLinkedDriverCart) {
         summary.innerHTML = "";
         return;
     }
+
+    const totals = pricing && typeof pricing === "object"
+        ? pricing
+        : calculateCartPricing([]);
 
     const warehouse = localStorage.getItem("customer_warehouse") || "المنطقة المختارة";
     const savedDeliveryDetails = getStoredCustomerDeliveryDetails();
@@ -576,8 +594,10 @@ function renderCustomerCartSummary(total, totalQuantity) {
         <div class="customer-summary-address"><span>التوصيل إلى الموقع الحالي</span>${hasSavedDelivery ? `<strong>📍 ${escapeCartHtml(savedAddress)}</strong><a href="customer-details.html">تغيير عنوان الاستلام</a>` : '<a href="customer-details.html">📍 سجل عنوان الاستلام</a>'}</div>
         <div class="customer-summary-totals">
             <div class="customer-summary-row"><span>عدد القطع</span><strong>${totalQuantity}</strong></div>
-            <div class="customer-summary-row"><span>الإجمالي الفرعي</span><strong>${total.toFixed(2)} ر.س</strong></div>
-            <div class="customer-summary-row customer-summary-total"><span>إجمالي الطلب</span><strong>${total.toFixed(2)} ر.س</strong></div>
+            <div class="customer-summary-row"><span>الإجمالي الفرعي</span><strong>${totals.subtotal.toFixed(2)} ر.س</strong></div>
+            <div class="customer-summary-row"><span>الضريبة (15٪)</span><strong>+ ${totals.tax.toFixed(2)} ر.س</strong></div>
+            <div class="customer-summary-row"><span>الخصم</span><strong>− ${totals.discount.toFixed(2)} ر.س</strong></div>
+            <div class="customer-summary-row customer-summary-total"><span>إجمالي الطلب</span><strong>${totals.total.toFixed(2)} ر.س</strong></div>
         </div>
         <div class="customer-summary-actions">
             <button type="button" onclick="continueCustomerCheckout()">🛒 متابعة تقديم الطلب</button>
@@ -691,12 +711,14 @@ function renderCartView() {
     const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
     tools.style.display = isLinkedDriverCart ? "block" : "none";
-    const cartTotal = Number(cartOrder?.total || 0);
+    const cartPricing = calculateCartPricing(cartItems);
+    const cartTotal = cartPricing.total;
+    if (cartOrder) cartOrder.total = cartTotal;
     document.getElementById("cartSummary").innerHTML = `
         <span>${cartItems.length} صنف</span>
         <span>${totalQuantity} قطعة</span>
         <span>الإجمالي: ${cartTotal.toFixed(2)} ر.س</span>`;
-    renderCustomerCartSummary(cartTotal, totalQuantity);
+    renderCustomerCartSummary(cartPricing, totalQuantity);
 
     if (!visibleItems.length) {
         container.innerHTML = '<div class="cart-empty-filter">لا توجد منتجات مطابقة للبحث.</div>';
@@ -1240,9 +1262,7 @@ async function changeQuantity(itemId, change) {
 
     // نُظهر التعديل فورًا؛ لا ننتظر الشبكة ولا نعيد تحميل السلة مع كل نقرة.
     item.quantity = newQuantity;
-    cartOrder.total = cartItems.reduce((sum, cartItem) =>
-        sum + Number(cartItem.price || 0) * Number(cartItem.quantity || 0), 0
-    );
+    cartOrder.total = calculateCartPricing(cartItems).total;
     renderCartView();
 
     clearTimeout(quantitySaveTimers.get(itemId));
@@ -1313,18 +1333,7 @@ async function updateOrderTotal() {
         .eq("order_id", orderId);
 
 
-    const total =
-        (items || []).reduce(
-            (sum, item) =>
-                sum +
-                (
-                    Number(item.price) || 0
-                ) *
-                (
-                    Number(item.quantity) || 1
-                ),
-            0
-        );
+    const total = calculateCartPricing(items || []).total;
 
 
     await supabaseClient
@@ -1781,7 +1790,11 @@ async function showPreviousOrders() {
 
         const date =
             new Date(order.created_at)
-                .toLocaleDateString("ar-SA");
+                .toLocaleString("ar-SA", {
+                    timeZone: "Asia/Riyadh",
+                    dateStyle: "medium",
+                    timeStyle: "short"
+                });
 
 
         orderCard.innerHTML = `
