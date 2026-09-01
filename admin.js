@@ -707,7 +707,8 @@ function renderTransferDraft() {
     }
     transferDraftItems.innerHTML = transferDraft.map((item, index) => `
         <div class="transfer-draft-item">
-            <span>${transferText(item.name)} — <strong>${item.quantity} قطعة</strong><small> · المتاح في ${transferText(item.source_warehouse)}: ${item.source_quantity} · في ${transferText(item.destination_warehouse)}: ${item.destination_quantity}</small></span>
+            <span>${transferText(item.name)}<small> · المتاح في ${transferText(item.source_warehouse)}: ${item.source_quantity} · في ${transferText(item.destination_warehouse)}: ${item.destination_quantity}</small></span>
+            <label class="transfer-draft-quantity">الكمية <input type="number" min="1" max="${Math.max(1, Number(item.source_quantity || 0))}" value="${item.quantity}" onchange="changeTransferDraftQuantity(${index}, this.value)"></label>
             <button type="button" onclick="removeTransferDraftItem(${index})">إزالة</button>
         </div>
     `).join("");
@@ -717,6 +718,16 @@ function renderTransferDraft() {
 window.removeTransferDraftItem = function (index) {
     transferDraft.splice(index, 1);
     renderTransferDraft();
+};
+
+window.changeTransferDraftQuantity = function (index, value) {
+    const item = transferDraft[index];
+    if (!item) return;
+    const available = Math.max(0, Number(item.source_quantity || 0));
+    const requested = Math.max(1, Math.floor(Number(value) || 1));
+    item.quantity = available ? Math.min(requested, available) : requested;
+    renderTransferDraft();
+    if (requested > available && available > 0) setTransferMessage(`تم ضبط الكمية على المتاح في المصدر: ${available} قطعة.`);
 };
 
 // يجلب كل منتجات مخزن التحويل على دفعات؛ Supabase يعيد ألف صف فقط افتراضياً.
