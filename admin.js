@@ -749,7 +749,7 @@ async function loadTransferSourceProducts() {
             loadAllTransferWarehouseProducts(transferDestinationWarehouse.value, "id, quantity, inventory_key")
         ]);
         const destinationByInventoryKey = new Map((destinationProducts || []).map(product => [String(product.inventory_key), product]));
-        transferSourceProducts = (sourceProducts || []).map(product => {
+    transferSourceProducts = (sourceProducts || []).map(product => {
             const counterpart = destinationByInventoryKey.get(String(product.inventory_key));
             return { ...product, destination_quantity: Number(counterpart?.quantity || 0) };
         });
@@ -771,6 +771,22 @@ function renderTransferProductOptions() {
         const values = [product.product_code, product.company, product.model, product.color, product.type, product.product_type].join(" ").toLowerCase();
         return !search || values.includes(search);
     });
+    // عند تغيير مخزن المصدر لا نمسح المسودة؛ نربط كل صنف بنسخته في المخزن الجديد إن وجدت.
+    transferDraft.forEach(draft => {
+        const replacement = transferSourceProducts.find(product =>
+            String(product.product_code || "") === String(draft.product_code || "") &&
+            String(product.company || "") === String(draft.company || "") &&
+            String(product.model || "") === String(draft.model || "") &&
+            String(product.color || "") === String(draft.color || "")
+        );
+        if (!replacement) return;
+        draft.product_id = replacement.id;
+        draft.source_quantity = Number(replacement.quantity || 0);
+        draft.destination_quantity = Number(replacement.destination_quantity || 0);
+        draft.source_warehouse = transferSourceWarehouse.value;
+        draft.destination_warehouse = transferDestinationWarehouse.value;
+    });
+    renderTransferDraft();
     const groupedProducts = new Map();
     products.forEach(product => {
         const key = String(product.product_code || product.inventory_key || product.id);
@@ -904,6 +920,10 @@ document.getElementById("addTransferItemButton")?.addEventListener("click", () =
     } else {
         transferDraft.push({
             product_id: product.id,
+            product_code: product.product_code,
+            company: product.company,
+            model: product.model,
+            color: product.color,
             quantity,
             name: [[product.company, product.model, product.product_code].filter(Boolean).join(" ") || `منتج #${product.id}`, product.color, product.type, product.product_type].filter(Boolean).join(" · "),
             source_quantity: product.quantity || 0,
@@ -1101,8 +1121,8 @@ document.getElementById("confirmTransferVariant")?.addEventListener("click", () 
 transferVariantModal?.addEventListener("click", event => {
     if (event.target === transferVariantModal) closeTransferVariantModal();
 });
-transferSourceWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
-transferDestinationWarehouse?.addEventListener("change", () => { transferDraft = []; renderTransferDraft(); loadTransferSourceProducts(); });
+transferSourceWarehouse?.addEventListener("change", () => { loadTransferSourceProducts(); });
+transferDestinationWarehouse?.addEventListener("change", () => { loadTransferSourceProducts(); });
 document.getElementById("refreshTransfersButton")?.addEventListener("click", loadTransfers);
 ["productsButton", "ordersButton", "categoriesButton", "dashboardButton"].forEach(id => {
     document.getElementById(id)?.addEventListener("click", () => {
@@ -4119,7 +4139,7 @@ document.getElementById("requestShortagesTransfer")?.addEventListener("click", a
     selectedItems.forEach(shortage => {
         const product = transferSourceProducts.find(item => String(item.product_code || "") === String(shortage.product_code || "") && String(item.company || "") === String(shortage.company || "") && String(item.model || "") === String(shortage.model || "") && String(item.color || "") === String(shortage.color || ""));
         if (!product) return;
-        transferDraft.push({ product_id: product.id, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
+        transferDraft.push({ product_id: product.id, product_code: product.product_code, company: product.company, model: product.model, color: product.color, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
     });
     renderTransferDraft();
     setTransferMessage(transferDraft.length ? "تمت إضافة النواقص المتوفرة إلى مسودة التحويل. عدّل الكميات ثم أرسل الطلب." : "لم نجد هذه الأصناف في المخزن المصدر المختار. اختر مخزن مصدر آخر.", !transferDraft.length);
