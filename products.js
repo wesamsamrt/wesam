@@ -1259,19 +1259,23 @@ function openProductModal(variants) {
 
         differentColorInfo = {
             groups: colorGroups,
-            maxQuantity: colorGroups.reduce((sum, group) => sum + group.available, 0)
+            maxQuantity: colorGroups.reduce((sum, group) => sum + group.available, 0),
+            selectedColorCount: 2,
+            maxPerColor: Math.min(...colorGroups.slice(0, 2).map(group => group.available))
         };
         const row = document.createElement("div");
         row.className = "different-colors-row";
-        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">اختر عدد الألوان والكمية الإجمالية</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
+        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">اختر عدد الألوان والكمية لكل لون</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية لكل لون<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
         const colorsCountInput = row.querySelector(".different-color-count");
         const quantityInput = row.querySelector(".different-color-quantity");
         const updateDifferentColors = () => {
             let colorCount = Number.parseInt(colorsCountInput.value, 10) || 2;
             colorCount = Math.max(2, Math.min(colorGroups.length, colorCount));
+            const maxPerColor = Math.min(...colorGroups.slice(0, colorCount).map(group => group.available));
             let quantity = Number.parseInt(quantityInput.value, 10) || 0;
-            quantity = Math.max(0, Math.min(differentColorInfo.maxQuantity, quantity));
-            if (quantity > 0) quantity = Math.max(colorCount, quantity);
+            quantity = Math.max(0, Math.min(maxPerColor, quantity));
+            differentColorInfo.selectedColorCount = colorCount;
+            differentColorInfo.maxPerColor = maxPerColor;
             colorsCountInput.value = colorCount;
             quantityInput.value = quantity;
             if (quantity > 0) colorsContainer.querySelectorAll(".color-quantity-input").forEach(input => { input.value = "0"; });
@@ -2110,8 +2114,9 @@ plus.addEventListener("pointerdown", function (e) {
         });
 
         if (differentQuantity > 0 && differentColorInfo) {
-            totalSelected = differentQuantity;
-            totalStock = differentColorInfo.maxQuantity;
+            const selectedColorCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 2;
+            totalSelected = differentQuantity * selectedColorCount;
+            totalStock = differentColorInfo.groups.slice(0, selectedColorCount).reduce((sum, group) => sum + group.available, 0);
         }
 
 
@@ -2178,25 +2183,10 @@ plus.addEventListener("pointerdown", function (e) {
         const differentColorsCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 0;
         if (differentQuantity > 0 && differentColorInfo) {
             const groups = differentColorInfo.groups.slice(0, Math.max(2, Math.min(differentColorInfo.groups.length, differentColorsCount)));
-            const allocation = new Map(groups.map(group => [group.colorKey, 1]));
-            let remaining = differentQuantity - groups.length;
-            while (remaining > 0) {
-                let added = false;
-                groups.forEach(group => {
-                    if (remaining <= 0) return;
-                    if ((allocation.get(group.colorKey) || 0) < group.available) {
-                        allocation.set(group.colorKey, allocation.get(group.colorKey) + 1);
-                        remaining--;
-                        added = true;
-                    }
-                });
-                if (!added) break;
-            }
-            allocation.forEach((quantity, colorKey) => {
-                const group = groups.find(item => item.colorKey === colorKey);
-                // نحفظ عبارة موحدة بدل اللون الفعلي؛ موظف المخزن يحدد الألوان
-                // النهائية يدويًا عند تجهيز الطلب.
-                group.products.forEach(product => selectedItems.push({ product, quantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" }));
+            groups.forEach(group => {
+                // نفس الكمية تُطلب من كل لون مختار، وتُحفظ العبارة الموحدة
+                // ليكتب موظف المخزن الألوان النهائية عند التجهيز.
+                group.products.forEach(product => selectedItems.push({ product, quantity: differentQuantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" }));
             });
         }
 
