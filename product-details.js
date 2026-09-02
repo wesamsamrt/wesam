@@ -4,6 +4,7 @@ let selectedCompany = "";
 let selectedModel = "";
 let selectedColor = "";
 let selectedQuantity = 1;
+let selectedDifferentColorCount = 2;
 let detailWarehouse = "";
 let cachedDetailCartUser = null;
 let cachedDetailOpenOrder = null;
@@ -179,6 +180,7 @@ function setupDetailInteractions() {
         selectedModel = "";
         selectedColor = "";
         selectedQuantity = 1;
+        selectedDifferentColorCount = 2;
         document.querySelectorAll("[data-company]").forEach(item => item.classList.toggle("active", item === button));
         renderDetailModels();
         updateDetailStock();
@@ -213,6 +215,7 @@ function renderDetailModels() {
         selectedModel = button.dataset.model;
         selectedColor = "";
         selectedQuantity = 1;
+        selectedDifferentColorCount = 2;
         container.querySelectorAll("[data-model]").forEach(item => item.classList.toggle("active", item === button));
         renderDetailColors();
         updateDetailStock();
@@ -264,12 +267,16 @@ function renderDetailColors() {
         return `<button type="button" class="detail-color-choice ${color === selectedColor ? "active" : ""}" data-color="${escapeDetailHtml(color)}" data-available="${available}">
             <strong>${escapeDetailHtml(color)}</strong><small>${formatDetailStock(available)}</small>
         </button>`;
-    }).join("");
+    }).join("") + (colors.size > 1 ? `<button type="button" class="detail-color-choice detail-different-colors ${selectedColor === "__DIFFERENT_COLORS__" ? "active" : ""}" data-different-colors="true" data-available="${[...colors.values()].flat().reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0)}" data-color-count="${colors.size}">
+        <strong>ألوان مختلفة</strong><small>اختر عدد الألوان والكمية</small>
+    </button>` : "");
 
     container.querySelectorAll(".detail-color-choice").forEach(button => {
         button.addEventListener("click", () => {
-            selectedColor = button.dataset.color;
-            selectedQuantity = 1;
+            const isDifferentColors = button.dataset.differentColors === "true";
+            selectedColor = isDifferentColors ? "__DIFFERENT_COLORS__" : button.dataset.color;
+            selectedDifferentColorCount = isDifferentColors ? Math.max(2, Math.min(Number(button.dataset.colorCount || 2), selectedDifferentColorCount || 2)) : 2;
+            selectedQuantity = isDifferentColors ? Math.max(selectedDifferentColorCount, selectedQuantity || selectedDifferentColorCount) : 1;
             container.querySelectorAll(".detail-color-choice").forEach(item => item.classList.toggle("active", item === button));
             renderDetailPurchaseQuantity(Number(button.dataset.available || 0));
             updateDetailStock();
@@ -286,6 +293,28 @@ function renderDetailPurchaseQuantity(available) {
     const safeAvailable = Math.max(0, Number(available || 0));
     if (!selectedColor || !safeAvailable) {
         container.innerHTML = '<span>الكمية</span><span class="detail-choice-hint">اختر اللون أولًا</span>';
+        return;
+    }
+
+    if (selectedColor === "__DIFFERENT_COLORS__") {
+        const colorsCount = document.querySelectorAll(".detail-color-choice:not(.detail-different-colors)").length;
+        selectedDifferentColorCount = Math.max(2, Math.min(colorsCount, Number(selectedDifferentColorCount || 2)));
+        selectedQuantity = Math.max(selectedDifferentColorCount, Math.min(safeAvailable, Number(selectedQuantity || selectedDifferentColorCount)));
+        container.innerHTML = `<span>ألوان مختلفة</span><div class="detail-different-quantity-fields">
+            <label>عدد الألوان<input id="detailDifferentColorCount" type="number" min="2" max="${colorsCount}" value="${selectedDifferentColorCount}" inputmode="numeric"></label>
+            <label>الكمية<input id="detailSelectedQuantity" type="number" min="${selectedDifferentColorCount}" max="${safeAvailable}" value="${selectedQuantity}" inputmode="numeric"></label>
+        </div>`;
+        const colorCountInput = container.querySelector("#detailDifferentColorCount");
+        const quantityInput = container.querySelector("#detailSelectedQuantity");
+        const setDifferentValues = () => {
+            selectedDifferentColorCount = Math.max(2, Math.min(colorsCount, Number(colorCountInput.value || 2)));
+            selectedQuantity = Math.max(selectedDifferentColorCount, Math.min(safeAvailable, Number(quantityInput.value || selectedDifferentColorCount)));
+            colorCountInput.value = selectedDifferentColorCount;
+            quantityInput.min = selectedDifferentColorCount;
+            quantityInput.value = selectedQuantity;
+        };
+        colorCountInput.addEventListener("input", setDifferentValues);
+        quantityInput.addEventListener("input", setDifferentValues);
         return;
     }
 
@@ -379,17 +408,55 @@ async function addDetailSelectionsToCart() {
         return;
     }
 
-    const items = [];
-    let remaining = selectedQuantity;
-    detailVariants.filter(product =>
+    const matchingProducts = detailVariants.filter(product =>
         (!selectedCompany || String(product.company || "").trim() === selectedCompany) &&
-        (!selectedModel || String(product.model || "").trim() === selectedModel) &&
-        (String(product.color || "بدون لون").trim() || "بدون لون") === selectedColor
-    ).forEach(product => {
-        const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
-        if (quantity > 0) items.push({ product, quantity });
-        remaining -= quantity;
-    });
+        (!selectedModel || String(product.model || "").trim() === selectedModel)
+    );
+    const items = [];
+
+    if (selectedColor === "__DIFFERENT_COLORS__") {
+        const byColor = new Map();
+        matchingProducts.forEach(product => {
+            const color = String(product.color || "بدون لون").trim() || "بدون لون";
+            if (!byColor.has(color)) byColor.set(color, []);
+            byColor.get(color).push(product);
+        });
+        const selectedColors = [...byColor.entries()].filter(([, products]) => products.some(product => Number(product.quantity || 0) > 0)).slice(0, selectedDifferentColorCount);
+        if (selectedColors.length < selectedDifferentColorCount) {
+            showDetailNotice("لا تتوفر كمية كافية لعدد الألوان المطلوب.", "error");
+            return;
+        }
+        const allocation = new Map(selectedColors.map(([color]) => [color, 1]));
+        let remaining = selectedQuantity - selectedColors.length;
+        while (remaining > 0) {
+            let added = false;
+            selectedColors.forEach(([color, products]) => {
+                if (!remaining) return;
+                const capacity = products.reduce((sum, product) => sum + Math.max(0, Number(product.quantity || 0)), 0);
+                if (allocation.get(color) < capacity) {
+                    allocation.set(color, allocation.get(color) + 1);
+                    remaining--;
+                    added = true;
+                }
+            });
+            if (!added) break;
+        }
+        allocation.forEach((requestedQuantity, color) => {
+            let remaining = requestedQuantity;
+            byColor.get(color).forEach(product => {
+                const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
+                if (quantity > 0) items.push({ product, quantity });
+                remaining -= quantity;
+            });
+        });
+    } else {
+        let remaining = selectedQuantity;
+        matchingProducts.filter(product => (String(product.color || "بدون لون").trim() || "بدون لون") === selectedColor).forEach(product => {
+            const quantity = Math.min(remaining, Math.max(0, Number(product.quantity || 0)));
+            if (quantity > 0) items.push({ product, quantity });
+            remaining -= quantity;
+        });
+    }
 
     if (!items.length) {
         showDetailNotice("الكمية المختارة غير متوفرة حاليًا.", "error");
@@ -445,7 +512,11 @@ async function addDetailSelectionsToCart() {
 
         const cartQuantity = (cartItems || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         updateDetailCartBadge(cartQuantity);
-        selectedQuantity = 1;
+        selectedQuantity = selectedColor === "__DIFFERENT_COLORS__" ? selectedDifferentColorCount : 1;
+        if (selectedColor === "__DIFFERENT_COLORS__") {
+            renderDetailPurchaseQuantity([...document.querySelectorAll(".detail-color-choice:not(.detail-different-colors)")].reduce((sum, colorButton) => sum + Number(colorButton.dataset.available || 0), 0));
+            return;
+        }
         const selectedColorButton = document.querySelector(`.detail-color-choice[data-color="${CSS.escape(selectedColor)}"]`);
         renderDetailPurchaseQuantity(Number(selectedColorButton?.dataset.available || 0));
     } catch (error) {
