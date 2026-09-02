@@ -5719,6 +5719,16 @@ function renderEditOrderItems() {
 
     editOrderItems.innerHTML = "";
 
+    // نفس ترتيب الطباعة حتى يرى الموظف الفاتورة بالطريقة نفسها قبل حفظها:
+    // الشركة، نوع المنتج، النوع، الموديل، ثم اللون.
+    editingOrderItems.sort((first, second) => {
+        const firstKey = [first.company, first.product_type, first.type, first.model, first.color]
+            .filter(Boolean).join(" ");
+        const secondKey = [second.company, second.product_type, second.type, second.model, second.color]
+            .filter(Boolean).join(" ");
+        return firstKey.localeCompare(secondKey, "ar-SA", { numeric: true, sensitivity: "base" });
+    });
+
 
     if (!editingOrderItems.length) {
 
