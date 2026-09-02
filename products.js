@@ -1236,9 +1236,51 @@ function openProductModal(variants) {
 
 
     let selectedColorProducts = [];
+    let differentColorInfo = null;
     const baseProductPrice = Number(variants[0]?.price) || 0;
     const orderPriceOverrideBox = modal.querySelector("#orderPriceOverrideBox");
     const orderPriceOverrideInput = modal.querySelector("#orderPriceOverride");
+
+    // خيار للمندوب عند طلب كمية موزعة على ألوان متعددة. لا يظهر إلا إذا
+    // كان للصنف لونان فعليان أو أكثر، ويُبقي كل لون كصنف مستقل في السلة.
+    function appendDifferentColorsOption(colorProducts, allProducts) {
+        const colorKeys = [...new Set(colorProducts
+            .map(product => String(product.color || "").trim().toLowerCase())
+            .filter(Boolean))];
+        if (colorKeys.length < 2) return;
+
+        const colorGroups = colorKeys.map(colorKey => {
+            const products = allProducts.filter(product => String(product.color || "").trim().toLowerCase() === colorKey);
+            // عند اختيار عدة موديلات، كمية اللون هي الكمية الممكنة لكل موديل.
+            const available = Math.min(...products.map(product => Math.max(0, Number(product.quantity) || 0)));
+            return { colorKey, products, available };
+        }).filter(group => group.available > 0);
+        if (colorGroups.length < 2) return;
+
+        differentColorInfo = {
+            groups: colorGroups,
+            maxQuantity: colorGroups.reduce((sum, group) => sum + group.available, 0)
+        };
+        const row = document.createElement("div");
+        row.className = "different-colors-row";
+        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">اختر عدد الألوان والكمية الإجمالية</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
+        const colorsCountInput = row.querySelector(".different-color-count");
+        const quantityInput = row.querySelector(".different-color-quantity");
+        const updateDifferentColors = () => {
+            let colorCount = Number.parseInt(colorsCountInput.value, 10) || 2;
+            colorCount = Math.max(2, Math.min(colorGroups.length, colorCount));
+            let quantity = Number.parseInt(quantityInput.value, 10) || 0;
+            quantity = Math.max(0, Math.min(differentColorInfo.maxQuantity, quantity));
+            if (quantity > 0) quantity = Math.max(colorCount, quantity);
+            colorsCountInput.value = colorCount;
+            quantityInput.value = quantity;
+            if (quantity > 0) colorsContainer.querySelectorAll(".color-quantity-input").forEach(input => { input.value = "0"; });
+            updateStockSummary();
+        };
+        colorsCountInput.addEventListener("input", updateDifferentColors);
+        quantityInput.addEventListener("input", updateDifferentColors);
+        colorsContainer.appendChild(row);
+    }
 
     // يتيح تعديل سعر البيع للحسابات الداخلية المصرح لها بالطلبات، دون تغيير سعر المنتج الأساسي.
     (async function configureOrderPriceOverride() {
@@ -1490,6 +1532,11 @@ if (compatibilityType === "general") {
             input.value =
                 quantity;
 
+            if (quantity > 0) {
+                const differentQuantityInput = colorsContainer.querySelector(".different-color-quantity");
+                if (differentQuantityInput) differentQuantityInput.value = "0";
+            }
+
 
             updateStockSummary();
 
@@ -1570,6 +1617,8 @@ if (compatibilityType === "general") {
 
     });
 
+    appendDifferentColorsOption(colorProducts, colorProducts);
+
 
     /*
        تحديث المخزون
@@ -1599,6 +1648,7 @@ if (compatibilityType === "general") {
         addButton.disabled = true;
 
         selectedColorProducts = [];
+        differentColorInfo = null;
 
 
         if (!company) {
@@ -1687,6 +1737,7 @@ if (compatibilityType === "general") {
         addButton.disabled = true;
 
         selectedColorProducts = [];
+        differentColorInfo = null;
 
 
         if (!company || !selectedModels.length) {
@@ -1941,6 +1992,11 @@ if (compatibilityType === "general") {
                 input.value =
                     quantity;
 
+                if (quantity > 0) {
+                    const differentQuantityInput = colorsContainer.querySelector(".different-color-quantity");
+                    if (differentQuantityInput) differentQuantityInput.value = "0";
+                }
+
 
                 updateStockSummary();
 
@@ -1999,6 +2055,8 @@ plus.addEventListener("pointerdown", function (e) {
 
         });
 
+        appendDifferentColorsOption(sharedColorProducts, modelProducts);
+
 
         updateStockSummary();
 
@@ -2020,6 +2078,8 @@ plus.addEventListener("pointerdown", function (e) {
         let totalSelected = 0;
 
         let totalStock = 0;
+        const differentQuantityInput = colorsContainer.querySelector(".different-color-quantity");
+        const differentQuantity = Number.parseInt(differentQuantityInput?.value, 10) || 0;
 
 
         rows.forEach(row => {
@@ -2048,6 +2108,11 @@ plus.addEventListener("pointerdown", function (e) {
                 : Math.max(0, Number(product?.quantity) || 0);
 
         });
+
+        if (differentQuantity > 0 && differentColorInfo) {
+            totalSelected = differentQuantity;
+            totalStock = differentColorInfo.maxQuantity;
+        }
 
 
         stockSummary.innerHTML = `
@@ -2109,6 +2174,30 @@ plus.addEventListener("pointerdown", function (e) {
             }
         });
 
+        const differentQuantity = Number.parseInt(colorsContainer.querySelector(".different-color-quantity")?.value, 10) || 0;
+        const differentColorsCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 0;
+        if (differentQuantity > 0 && differentColorInfo) {
+            const groups = differentColorInfo.groups.slice(0, Math.max(2, Math.min(differentColorInfo.groups.length, differentColorsCount)));
+            const allocation = new Map(groups.map(group => [group.colorKey, 1]));
+            let remaining = differentQuantity - groups.length;
+            while (remaining > 0) {
+                let added = false;
+                groups.forEach(group => {
+                    if (remaining <= 0) return;
+                    if ((allocation.get(group.colorKey) || 0) < group.available) {
+                        allocation.set(group.colorKey, allocation.get(group.colorKey) + 1);
+                        remaining--;
+                        added = true;
+                    }
+                });
+                if (!added) break;
+            }
+            allocation.forEach((quantity, colorKey) => {
+                const group = groups.find(item => item.colorKey === colorKey);
+                group.products.forEach(product => selectedItems.push({ product, quantity, orderPrice: customPrice }));
+            });
+        }
+
         if (!selectedItems.length) {
             alert("اختر كمية لون واحد على الأقل");
             return;
@@ -2121,6 +2210,8 @@ plus.addEventListener("pointerdown", function (e) {
         try {
             await addProductsBatch(selectedItems);
             rows.forEach(row => { row.querySelector(".color-quantity-input").value = 0; });
+            const differentQuantityInput = colorsContainer.querySelector(".different-color-quantity");
+            if (differentQuantityInput) differentQuantityInput.value = "0";
             updateStockSummary();
         } catch (error) {
             console.error("خطأ إضافة المنتجات:", error);
@@ -2608,6 +2699,23 @@ function addProductModalStyles() {
 
     cursor: not-allowed;
 }
+
+/* خيار المندوب: ألوان مختلفة مع خانتين منفصلتين للعدد والكمية. */
+.different-colors-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    margin-top: 10px;
+    background: #f5f2ff;
+    border: 1px dashed #8d7be8;
+    border-radius: 17px;
+}
+.different-colors-fields { display: flex; gap: 7px; direction: rtl; }
+.different-colors-fields label { display: grid !important; gap: 4px; margin: 0 !important; color: #5947ac !important; font-size: 11px !important; text-align: center; }
+.different-colors-fields input { width: 58px; height: 38px; border: 1px solid #cfc6f5; border-radius: 10px; background: #fff; text-align: center; font: 800 16px inherit; color: #2f2764; }
+@media (max-width: 430px) { .different-colors-row { align-items: flex-start; flex-direction: column; } .different-colors-fields { width: 100%; } .different-colors-fields label { flex: 1; } .different-colors-fields input { width: 100%; } }
     `;
 
 
