@@ -2194,7 +2194,9 @@ plus.addEventListener("pointerdown", function (e) {
             }
             allocation.forEach((quantity, colorKey) => {
                 const group = groups.find(item => item.colorKey === colorKey);
-                group.products.forEach(product => selectedItems.push({ product, quantity, orderPrice: customPrice }));
+                // نحفظ عبارة موحدة بدل اللون الفعلي؛ موظف المخزن يحدد الألوان
+                // النهائية يدويًا عند تجهيز الطلب.
+                group.products.forEach(product => selectedItems.push({ product, quantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" }));
             });
         }
 
@@ -2770,7 +2772,7 @@ async function addProductsBatch(items) {
         error: existingItemsError
     } = await supabaseClient
         .from("order_items")
-        .select("id, product_id, quantity, price")
+        .select("id, product_id, quantity, price, color")
         .eq("order_id", order.id)
         .in("product_id", productIds);
 
@@ -2784,10 +2786,7 @@ async function addProductsBatch(items) {
 
     (existingItems || []).forEach(item => {
 
-        existingMap.set(
-            String(item.product_id),
-            item
-        );
+        existingMap.set(`${item.product_id}::${String(item.color || "")}`, item);
 
     });
 
@@ -2817,10 +2816,8 @@ async function addProductsBatch(items) {
             : (Number(product.price) || 0);
 
 
-        const existingItem =
-            existingMap.get(
-                String(product.id)
-            );
+        const cartColor = item.cartColor ?? product.color;
+        const existingItem = existingMap.get(`${product.id}::${String(cartColor || "")}`);
 
 
         /* المنتج موجود بالسلة */
@@ -2843,7 +2840,8 @@ async function addProductsBatch(items) {
                 product_code:
                     product.product_code,
 
-                price: unitPrice
+                price: unitPrice,
+                color: cartColor
 
             });
 
@@ -2873,7 +2871,7 @@ async function addProductsBatch(items) {
                 type: product.type,
                 company: product.company,
                 model: product.model,
-                color: product.color,
+                color: cartColor,
                 price: unitPrice,
                 image: product.image
 
