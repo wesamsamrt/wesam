@@ -2644,6 +2644,50 @@ body {
     color: #6557ed;
 }
 
+/* شاشة تعديل الفاتورة: صفحة واسعة مستقلة لتظهر الأعمدة بوضوح. */
+.edit-order-modal.edit-order-page {
+    align-items: stretch;
+    padding: 0;
+    background: #f4f5fb;
+}
+
+.edit-order-modal.edit-order-page .edit-order-box {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    min-height: 100vh;
+    overflow: visible;
+    border-radius: 0;
+    padding: 34px clamp(22px, 4vw, 72px);
+    box-shadow: none;
+}
+
+.edit-order-modal.edit-order-page .edit-order-item-grid {
+    grid-template-columns: repeat(11, minmax(105px, 1fr));
+    overflow-x: auto;
+}
+
+.edit-preparation-colors {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid #cfc8ff;
+    border-radius: 16px;
+    background: #f5f3ff;
+}
+
+.edit-preparation-colors-title { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 13px; color: #29204e; }
+.edit-preparation-colors-title span { color: #746d97; font-size: 13px; }
+.edit-preparation-colors-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.edit-preparation-colors-grid label { display: grid; grid-template-columns: auto 64px; gap: 6px 9px; align-items: center; padding: 9px; border: 1px solid #ddd7fa; border-radius: 11px; background: #fff; font-size: 13px; font-weight: 700; }
+.edit-preparation-colors-grid input { width: 64px; padding: 7px; border: 1px solid #bfb7ed; border-radius: 8px; text-align: center; font: inherit; }
+.edit-preparation-colors-grid small { grid-column: 1 / -1; color: #777; font-weight: 400; }
+
+@media (max-width: 760px) {
+    .edit-order-modal.edit-order-page .edit-order-box { padding: 18px 12px; }
+    .edit-order-modal.edit-order-page .edit-order-item-grid { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+    .edit-preparation-colors-title { display: grid; }
+}
+
 .mark-unavailable-item { border:0; border-radius:10px; min-height:40px; padding:0 10px; background:#fff0d9; color:#ad6811; font-family:inherit; font-weight:800; cursor:pointer; }
 
 .edit-order-item-field input[readonly] {

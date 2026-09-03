@@ -5672,6 +5672,77 @@ window.printEditingOrder = function () {
     printOrder(editingOrderId);
 };
 let editingOrderItems = [];
+let editingDifferentColorGroups = [];
+
+function editDifferentColorGroupKey(item) {
+    return [item.product_code, item.company, item.model, item.product_type, item.type]
+        .map(value => String(value ?? "").trim()).join("\u001f");
+}
+
+// يبني ألوان التحضير لخيار «ألوان مختلفة» من مخزون نفس الطلب.
+async function loadEditDifferentColorGroups(order) {
+    const specialItems = editingOrderItems.filter(item => String(item.color || "").trim() === "ألوان مختلفة");
+    editingDifferentColorGroups = [];
+    if (!specialItems.length) return;
+
+    const codes = [...new Set(specialItems.map(item => String(item.product_code || "").trim()).filter(Boolean))];
+    const { data: products, error } = codes.length
+        ? await supabaseClient.from("products")
+            .select("id, product_code, category, product_type, type, company, model, color, quantity, price, image")
+            .eq("warehouse", order.warehouse).in("product_code", codes)
+        : { data: [], error: null };
+    if (error) console.warn("تعذر جلب ألوان التحضير للتعديل:", error);
+
+    const groups = new Map();
+    specialItems.forEach(item => {
+        const key = editDifferentColorGroupKey(item);
+        const group = groups.get(key) || { key, template: item, quantities: new Map(), variants: [] };
+        group.quantities.set(String(item.product_id), (group.quantities.get(String(item.product_id)) || 0) + Number(item.quantity || 0));
+        groups.set(key, group);
+    });
+    (products || []).forEach(product => {
+        const group = groups.get(editDifferentColorGroupKey(product));
+        if (group && String(product.color || "").trim()) group.variants.push(product);
+    });
+    editingDifferentColorGroups = [...groups.values()];
+}
+
+window.changeEditPreparedColorQuantity = function (groupIndex, productId, value) {
+    const group = editingDifferentColorGroups[groupIndex];
+    const product = group?.variants.find(item => String(item.id) === String(productId));
+    if (!group || !product) return;
+    const quantity = Math.max(0, Number.parseInt(value, 10) || 0);
+    const itemIndex = editingOrderItems.findIndex(item =>
+        String(item.color || "").trim() === "ألوان مختلفة" &&
+        editDifferentColorGroupKey(item) === group.key &&
+        String(item.product_id) === String(productId)
+    );
+    if (quantity === 0) {
+        if (itemIndex >= 0) editingOrderItems.splice(itemIndex, 1);
+        group.quantities.delete(String(productId));
+    } else if (itemIndex >= 0) {
+        editingOrderItems[itemIndex].quantity = quantity;
+        group.quantities.set(String(productId), quantity);
+    } else {
+        editingOrderItems.push({
+            ...group.template,
+            id: null,
+            product_id: product.id,
+            product_code: product.product_code,
+            category: product.category,
+            product_type: product.product_type,
+            type: product.type,
+            company: product.company,
+            model: product.model,
+            color: "ألوان مختلفة",
+            quantity,
+            price: Number(product.price ?? group.template.price ?? 0),
+            image: product.image || group.template.image || null
+        });
+        group.quantities.set(String(productId), quantity);
+    }
+    renderEditOrderItems();
+};
 
 
 /* عناصر نافذة التعديل */
@@ -5779,6 +5850,8 @@ async function editOrder(orderId) {
                 ...item
             }));
 
+        await loadEditDifferentColorGroups(order);
+
 
         renderEditOrderItems();
 
@@ -5789,6 +5862,14 @@ async function editOrder(orderId) {
 
         editOrderModal.style.display =
             "flex";
+
+        // تبدو شاشة التعديل كصفحة مستقلة كاملة، مع عنوان قابل للرجوع في المتصفح.
+        editOrderModal.classList.add("edit-order-page");
+        if (!new URLSearchParams(window.location.search).get("editOrder")) {
+            const url = new URL(window.location.href);
+            url.searchParams.set("editOrder", String(order.id));
+            window.history.pushState({ editOrder: order.id }, "", url);
+        }
 
 
         document.body.style.overflow =
@@ -5831,7 +5912,7 @@ function renderEditOrderItems() {
     });
 
 
-    if (!editingOrderItems.length) {
+    if (!editingOrderItems.length && !editingDifferentColorGroups.length) {
 
         editOrderItems.innerHTML = `
 
@@ -5850,8 +5931,12 @@ function renderEditOrderItems() {
     }
 
 
-    editingOrderItems.forEach(
-        (item, index) => {
+    const visibleItems = editingOrderItems
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => String(item.color || "").trim() !== "ألوان مختلفة");
+
+    visibleItems.forEach(
+        ({ item, index }) => {
 
             const row =
                 document.createElement("div");
@@ -5870,8 +5955,18 @@ function renderEditOrderItems() {
                     </div>
 
                     <div class="edit-order-item-field">
+                        <label>التصنيف</label>
+                        <input type="text" value="${escapeHtmlAttribute(item.category || "")}" readonly>
+                    </div>
+
+                    <div class="edit-order-item-field">
+                        <label>نوع المنتج</label>
+                        <input type="text" value="${escapeHtmlAttribute(item.product_type || "")}" readonly>
+                    </div>
+
+                    <div class="edit-order-item-field">
                         <label>النوع</label>
-                        <input type="text" value="${escapeHtmlAttribute(item.type || item.product_type || "")}" readonly>
+                        <input type="text" value="${escapeHtmlAttribute(item.type || "")}" readonly>
                     </div>
 
                     <div class="edit-order-item-field">
@@ -5966,6 +6061,20 @@ function renderEditOrderItems() {
 
         }
     );
+
+    // لا نكرر عناصر «ألوان مختلفة» كسطور كثيرة؛ تظهر كجدول تجهيز واضح
+    // فيه لون كل نسخة وخانة كمية مستقلة لها.
+    editingDifferentColorGroups.forEach((group, groupIndex) => {
+        const section = document.createElement("section");
+        section.className = "edit-preparation-colors";
+        const title = [group.template.company, group.template.model, group.template.type || group.template.product_type]
+            .filter(Boolean).join(" · ");
+        section.innerHTML = `<div class="edit-preparation-colors-title"><strong>ألوان مختلفة — ${escapeHtmlAttribute(title || group.template.product_code || "منتج")}</strong><span>اكتب الكمية التي تم تجهيزها من كل لون</span></div>
+            <div class="edit-preparation-colors-grid">${group.variants.length
+                ? group.variants.map(product => `<label><span>${escapeHtmlAttribute(product.color)}</span><input type="number" min="0" inputmode="numeric" value="${Number(group.quantities.get(String(product.id)) || 0)}" onchange="changeEditPreparedColorQuantity(${groupIndex}, ${Number(product.id)}, this.value)"><small>المتاح الآن: ${Number(product.quantity || 0)}</small></label>`).join("")
+                : '<p>لا توجد ألوان متاحة لهذا الصنف في المخزون.</p>'}</div>`;
+        editOrderItems.appendChild(section);
+    });
 
 
     calculateEditOrderTotal();
@@ -6200,7 +6309,7 @@ async function saveOrderEdit() {
                 warehouse: driverWarehouse,
                 total
             },
-            p_items: editingOrderItems.map(item => ({
+            p_items: editingOrderItems.filter(item => Number(item.quantity || 0) > 0).map(item => ({
                 product_id: item.product_id || null,
                 product_code: item.product_code || null,
                 category: item.category || null,
@@ -6551,7 +6660,15 @@ async function saveOrderEdit() {
 function closeEditOrder() {
 
     editOrderModal.style.display =
-        "none";
+            "none";
+
+    editOrderModal.classList.remove("edit-order-page");
+
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has("editOrder")) {
+        currentUrl.searchParams.delete("editOrder");
+        window.history.replaceState({}, "", currentUrl);
+    }
 
     document.body.style.overflow =
         "";
@@ -6559,6 +6676,7 @@ function closeEditOrder() {
     editingOrderId = null;
 
     editingOrderItems = [];
+    editingDifferentColorGroups = [];
 
 }
 
