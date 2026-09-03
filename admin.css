@@ -2682,6 +2682,21 @@ body {
 .edit-preparation-colors-grid input { width: 64px; padding: 7px; border: 1px solid #bfb7ed; border-radius: 8px; text-align: center; font: inherit; }
 .edit-preparation-colors-grid small { grid-column: 1 / -1; color: #777; font-weight: 400; }
 
+.edit-invoice-table-wrap { overflow-x: auto; border: 1px solid #e1dffc; border-radius: 16px; background: #fff; }
+.edit-invoice-table { width: 100%; min-width: 1650px; border-collapse: collapse; font-size: 12px; }
+.edit-invoice-table th,.edit-invoice-table td { border: 1px solid #e4e3eb; padding: 9px 7px; text-align: center; vertical-align: middle; }
+.edit-invoice-table th { background: #ebe8ff; color: #332580; white-space: nowrap; }
+.edit-invoice-table input { width: 100%; min-width: 70px; padding: 8px; border: 1px solid #d6d2ed; border-radius: 8px; font: inherit; text-align: center; }
+.different-colors-invoice-row { background: #f6f4ff; }
+.prepared-colors-preview { display: block; max-width: 180px; margin: 0 auto 7px; color: #554a94; line-height: 1.7; }
+.edit-prepared-colors-button,.invoice-edit-actions button { border: 1px solid #bfb5fb; border-radius: 8px; background: #fff; color: #5543ca; padding: 5px 9px; font: inherit; cursor: pointer; }
+.invoice-edit-actions { display: grid; gap: 5px; }.invoice-edit-actions button:last-child { color: #b53b4b; border-color: #f0bcc4; }
+.edit-prepared-colors-dialog { position: fixed; inset: 0; z-index: 12000; display: grid; place-items: center; padding: 20px; background: rgba(8,12,31,.54); }
+.edit-prepared-colors-dialog-box { position: relative; width: min(1100px,100%); max-height: 90vh; overflow: auto; padding: 28px; border: 1px solid #cfc8ff; border-radius: 20px; background: #f8f7ff; box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+.edit-prepared-colors-dialog-box h3 { margin: 0 0 7px; color: #211656; }.edit-prepared-colors-dialog-box>p { margin: 0 0 18px; color: #756b9d; }
+.edit-prepared-colors-dialog-grid { display: flex; flex-wrap: wrap; gap: 12px; }.edit-prepared-colors-dialog-grid label { display: grid; grid-template-columns:auto 72px; gap: 7px 10px; align-items: center; min-width: 150px; padding: 12px; border: 1px solid #d9d3ff; border-radius: 13px; background: #fff; font-weight: 700; }.edit-prepared-colors-dialog-grid input { width: 72px; padding: 9px; border: 1px solid #bbb1f7; border-radius: 9px; text-align: center; font: inherit; }.edit-prepared-colors-dialog-grid small { grid-column: 1/-1; color: #888; font-weight: 400; }
+.edit-prepared-colors-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }.edit-prepared-colors-dialog-actions button { border: 0; border-radius: 10px; padding: 11px 17px; background: #e8e6ee; font: inherit; cursor: pointer; }.edit-prepared-colors-dialog-actions .save { background: #6557ed; color: #fff; }.edit-prepared-colors-close { position: absolute; top: 14px; left: 14px; width: 34px; height: 34px; border: 0; border-radius: 9px; background: #eceaf1; font-size: 22px; cursor: pointer; }
+
 @media (max-width: 760px) {
     .edit-order-modal.edit-order-page .edit-order-box { padding: 18px 12px; }
     .edit-order-modal.edit-order-page .edit-order-item-grid { grid-template-columns: repeat(2, minmax(130px, 1fr)); }

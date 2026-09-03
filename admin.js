@@ -5707,9 +5707,7 @@ async function loadEditDifferentColorGroups(order) {
     editingDifferentColorGroups = [...groups.values()];
 }
 
-window.changeEditPreparedColorQuantity = function (groupIndex, productId, value) {
-    const group = editingDifferentColorGroups[groupIndex];
-    const product = group?.variants.find(item => String(item.id) === String(productId));
+function setEditPreparedColorQuantity(group, product, value) {
     if (!group || !product) return;
     const quantity = Math.max(0, Number.parseInt(value, 10) || 0);
     const itemIndex = editingOrderItems.findIndex(item =>
@@ -5741,6 +5739,12 @@ window.changeEditPreparedColorQuantity = function (groupIndex, productId, value)
         });
         group.quantities.set(String(productId), quantity);
     }
+}
+
+window.changeEditPreparedColorQuantity = function (groupIndex, productId, value) {
+    const group = editingDifferentColorGroups[groupIndex];
+    const product = group?.variants.find(item => String(item.id) === String(productId));
+    setEditPreparedColorQuantity(group, product, value);
     renderEditOrderItems();
 };
 
@@ -6081,6 +6085,68 @@ function renderEditOrderItems() {
 
 }
 
+// عرض الفاتورة في جدول أعمدة واضح داخل صفحة التعديل بدل بطاقات ضيقة.
+renderEditOrderItems = function () {
+    const normalItems = editingOrderItems
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => String(item.color || "").trim() !== "ألوان مختلفة");
+
+    const tableRows = normalItems.map(({ item, index }) => `
+        <tr>
+            <td>${index + 1}</td><td>${escapeHtmlAttribute(item.product_code || "-")}</td><td><input value="${escapeHtmlAttribute(item.category || "")}" onchange="changeEditOrderItem(${index}, 'category', this.value)"></td>
+            <td><input value="${escapeHtmlAttribute(item.product_type || "")}" onchange="changeEditOrderItem(${index}, 'product_type', this.value)"></td><td><input value="${escapeHtmlAttribute(item.type || "")}" onchange="changeEditOrderItem(${index}, 'type', this.value)"></td>
+            <td><input value="${escapeHtmlAttribute(item.company || "")}" onchange="changeEditOrderItem(${index}, 'company', this.value)"></td>
+            <td><input value="${escapeHtmlAttribute(item.model || "")}" onchange="changeEditOrderItem(${index}, 'model', this.value)"></td>
+            <td><input value="${escapeHtmlAttribute(item.color || "")}" onchange="changeEditOrderItem(${index}, 'color', this.value)"></td>
+            <td>—</td><td>${escapeHtmlAttribute(item.storage_location || "غير محدد")}</td>
+            <td><input type="number" min="1" value="${Number(item.quantity || 1)}" onchange="changeEditOrderItem(${index}, 'quantity', this.value)"></td>
+            <td><input type="number" min="0" step="0.01" value="${Number(item.price || 0)}" onchange="changeEditOrderItem(${index}, 'price', this.value)"></td>
+            <td>${(Number(item.quantity || 1) * Number(item.price || 0)).toFixed(2)} ر.س</td>
+            <td class="invoice-edit-actions"><button type="button" onclick="removeEditOrderItem(${index})">حذف</button><button type="button" onclick="markEditOrderItemUnavailable(${index})">غير متوفر</button></td>
+        </tr>`).join("");
+
+    const specialRows = editingDifferentColorGroups.map((group, groupIndex) => {
+        const item = group.template;
+        const title = [item.company, item.model, item.type || item.product_type].filter(Boolean).join(" · ");
+        const selectedTotal = [...group.quantities.values()].reduce((sum, quantity) => sum + Number(quantity || 0), 0);
+        const colors = group.variants.map(product => escapeHtmlAttribute(product.color)).join("، ") || "لا توجد ألوان";
+        return `<tr class="different-colors-invoice-row"><td>—</td><td>${escapeHtmlAttribute(item.product_code || "-")}</td><td>${escapeHtmlAttribute(item.category || "-")}</td>
+            <td>${escapeHtmlAttribute(item.product_type || "-")}</td><td>${escapeHtmlAttribute(item.type || "-")}</td><td>${escapeHtmlAttribute(item.company || "-")}</td>
+            <td>${escapeHtmlAttribute(item.model || "-")}</td><td><strong>ألوان مختلفة</strong></td>
+            <td><span class="prepared-colors-preview">${colors}</span><button type="button" class="edit-prepared-colors-button" onclick="openEditPreparedColors(${groupIndex})">تعديل</button></td>
+            <td>${escapeHtmlAttribute(item.storage_location || "غير محدد")}</td><td>${selectedTotal}</td><td>${Number(item.price || 0).toFixed(2)} ر.س</td>
+            <td>${(selectedTotal * Number(item.price || 0)).toFixed(2)} ر.س</td><td>يُعدّل من قائمة الألوان</td></tr>`;
+    }).join("");
+
+    editOrderItems.innerHTML = `<div class="edit-invoice-table-wrap"><table class="edit-invoice-table"><thead><tr>
+        <th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الألوان</th><th>موقع القطعة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>إجراءات</th>
+    </tr></thead><tbody>${tableRows}${specialRows || ""}${!tableRows && !specialRows ? '<tr><td colspan="14">لا توجد منتجات في الطلب.</td></tr>' : ""}</tbody></table></div>`;
+    calculateEditOrderTotal();
+};
+
+window.openEditPreparedColors = function (groupIndex) {
+    const group = editingDifferentColorGroups[groupIndex];
+    if (!group) return;
+    document.getElementById("editPreparedColorsDialog")?.remove();
+    const title = [group.template.company, group.template.model, group.template.type || group.template.product_type].filter(Boolean).join(" · ");
+    const dialog = document.createElement("div");
+    dialog.id = "editPreparedColorsDialog";
+    dialog.className = "edit-prepared-colors-dialog";
+    dialog.innerHTML = `<div class="edit-prepared-colors-dialog-box"><button type="button" class="edit-prepared-colors-close" data-close>×</button><h3>ألوان مختلفة — ${escapeHtmlAttribute(title || group.template.product_code)}</h3><p>اكتب الكمية التي تم تجهيزها من كل لون.</p><div class="edit-prepared-colors-dialog-grid">${group.variants.map(product => `<label><span>${escapeHtmlAttribute(product.color)}</span><input data-product-id="${Number(product.id)}" type="number" min="0" inputmode="numeric" value="${Number(group.quantities.get(String(product.id)) || 0)}"><small>المتاح الآن: ${Number(product.quantity || 0)}</small></label>`).join("") || '<p>لا توجد ألوان لهذا الصنف.</p>'}</div><div class="edit-prepared-colors-dialog-actions"><button type="button" data-close>إلغاء</button><button type="button" class="save" data-save>حفظ كميات الألوان</button></div></div>`;
+    document.body.appendChild(dialog);
+    const close = () => dialog.remove();
+    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
+    dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
+    dialog.querySelector("[data-save]")?.addEventListener("click", () => {
+        dialog.querySelectorAll("[data-product-id]").forEach(input => {
+            const product = group.variants.find(item => String(item.id) === String(input.dataset.productId));
+            if (product) setEditPreparedColorQuantity(group, product, input.value);
+        });
+        renderEditOrderItems();
+        close();
+    });
+};
+
 
 /* =========================================================
    تغيير بيانات منتج
@@ -6137,6 +6203,7 @@ function changeEditOrderItem(
 
 
     calculateEditOrderTotal();
+    renderEditOrderItems();
 
 }
 
