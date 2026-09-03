@@ -2687,6 +2687,13 @@ body {
 .edit-invoice-table th,.edit-invoice-table td { border: 1px solid #e4e3eb; padding: 9px 7px; text-align: center; vertical-align: middle; }
 .edit-invoice-table th { background: #ebe8ff; color: #332580; white-space: nowrap; }
 .edit-invoice-table input { width: 100%; min-width: 70px; padding: 8px; border: 1px solid #d6d2ed; border-radius: 8px; font: inherit; text-align: center; }
+.shortages-invoice-table { min-width: 1850px; }
+.shortage-select { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; color: #5543ca; font-weight: 700; cursor: pointer; }
+.shortage-select input { width: 16px; min-width: 16px; height: 16px; padding: 0; accent-color: #6557ed; }
+.shortage-select input:disabled + span { color: #9993ac; }
+.shortage-status { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.shortage-status.new { background: #eeeaff; color: #5845ca; }
+.shortage-status.requested { background: #e3f8ed; color: #25885a; }
 .different-colors-invoice-row { background: #f6f4ff; }
 .prepared-colors-preview { display: block; max-width: 180px; margin: 0 auto 7px; color: #554a94; line-height: 1.7; }
 .edit-prepared-colors-button,.invoice-edit-actions button { border: 1px solid #bfb5fb; border-radius: 8px; background: #fff; color: #5543ca; padding: 5px 9px; font: inherit; cursor: pointer; }

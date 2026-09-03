@@ -4141,8 +4141,22 @@ async function loadAdminShortages() {
     shortagesList.innerHTML = '<div class="message">جاري تحميل النواقص...</div>';
     const { data, error } = await supabaseClient.rpc("list_warehouse_shortages", { p_warehouse: selectedWarehouse });
     if (error) { shortagesList.innerHTML = `<div class="message error">تعذر تحميل النواقص: ${transferText(error.message)}</div>`; return; }
-    adminShortagesData = data || [];
-    shortagesList.innerHTML = adminShortagesData.length ? adminShortagesData.map(item => `<article class="customer-admin-card"><div class="customer-admin-card-top"><label><input type="checkbox" data-shortage-id="${item.id}" ${item.status === "تم الطلب" ? "disabled" : ""}> تحديد</label><div><h3>${transferText(item.type || item.product_type || "منتج")}</h3><p>${transferText([item.company,item.model,item.color].filter(Boolean).join(" · "))}</p></div><span class="customer-orders-count">${transferText(item.status || "جديد")}</span></div><div class="customer-admin-card-bottom"><span>كود: ${transferText(item.product_code || "—")} · الكمية المطلوبة: ${Number(item.quantity || 0)}${item.transfer_id ? ` · تحويل #${item.transfer_id}` : ""}</span><strong>${item.price || 0} ر.س</strong></div></article>`).join("") : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
+    adminShortagesData = [...(data || [])].sort((first, second) => {
+        const key = item => [item.category, item.product_type, item.type, item.company, item.model, item.color, item.product_code]
+            .filter(Boolean).join(" ").toLocaleLowerCase("ar-SA");
+        return key(first).localeCompare(key(second), "ar-SA");
+    });
+    shortagesList.innerHTML = adminShortagesData.length ? `<div class="edit-invoice-table-wrap shortages-invoice-table-wrap"><table class="edit-invoice-table shortages-invoice-table"><thead><tr>
+        <th>تحديد</th><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الألوان</th><th>موقع القطعة</th><th>الكمية المطلوبة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الحالة</th><th>التحويل</th>
+    </tr></thead><tbody>${adminShortagesData.map((item, index) => {
+        const quantity = Number(item.quantity || 0);
+        const price = Number(item.price || 0);
+        const isRequested = item.status === "تم الطلب";
+        return `<tr><td><label class="shortage-select"><input type="checkbox" data-shortage-id="${item.id}" ${isRequested ? "disabled" : ""}><span>${isRequested ? "تم الطلب" : "تحديد"}</span></label></td>
+            <td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.category || "—")}</td><td>${transferText(item.product_type || "—")}</td><td>${transferText(item.type || "—")}</td>
+            <td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>—</td><td>—</td><td>${quantity}</td><td>${price.toFixed(2)} ر.س</td><td>${(quantity * price).toFixed(2)} ر.س</td>
+            <td><span class="shortage-status ${isRequested ? "requested" : "new"}">${transferText(item.status || "جديد")}</span></td><td>${item.transfer_id ? `#${transferText(item.transfer_id)}` : "—"}</td></tr>`;
+    }).join("")}</tbody></table></div>` : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
 }
 
 document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {
