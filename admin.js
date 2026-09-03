@@ -4903,6 +4903,11 @@ async function printOrder(orderId) {
             ...item,
             color: item.colors.length ? item.colors.join("، ") : "-"
         }));
+        // يظهر عمود التحضير عند «ألوان مختلفة» أو عندما دُمجت ألوان مختارة متعددة
+        // في سطر واحد، مثل: أحمر وأخضر.
+        const shouldShowColorChecklist = groupedPrintItems.some(item =>
+            item.hasDifferentColors || item.colors.length > 1
+        );
 
 
         const date =
@@ -4966,11 +4971,12 @@ Object.entries(typeCodes).forEach(
                 const total =
                     quantity * price;
 
-                const preparationColors = item.hasDifferentColors
-                    ? (item.availableColors.length
-                        ? `<div class="preparation-colors">${item.availableColors.map(color => `<span class="preparation-color"><b>${color}</b><i></i></span>`).join("")}</div>`
-                        : '<span class="preparation-no-colors">لا توجد ألوان متوفرة</span>')
-                    : "-";
+                const checklistColors = item.hasDifferentColors
+                    ? item.availableColors
+                    : (item.colors.length > 1 ? item.colors : []);
+                const preparationColors = checklistColors.length
+                    ? `<div class="preparation-colors">${checklistColors.map(color => `<span class="preparation-color"><b>${color}</b><i></i></span>`).join("")}</div>`
+                    : (item.hasDifferentColors ? '<span class="preparation-no-colors">لا توجد ألوان متوفرة</span>' : "-");
 
 
                 rowsHTML += `
@@ -5009,7 +5015,7 @@ Object.entries(typeCodes).forEach(
                             ${item.color || "-"}
                         </td>
 
-                        ${hasDifferentColorItems ? `<td class="preparation-colors-cell">${preparationColors}</td>` : ""}
+                        ${shouldShowColorChecklist ? `<td class="preparation-colors-cell">${preparationColors}</td>` : ""}
 
                         <td>
                             ${item.storage_location || "غير محدد"}
@@ -5543,7 +5549,7 @@ Object.entries(typeCodes).forEach(
                     اللون
                 </th>
 
-                ${hasDifferentColorItems ? '<th class="preparation-colors-cell">الألوان</th>' : ""}
+                ${shouldShowColorChecklist ? '<th class="preparation-colors-cell">الألوان</th>' : ""}
 
                 <th>
                     موقع القطعة
