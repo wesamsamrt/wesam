@@ -4844,6 +4844,34 @@ async function printOrder(orderId) {
         }
 
         const items = order.items || [];
+        const printProductKey = item => [item.product_code, item.company, item.model, item.product_type, item.type]
+            .map(value => String(value ?? "").trim()).join("\u001f");
+        const hasDifferentColorItems = items.some(item => String(item.color || "").trim() === "ألوان مختلفة");
+        const availableColorsByProduct = new Map();
+
+        // ألوان «ألوان مختلفة» لا تُخزن داخل الفاتورة، لذا نجلب الألوان المتوفرة
+        // حاليًا في مخزن الطلب لتظهر للمحضّر كقائمة تجهيز.
+        if (hasDifferentColorItems) {
+            const productCodes = [...new Set(items
+                .filter(item => String(item.color || "").trim() === "ألوان مختلفة")
+                .map(item => String(item.product_code || "").trim()).filter(Boolean))];
+            if (productCodes.length) {
+                const { data: variants, error: variantsError } = await supabaseClient
+                    .from("products")
+                    .select("product_code, company, model, product_type, type, color, quantity")
+                    .eq("warehouse", order.warehouse)
+                    .in("product_code", productCodes);
+                if (variantsError) console.warn("تعذر جلب ألوان التحضير:", variantsError);
+                (variants || []).filter(product => Number(product.quantity || 0) > 0).forEach(product => {
+                    const color = String(product.color || "").trim();
+                    if (!color) return;
+                    const key = printProductKey(product);
+                    const colors = availableColorsByProduct.get(key) || [];
+                    if (!colors.includes(color)) colors.push(color);
+                    availableColorsByProduct.set(key, colors);
+                });
+            }
+        }
         // ترتيب الطباعة: الشركة ثم النوع ثم الموديل ثم اللون، ليأتي كل موديل متشابه متتابعًا.
         const printItems = [...items].sort((first, second) => {
             const firstKey = [first.company, first.product_type, first.type, first.model, first.color].filter(Boolean).join(" ");
@@ -4858,10 +4886,17 @@ async function printOrder(orderId) {
                 item.product_code, item.category, item.product_type, item.type,
                 item.company, item.model, item.storage_location, Number(item.price || 0)
             ].map(value => String(value ?? "")).join("\u001f");
-            const group = groupedPrintMap.get(groupKey) || { ...item, quantity: 0, colors: [] };
+            const group = groupedPrintMap.get(groupKey) || {
+                ...item,
+                quantity: 0,
+                colors: [],
+                hasDifferentColors: false,
+                availableColors: availableColorsByProduct.get(printProductKey(item)) || []
+            };
             group.quantity += Number(item.quantity || 1);
             const color = String(item.color || "").trim();
             if (color && !group.colors.includes(color)) group.colors.push(color);
+            if (color === "ألوان مختلفة") group.hasDifferentColors = true;
             groupedPrintMap.set(groupKey, group);
         });
         const groupedPrintItems = [...groupedPrintMap.values()].map(item => ({
@@ -4931,6 +4966,12 @@ Object.entries(typeCodes).forEach(
                 const total =
                     quantity * price;
 
+                const preparationColors = item.hasDifferentColors
+                    ? (item.availableColors.length
+                        ? `<div class="preparation-colors">${item.availableColors.map(color => `<span class="preparation-color"><b>${color}</b><i></i></span>`).join("")}</div>`
+                        : '<span class="preparation-no-colors">لا توجد ألوان متوفرة</span>')
+                    : "-";
+
 
                 rowsHTML += `
 
@@ -4967,6 +5008,8 @@ Object.entries(typeCodes).forEach(
                         <td>
                             ${item.color || "-"}
                         </td>
+
+                        ${hasDifferentColorItems ? `<td class="preparation-colors-cell">${preparationColors}</td>` : ""}
 
                         <td>
                             ${item.storage_location || "غير محدد"}
@@ -5275,6 +5318,41 @@ Object.entries(typeCodes).forEach(
 
         }
 
+        .preparation-colors-cell {
+            width: 170px;
+            padding: 5px !important;
+        }
+
+        .preparation-colors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .preparation-color {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 4px;
+            border: 1px solid #bbb;
+            border-radius: 3px;
+            font-size: 9px;
+            white-space: nowrap;
+        }
+
+        .preparation-color b { font-weight: normal; }
+
+        .preparation-color i {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 1px solid #111;
+            background: #fff;
+        }
+
+        .preparation-no-colors { color: #666; font-size: 9px; }
+
 
         @media print {
 
@@ -5464,6 +5542,8 @@ Object.entries(typeCodes).forEach(
                 <th>
                     اللون
                 </th>
+
+                ${hasDifferentColorItems ? '<th class="preparation-colors-cell">الألوان</th>' : ""}
 
                 <th>
                     موقع القطعة
