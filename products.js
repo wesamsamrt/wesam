@@ -1249,6 +1249,26 @@ function openProductModal(variants) {
             .filter(Boolean))];
         if (colorKeys.length < 2) return;
 
+        // «ألوان مختلفة» كمية مستقلة لكل موديل مختار، تماماً مثل اختيار
+        // لون عادي: اختيار 10 مع موديلين يعني 10 لكل موديل، وليس 5 + 5.
+        const modelGroups = [...allProducts.reduce((groups, product) => {
+            const key = String(product.model || "").trim();
+            if (!groups.has(key)) groups.set(key, { model: key, products: [] });
+            groups.get(key).products.push(product);
+            return groups;
+        }, new Map()).values()];
+        const modelColorCounts = modelGroups.map(group => new Set(group.products
+            .map(product => String(product.color || "").trim().toLowerCase())
+            .filter(Boolean)).size);
+        const maxColorCount = Math.min(...modelColorCounts);
+        if (maxColorCount < 2) return;
+
+        const maxQuantityForModels = colorCount => Math.min(...modelGroups.map(group => group.products
+            .map(product => Math.max(0, Number(product.quantity) || 0))
+            .sort((first, second) => second - first)
+            .slice(0, colorCount)
+            .reduce((sum, quantity) => sum + quantity, 0)));
+
         const colorGroups = colorKeys.map(colorKey => {
             const products = allProducts.filter(product => String(product.color || "").trim().toLowerCase() === colorKey);
             // عند اختيار عدة موديلات، كمية اللون هي الكمية الممكنة لكل موديل.
@@ -1259,18 +1279,21 @@ function openProductModal(variants) {
 
         differentColorInfo = {
             groups: colorGroups,
-            maxQuantity: colorGroups.reduce((sum, group) => sum + group.available, 0),
+            modelGroups,
+            maxColorCount,
+            maxQuantity: maxQuantityForModels(2),
             selectedColorCount: 2,
-            maxPerColor: Math.min(...colorGroups.slice(0, 2).map(group => group.available))
+            maxPerColor: maxQuantityForModels(2)
         };
         const row = document.createElement("div");
         row.className = "different-colors-row";
-        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">حدد عدد الألوان والكمية الكاملة للطلب؛ المحضّر يوزع الألوان لاحقًا.</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
+        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">الكمية تُضاف لكل موديل مختار؛ المحضّر يوزع الألوان لاحقًا.</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية لكل موديل<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
         const colorsCountInput = row.querySelector(".different-color-count");
         const quantityInput = row.querySelector(".different-color-quantity");
         const updateDifferentColors = () => {
             let colorCount = Number.parseInt(colorsCountInput.value, 10) || 2;
-            colorCount = Math.max(2, Math.min(colorGroups.length, colorCount));
+            colorCount = Math.max(2, Math.min(differentColorInfo.maxColorCount, colorCount));
+            differentColorInfo.maxQuantity = maxQuantityForModels(colorCount);
             let quantity = Number.parseInt(quantityInput.value, 10) || 0;
             quantity = Math.max(0, Math.min(differentColorInfo.maxQuantity, quantity));
             differentColorInfo.selectedColorCount = colorCount;
@@ -2114,8 +2137,9 @@ plus.addEventListener("pointerdown", function (e) {
 
         if (differentQuantity > 0 && differentColorInfo) {
             const selectedColorCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 2;
-            totalSelected = differentQuantity;
-            totalStock = differentColorInfo.maxQuantity;
+            const modelCount = differentColorInfo.modelGroups.length;
+            totalSelected = differentQuantity * modelCount;
+            totalStock = differentColorInfo.maxQuantity * modelCount;
         }
 
 
@@ -2179,12 +2203,13 @@ plus.addEventListener("pointerdown", function (e) {
         });
 
         const differentQuantity = Number.parseInt(colorsContainer.querySelector(".different-color-quantity")?.value, 10) || 0;
-        const differentColorsCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 0;
         if (differentQuantity > 0 && differentColorInfo) {
-            // لا نوزع الكمية تلقائيًا على الألوان. نحتفظ بها كسطر واحد،
-            // ثم يحدد المحضّر توزيعها الحقيقي من صفحة تعديل الفاتورة.
-            const product = differentColorInfo.groups[0]?.products[0];
-            if (product) selectedItems.push({ product, quantity: differentQuantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" });
+            // نحتفظ بسطر «ألوان مختلفة» منفصل لكل موديل حتى تكون الكمية
+            // المدخلة كاملة لكل موديل (مثلاً 10 لـ IP 14 و10 لـ IP 15).
+            differentColorInfo.modelGroups.forEach(group => {
+                const product = group.products.find(item => Number(item.quantity || 0) > 0) || group.products[0];
+                if (product) selectedItems.push({ product, quantity: differentQuantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" });
+            });
         }
 
         if (!selectedItems.length) {
