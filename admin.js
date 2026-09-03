@@ -5767,7 +5767,7 @@ function setEditPreparedColorQuantity(group, product, value) {
             price: Number(product.price ?? group.template.price ?? 0),
             image: product.image || group.template.image || null
         });
-        group.quantities.set(String(productId), quantity);
+        group.quantities.set(String(product.id), quantity);
     }
 }
 
@@ -5776,6 +5776,40 @@ window.changeEditPreparedColorQuantity = function (groupIndex, productId, value)
     const product = group?.variants.find(item => String(item.id) === String(productId));
     setEditPreparedColorQuantity(group, product, value);
     renderEditOrderItems();
+};
+
+window.removeEditDifferentColorGroup = function (groupIndex) {
+    const group = editingDifferentColorGroups[groupIndex];
+    if (!group) return;
+    if (!confirm("هل تريد حذف هذا الصنف من الفاتورة؟")) return;
+    editingOrderItems = editingOrderItems.filter(item => !(
+        String(item.color || "").trim() === "ألوان مختلفة" &&
+        editDifferentColorGroupKey(item) === group.key
+    ));
+    editingDifferentColorGroups.splice(groupIndex, 1);
+    renderEditOrderItems();
+};
+
+window.markEditDifferentColorGroupUnavailable = async function (groupIndex) {
+    const group = editingDifferentColorGroups[groupIndex];
+    if (!group || !editingOrderId) return;
+    if (!confirm("سيُنقل الصنف إلى صفحة النواقص ويُحذف من الفاتورة. متابعة؟")) return;
+    const quantity = group.isPendingDistribution
+        ? Number(group.targetQuantity || 0)
+        : [...group.quantities.values()].reduce((sum, value) => sum + Number(value || 0), 0);
+    const { error } = await supabaseClient.rpc("report_order_shortage", {
+        p_order_id: editingOrderId,
+        p_item: { ...group.template, quantity: Math.max(1, quantity) }
+    });
+    if (error) { alert(`تعذر تسجيل النقص: ${error.message}`); return; }
+    editingOrderItems = editingOrderItems.filter(item => !(
+        String(item.color || "").trim() === "ألوان مختلفة" &&
+        editDifferentColorGroupKey(item) === group.key
+    ));
+    editingDifferentColorGroups.splice(groupIndex, 1);
+    renderEditOrderItems();
+    editOrderMessage.textContent = "تم نقل الصنف إلى النواقص. احفظ التعديلات لتحديث الفاتورة.";
+    editOrderMessage.style.color = "#2e9d69";
 };
 
 
@@ -6149,7 +6183,8 @@ renderEditOrderItems = function () {
             <td>${escapeHtmlAttribute(item.model || "-")}</td><td><strong>ألوان مختلفة</strong></td>
             <td><span class="prepared-colors-preview">${colors}</span><button type="button" class="edit-prepared-colors-button" onclick="openEditPreparedColors(${groupIndex})">تعديل</button></td>
             <td>${escapeHtmlAttribute(item.storage_location || "غير محدد")}</td><td>${selectedTotal}</td><td>${Number(item.price || 0).toFixed(2)} ر.س</td>
-            <td>${(selectedTotal * Number(item.price || 0)).toFixed(2)} ر.س</td><td>يُعدّل من قائمة الألوان</td></tr>`;
+            <td>${(selectedTotal * Number(item.price || 0)).toFixed(2)} ر.س</td>
+            <td class="invoice-edit-actions"><button type="button" onclick="removeEditDifferentColorGroup(${groupIndex})">حذف</button><button type="button" onclick="markEditDifferentColorGroupUnavailable(${groupIndex})">غير متوفر</button></td></tr>`;
     }).join("");
 
     editOrderItems.innerHTML = `<div class="edit-invoice-table-wrap"><table class="edit-invoice-table"><thead><tr>
