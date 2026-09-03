@@ -4848,6 +4848,11 @@ async function printOrder(orderId) {
             .map(value => String(value ?? "").trim()).join("\u001f");
         const hasDifferentColorItems = items.some(item => String(item.color || "").trim() === "ألوان مختلفة");
         const availableColorsByProduct = new Map();
+        const preparedQuantityByProductId = new Map();
+        items.filter(item => String(item.color || "").trim() === "ألوان مختلفة").forEach(item => {
+            const productId = String(item.product_id || "");
+            if (productId) preparedQuantityByProductId.set(productId, (preparedQuantityByProductId.get(productId) || 0) + Number(item.quantity || 0));
+        });
 
         // ألوان «ألوان مختلفة» لا تُخزن داخل الفاتورة، لذا نجلب الألوان المتوفرة
         // حاليًا في مخزن الطلب لتظهر للمحضّر كقائمة تجهيز.
@@ -4858,16 +4863,21 @@ async function printOrder(orderId) {
             if (productCodes.length) {
                 const { data: variants, error: variantsError } = await supabaseClient
                     .from("products")
-                    .select("product_code, company, model, product_type, type, color, quantity")
+                    .select("id, product_code, company, model, product_type, type, color, quantity")
                     .eq("warehouse", order.warehouse)
                     .in("product_code", productCodes);
                 if (variantsError) console.warn("تعذر جلب ألوان التحضير:", variantsError);
-                (variants || []).filter(product => Number(product.quantity || 0) > 0).forEach(product => {
+                (variants || []).forEach(product => {
                     const color = String(product.color || "").trim();
                     if (!color) return;
                     const key = printProductKey(product);
                     const colors = availableColorsByProduct.get(key) || [];
-                    if (!colors.includes(color)) colors.push(color);
+                    const preparedQuantity = Number(preparedQuantityByProductId.get(String(product.id)) || 0);
+                    // يظهر اللون إن كان متاحًا أو جرى تحضيره حتى لو أصبح رصيده صفرًا بعد الخصم.
+                    if (Number(product.quantity || 0) <= 0 && preparedQuantity <= 0) return;
+                    const existingColor = colors.find(item => item.color === color);
+                    if (existingColor) existingColor.preparedQuantity += preparedQuantity;
+                    else colors.push({ color, preparedQuantity });
                     availableColorsByProduct.set(key, colors);
                 });
             }
@@ -4972,7 +4982,7 @@ Object.entries(typeCodes).forEach(
 
                 const checklistColors = item.hasDifferentColors ? item.availableColors : [];
                 const preparationColors = checklistColors.length
-                    ? `<div class="preparation-colors">${checklistColors.map(color => `<span class="preparation-color"><b>${color}</b><i></i></span>`).join("")}</div>`
+                    ? `<div class="preparation-colors">${checklistColors.map(item => `<span class="preparation-color"><b>${item.color}</b><i>${item.preparedQuantity > 0 ? item.preparedQuantity : ""}</i></span>`).join("")}</div>`
                     : (item.hasDifferentColors ? '<span class="preparation-no-colors">لا توجد ألوان متوفرة</span>' : "-");
 
 
