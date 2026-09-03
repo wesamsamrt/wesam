@@ -4884,7 +4884,9 @@ async function printOrder(orderId) {
         printItems.forEach(item => {
             const groupKey = [
                 item.product_code, item.category, item.product_type, item.type,
-                item.company, item.model, item.storage_location, Number(item.price || 0)
+                item.company, item.model, item.storage_location, Number(item.price || 0),
+                // اللون المحدد يبقى في صف مستقل؛ فقط «ألوان مختلفة» تُدمج للطباعة.
+                String(item.color || "").trim() === "ألوان مختلفة" ? "ألوان مختلفة" : String(item.color || "").trim()
             ].map(value => String(value ?? "")).join("\u001f");
             const group = groupedPrintMap.get(groupKey) || {
                 ...item,
@@ -4903,11 +4905,8 @@ async function printOrder(orderId) {
             ...item,
             color: item.colors.length ? item.colors.join("، ") : "-"
         }));
-        // يظهر عمود التحضير عند «ألوان مختلفة» أو عندما دُمجت ألوان مختارة متعددة
-        // في سطر واحد، مثل: أحمر وأخضر.
-        const shouldShowColorChecklist = groupedPrintItems.some(item =>
-            item.hasDifferentColors || item.colors.length > 1
-        );
+        // عمود التحضير مخصص لخيار «ألوان مختلفة» فقط.
+        const shouldShowColorChecklist = hasDifferentColorItems;
 
 
         const date =
@@ -4971,9 +4970,7 @@ Object.entries(typeCodes).forEach(
                 const total =
                     quantity * price;
 
-                const checklistColors = item.hasDifferentColors
-                    ? item.availableColors
-                    : (item.colors.length > 1 ? item.colors : []);
+                const checklistColors = item.hasDifferentColors ? item.availableColors : [];
                 const preparationColors = checklistColors.length
                     ? `<div class="preparation-colors">${checklistColors.map(color => `<span class="preparation-color"><b>${color}</b><i></i></span>`).join("")}</div>`
                     : (item.hasDifferentColors ? '<span class="preparation-no-colors">لا توجد ألوان متوفرة</span>' : "-");
