@@ -5713,14 +5713,14 @@ function setEditPreparedColorQuantity(group, product, value) {
     const itemIndex = editingOrderItems.findIndex(item =>
         String(item.color || "").trim() === "ألوان مختلفة" &&
         editDifferentColorGroupKey(item) === group.key &&
-        String(item.product_id) === String(productId)
+        String(item.product_id) === String(product.id)
     );
     if (quantity === 0) {
         if (itemIndex >= 0) editingOrderItems.splice(itemIndex, 1);
-        group.quantities.delete(String(productId));
+        group.quantities.delete(String(product.id));
     } else if (itemIndex >= 0) {
         editingOrderItems[itemIndex].quantity = quantity;
-        group.quantities.set(String(productId), quantity);
+        group.quantities.set(String(product.id), quantity);
     } else {
         editingOrderItems.push({
             ...group.template,
