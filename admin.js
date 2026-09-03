@@ -6091,8 +6091,10 @@ renderEditOrderItems = function () {
         .map((item, index) => ({ item, index }))
         .filter(({ item }) => String(item.color || "").trim() !== "ألوان مختلفة");
 
+    const invoiceSortKey = item => [item.company, item.product_type, item.type, item.model, item.color]
+        .filter(Boolean).join(" ");
     const tableRows = normalItems.map(({ item, index }) => `
-        <tr>
+        <tr data-edit-sort="${escapeHtmlAttribute(invoiceSortKey(item))}">
             <td>${index + 1}</td><td>${escapeHtmlAttribute(item.product_code || "-")}</td><td><input value="${escapeHtmlAttribute(item.category || "")}" onchange="changeEditOrderItem(${index}, 'category', this.value)"></td>
             <td><input value="${escapeHtmlAttribute(item.product_type || "")}" onchange="changeEditOrderItem(${index}, 'product_type', this.value)"></td><td><input value="${escapeHtmlAttribute(item.type || "")}" onchange="changeEditOrderItem(${index}, 'type', this.value)"></td>
             <td><input value="${escapeHtmlAttribute(item.company || "")}" onchange="changeEditOrderItem(${index}, 'company', this.value)"></td>
@@ -6110,7 +6112,7 @@ renderEditOrderItems = function () {
         const title = [item.company, item.model, item.type || item.product_type].filter(Boolean).join(" · ");
         const selectedTotal = [...group.quantities.values()].reduce((sum, quantity) => sum + Number(quantity || 0), 0);
         const colors = group.variants.map(product => escapeHtmlAttribute(product.color)).join("، ") || "لا توجد ألوان";
-        return `<tr class="different-colors-invoice-row"><td>—</td><td>${escapeHtmlAttribute(item.product_code || "-")}</td><td>${escapeHtmlAttribute(item.category || "-")}</td>
+        return `<tr class="different-colors-invoice-row" data-edit-sort="${escapeHtmlAttribute(invoiceSortKey(item))}"><td>—</td><td>${escapeHtmlAttribute(item.product_code || "-")}</td><td>${escapeHtmlAttribute(item.category || "-")}</td>
             <td>${escapeHtmlAttribute(item.product_type || "-")}</td><td>${escapeHtmlAttribute(item.type || "-")}</td><td>${escapeHtmlAttribute(item.company || "-")}</td>
             <td>${escapeHtmlAttribute(item.model || "-")}</td><td><strong>ألوان مختلفة</strong></td>
             <td><span class="prepared-colors-preview">${colors}</span><button type="button" class="edit-prepared-colors-button" onclick="openEditPreparedColors(${groupIndex})">تعديل</button></td>
@@ -6121,6 +6123,12 @@ renderEditOrderItems = function () {
     editOrderItems.innerHTML = `<div class="edit-invoice-table-wrap"><table class="edit-invoice-table"><thead><tr>
         <th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الألوان</th><th>موقع القطعة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>إجراءات</th>
     </tr></thead><tbody>${tableRows}${specialRows || ""}${!tableRows && !specialRows ? '<tr><td colspan="14">لا توجد منتجات في الطلب.</td></tr>' : ""}</tbody></table></div>`;
+    const invoiceBody = editOrderItems.querySelector("tbody");
+    if (invoiceBody) {
+        [...invoiceBody.querySelectorAll("tr[data-edit-sort]")]
+            .sort((first, second) => String(first.dataset.editSort || "").localeCompare(String(second.dataset.editSort || ""), "ar-SA", { numeric: true, sensitivity: "base" }))
+            .forEach(row => invoiceBody.appendChild(row));
+    }
     calculateEditOrderTotal();
 };
 
