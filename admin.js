@@ -4850,6 +4850,24 @@ async function printOrder(orderId) {
             const secondKey = [second.company, second.product_type, second.type, second.model, second.color].filter(Boolean).join(" ");
             return firstKey.localeCompare(secondKey, "ar-SA", { numeric: true, sensitivity: "base" });
         });
+        // للطباعة فقط: ندمج السطور المتطابقة في كل شيء عدا اللون. بهذا تبقى
+        // حركة المخزون منفصلة حسب اللون، لكن الفاتورة لا تكرر نفس المنتج عشرات المرات.
+        const groupedPrintMap = new Map();
+        printItems.forEach(item => {
+            const groupKey = [
+                item.product_code, item.category, item.product_type, item.type,
+                item.company, item.model, item.storage_location, Number(item.price || 0)
+            ].map(value => String(value ?? "")).join("\u001f");
+            const group = groupedPrintMap.get(groupKey) || { ...item, quantity: 0, colors: [] };
+            group.quantity += Number(item.quantity || 1);
+            const color = String(item.color || "").trim();
+            if (color && !group.colors.includes(color)) group.colors.push(color);
+            groupedPrintMap.set(groupKey, group);
+        });
+        const groupedPrintItems = [...groupedPrintMap.values()].map(item => ({
+            ...item,
+            color: item.colors.length ? item.colors.join("، ") : "-"
+        }));
 
 
         const date =
@@ -4869,7 +4887,7 @@ async function printOrder(orderId) {
 
         const typeCodes = {};
 
-(printItems || []).forEach(item => {
+(groupedPrintItems || []).forEach(item => {
 
     const code =
         item.product_code?.trim() ||
@@ -4899,7 +4917,7 @@ Object.entries(typeCodes).forEach(
 );
 
 
-        (printItems || []).forEach(
+        (groupedPrintItems || []).forEach(
             (item, index) => {
 
                 const quantity =
