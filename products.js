@@ -1265,17 +1265,16 @@ function openProductModal(variants) {
         };
         const row = document.createElement("div");
         row.className = "different-colors-row";
-        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">اختر عدد الألوان والكمية لكل لون</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية لكل لون<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
+        row.innerHTML = `<div class="color-info"><div class="color-name">ألوان مختلفة</div><div class="color-stock">حدد عدد الألوان والكمية الكاملة للطلب؛ المحضّر يوزع الألوان لاحقًا.</div></div><div class="different-colors-fields"><label>عدد الألوان<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-count" value="2" autocomplete="off"></label><label>الكمية<input type="text" inputmode="numeric" pattern="[0-9]*" class="different-color-quantity" value="0" autocomplete="off"></label></div>`;
         const colorsCountInput = row.querySelector(".different-color-count");
         const quantityInput = row.querySelector(".different-color-quantity");
         const updateDifferentColors = () => {
             let colorCount = Number.parseInt(colorsCountInput.value, 10) || 2;
             colorCount = Math.max(2, Math.min(colorGroups.length, colorCount));
-            const maxPerColor = Math.min(...colorGroups.slice(0, colorCount).map(group => group.available));
             let quantity = Number.parseInt(quantityInput.value, 10) || 0;
-            quantity = Math.max(0, Math.min(maxPerColor, quantity));
+            quantity = Math.max(0, Math.min(differentColorInfo.maxQuantity, quantity));
             differentColorInfo.selectedColorCount = colorCount;
-            differentColorInfo.maxPerColor = maxPerColor;
+            differentColorInfo.maxPerColor = differentColorInfo.maxQuantity;
             colorsCountInput.value = colorCount;
             quantityInput.value = quantity;
             if (quantity > 0) colorsContainer.querySelectorAll(".color-quantity-input").forEach(input => { input.value = "0"; });
@@ -2115,8 +2114,8 @@ plus.addEventListener("pointerdown", function (e) {
 
         if (differentQuantity > 0 && differentColorInfo) {
             const selectedColorCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 2;
-            totalSelected = differentQuantity * selectedColorCount;
-            totalStock = differentColorInfo.groups.slice(0, selectedColorCount).reduce((sum, group) => sum + group.available, 0);
+            totalSelected = differentQuantity;
+            totalStock = differentColorInfo.maxQuantity;
         }
 
 
@@ -2182,12 +2181,10 @@ plus.addEventListener("pointerdown", function (e) {
         const differentQuantity = Number.parseInt(colorsContainer.querySelector(".different-color-quantity")?.value, 10) || 0;
         const differentColorsCount = Number.parseInt(colorsContainer.querySelector(".different-color-count")?.value, 10) || 0;
         if (differentQuantity > 0 && differentColorInfo) {
-            const groups = differentColorInfo.groups.slice(0, Math.max(2, Math.min(differentColorInfo.groups.length, differentColorsCount)));
-            groups.forEach(group => {
-                // نفس الكمية تُطلب من كل لون مختار، وتُحفظ العبارة الموحدة
-                // ليكتب موظف المخزن الألوان النهائية عند التجهيز.
-                group.products.forEach(product => selectedItems.push({ product, quantity: differentQuantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" }));
-            });
+            // لا نوزع الكمية تلقائيًا على الألوان. نحتفظ بها كسطر واحد،
+            // ثم يحدد المحضّر توزيعها الحقيقي من صفحة تعديل الفاتورة.
+            const product = differentColorInfo.groups[0]?.products[0];
+            if (product) selectedItems.push({ product, quantity: differentQuantity, orderPrice: customPrice, cartColor: "ألوان مختلفة" });
         }
 
         if (!selectedItems.length) {

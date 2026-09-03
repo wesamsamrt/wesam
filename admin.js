@@ -4849,9 +4849,12 @@ async function printOrder(orderId) {
         const hasDifferentColorItems = items.some(item => String(item.color || "").trim() === "ألوان مختلفة");
         const availableColorsByProduct = new Map();
         const preparedQuantityByProductId = new Map();
+        const specialItemCountByProduct = new Map();
         items.filter(item => String(item.color || "").trim() === "ألوان مختلفة").forEach(item => {
             const productId = String(item.product_id || "");
             if (productId) preparedQuantityByProductId.set(productId, (preparedQuantityByProductId.get(productId) || 0) + Number(item.quantity || 0));
+            const productKey = printProductKey(item);
+            specialItemCountByProduct.set(productKey, (specialItemCountByProduct.get(productKey) || 0) + 1);
         });
 
         // ألوان «ألوان مختلفة» لا تُخزن داخل الفاتورة، لذا نجلب الألوان المتوفرة
@@ -4872,7 +4875,9 @@ async function printOrder(orderId) {
                     if (!color) return;
                     const key = printProductKey(product);
                     const colors = availableColorsByProduct.get(key) || [];
-                    const preparedQuantity = Number(preparedQuantityByProductId.get(String(product.id)) || 0);
+                    const preparedQuantity = specialItemCountByProduct.get(key) === 1
+                        ? 0
+                        : Number(preparedQuantityByProductId.get(String(product.id)) || 0);
                     // يظهر اللون إن كان متاحًا أو جرى تحضيره حتى لو أصبح رصيده صفرًا بعد الخصم.
                     if (Number(product.quantity || 0) <= 0 && preparedQuantity <= 0) return;
                     const existingColor = colors.find(item => item.color === color);
@@ -5706,19 +5711,34 @@ async function loadEditDifferentColorGroups(order) {
     const groups = new Map();
     specialItems.forEach(item => {
         const key = editDifferentColorGroupKey(item);
-        const group = groups.get(key) || { key, template: item, quantities: new Map(), variants: [] };
+        const group = groups.get(key) || { key, template: item, quantities: new Map(), variants: [], sourceItems: [] };
         group.quantities.set(String(item.product_id), (group.quantities.get(String(item.product_id)) || 0) + Number(item.quantity || 0));
+        group.sourceItems.push(item);
         groups.set(key, group);
     });
     (products || []).forEach(product => {
         const group = groups.get(editDifferentColorGroupKey(product));
         if (group && String(product.color || "").trim()) group.variants.push(product);
     });
-    editingDifferentColorGroups = [...groups.values()];
+    editingDifferentColorGroups = [...groups.values()].map(group => {
+        // السطر الواحد يعني أن المندوب لم يوزع الألوان بعد؛ نعرض المربعات فارغة.
+        group.isPendingDistribution = group.sourceItems.length === 1;
+        group.targetQuantity = group.sourceItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        if (group.isPendingDistribution) group.quantities = new Map();
+        return group;
+    });
 }
 
 function setEditPreparedColorQuantity(group, product, value) {
     if (!group || !product) return;
+    if (group.isPendingDistribution) {
+        editingOrderItems = editingOrderItems.filter(item => !(
+            String(item.color || "").trim() === "ألوان مختلفة" &&
+            editDifferentColorGroupKey(item) === group.key
+        ));
+        group.quantities = new Map();
+        group.isPendingDistribution = false;
+    }
     const quantity = Math.max(0, Number.parseInt(value, 10) || 0);
     const itemIndex = editingOrderItems.findIndex(item =>
         String(item.color || "").trim() === "ألوان مختلفة" &&
@@ -6120,7 +6140,9 @@ renderEditOrderItems = function () {
     const specialRows = editingDifferentColorGroups.map((group, groupIndex) => {
         const item = group.template;
         const title = [item.company, item.model, item.type || item.product_type].filter(Boolean).join(" · ");
-        const selectedTotal = [...group.quantities.values()].reduce((sum, quantity) => sum + Number(quantity || 0), 0);
+        const selectedTotal = group.isPendingDistribution
+            ? Number(group.targetQuantity || 0)
+            : [...group.quantities.values()].reduce((sum, quantity) => sum + Number(quantity || 0), 0);
         const colors = group.variants.map(product => escapeHtmlAttribute(product.color)).join("، ") || "لا توجد ألوان";
         return `<tr class="different-colors-invoice-row" data-edit-sort="${escapeHtmlAttribute(invoiceSortKey(item))}"><td>—</td><td>${escapeHtmlAttribute(item.product_code || "-")}</td><td>${escapeHtmlAttribute(item.category || "-")}</td>
             <td>${escapeHtmlAttribute(item.product_type || "-")}</td><td>${escapeHtmlAttribute(item.type || "-")}</td><td>${escapeHtmlAttribute(item.company || "-")}</td>
@@ -6150,12 +6172,18 @@ window.openEditPreparedColors = function (groupIndex) {
     const dialog = document.createElement("div");
     dialog.id = "editPreparedColorsDialog";
     dialog.className = "edit-prepared-colors-dialog";
-    dialog.innerHTML = `<div class="edit-prepared-colors-dialog-box"><button type="button" class="edit-prepared-colors-close" data-close>×</button><h3>ألوان مختلفة — ${escapeHtmlAttribute(title || group.template.product_code)}</h3><p>اكتب الكمية التي تم تجهيزها من كل لون.</p><div class="edit-prepared-colors-dialog-grid">${group.variants.map(product => `<label><span>${escapeHtmlAttribute(product.color)}</span><input data-product-id="${Number(product.id)}" type="number" min="0" inputmode="numeric" value="${Number(group.quantities.get(String(product.id)) || 0)}"><small>المتاح الآن: ${Number(product.quantity || 0)}</small></label>`).join("") || '<p>لا توجد ألوان لهذا الصنف.</p>'}</div><div class="edit-prepared-colors-dialog-actions"><button type="button" data-close>إلغاء</button><button type="button" class="save" data-save>حفظ كميات الألوان</button></div></div>`;
+    dialog.innerHTML = `<div class="edit-prepared-colors-dialog-box"><button type="button" class="edit-prepared-colors-close" data-close>×</button><h3>ألوان مختلفة — ${escapeHtmlAttribute(title || group.template.product_code)}</h3><p>وزّع الكمية المطلوبة (${Number(group.targetQuantity || 0)} قطعة) على الألوان التالية.</p><div class="edit-prepared-colors-dialog-grid">${group.variants.map(product => `<label><span>${escapeHtmlAttribute(product.color)}</span><input data-product-id="${Number(product.id)}" type="number" min="0" inputmode="numeric" value="${Number(group.quantities.get(String(product.id)) || 0)}"><small>المتاح الآن: ${Number(product.quantity || 0)}</small></label>`).join("") || '<p>لا توجد ألوان لهذا الصنف.</p>'}</div><div class="edit-prepared-colors-dialog-actions"><button type="button" data-close>إلغاء</button><button type="button" class="save" data-save>حفظ كميات الألوان</button></div></div>`;
     document.body.appendChild(dialog);
     const close = () => dialog.remove();
     dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
     dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
     dialog.querySelector("[data-save]")?.addEventListener("click", () => {
+        const preparedTotal = [...dialog.querySelectorAll("[data-product-id]")]
+            .reduce((sum, input) => sum + Math.max(0, Number(input.value || 0)), 0);
+        if (preparedTotal !== Number(group.targetQuantity || 0)) {
+            alert(`يجب أن يساوي مجموع الألوان الكمية المطلوبة: ${Number(group.targetQuantity || 0)} قطعة.`);
+            return;
+        }
         dialog.querySelectorAll("[data-product-id]").forEach(input => {
             const product = group.variants.find(item => String(item.id) === String(input.dataset.productId));
             if (product) setEditPreparedColorQuantity(group, product, input.value);
