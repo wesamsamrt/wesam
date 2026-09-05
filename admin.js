@@ -1614,22 +1614,30 @@ async function loadAnalyticsData() {
 }
 
 analyticsButton?.addEventListener("click", async () => {
-    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => {
+    ["productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => {
         const page = document.getElementById(id);
         if (page) page.style.display = "none";
     });
+    const adminPage = document.getElementById("adminPage");
+    const dashboard = document.querySelector(".admin-dashboard-content");
+    if (adminPage) adminPage.style.display = "block";
+    if (dashboard) dashboard.style.display = "none";
     analyticsAdmin.style.display = "block";
     await loadAnalyticsData();
 });
 document.getElementById("backFromAnalytics")?.addEventListener("click", () => {
     if (analyticsAdmin) analyticsAdmin.style.display = "none";
     const page = document.getElementById("adminPage");
+    const dashboard = document.querySelector(".admin-dashboard-content");
     if (page) page.style.display = "block";
+    if (dashboard) dashboard.style.display = "block";
 });
 document.getElementById("refreshAnalyticsButton")?.addEventListener("click", loadAnalyticsData);
 analyticsPeriod?.addEventListener("change", loadAnalyticsData);
 ["dashboardButton", "productsButton", "ordersButton", "customersButton", "shortagesButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
     if (analyticsAdmin) analyticsAdmin.style.display = "none";
+    const dashboard = document.querySelector(".admin-dashboard-content");
+    if (dashboard) dashboard.style.display = "block";
 }));
 
 // ينشئ ملف CSV لتقرير مبيعات المخزن الحالي ويبدأ تنزيله.
