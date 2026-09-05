@@ -15,7 +15,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="products.js?v=20260826-driver-links"></script>
+<script src="products.js?v=20260905-customer-desktop-mobile"></script>
 <script src="offers-videos/playlist.js"></script>
 
 <style>
@@ -3846,6 +3846,9 @@ async function searchProducts(value) {
             }
 
             // حساب المندوب يستخدم التصميم الكلاسيكي الأصلي، وبقية الحسابات تستخدم التصميم الداكن.
+            if (typeof setCustomerDesktopMobileViewport === "function") {
+                setCustomerDesktopMobileViewport(Boolean(isLinkedDriver));
+            }
             darkThemeStyles.media = isLinkedDriver ? "not all" : "all";
             document.body.classList.toggle("driver-classic-theme", Boolean(isLinkedDriver));
             document.documentElement.classList.remove("home-theme-pending");

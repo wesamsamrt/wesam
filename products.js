@@ -5,6 +5,18 @@ let isGuestShopping = false;
 let customerWarehouseResolved = false;
 let isLinkedDriverShopping = false;
 
+// واجهة العميل على الجوال تعرض نفس شبكة الكمبيوتر مصغرة بالكامل، بدلاً من
+// تحويل الصفوف إلى أعمدة. لا نطبق ذلك على المندوب حتى يبقى تصميمه المتجاوب.
+function setCustomerDesktopMobileViewport(isDriver = false) {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    const isPhone = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 800;
+    viewport.setAttribute("content", !isDriver && isPhone
+        ? "width=1460, viewport-fit=cover"
+        : "width=device-width, initial-scale=1.0, viewport-fit=cover");
+    document.documentElement.classList.toggle("customer-desktop-mobile", !isDriver && isPhone);
+}
+
 // يطابق اسم الماركة الثابت في قسم الأجهزة مع صيغها العربية والإنجليزية المخزنة في المنتجات.
 function isProductFromBrand(product, selectedBrand) {
     const aliases = {
@@ -47,13 +59,15 @@ function isProductCompatibleWithDevice(product, selectedDevice) {
 // يعطّل طبقة التصميم الداكنة فقط للحساب المرتبط بمندوب، فيبقى على واجهته الكلاسيكية.
 async function applyProductsPageTheme(user, driverIdentity = null) {
     const darkThemeStyles = document.getElementById("productsDarkThemeStyles");
-    if (!darkThemeStyles || !user) return;
+    if (!darkThemeStyles) return;
 
-    if (!driverIdentity) {
+    if (user && !driverIdentity) {
         const { data } = await supabaseClient.rpc("get_my_driver_identity");
         driverIdentity = data;
     }
-    document.body.classList.toggle("driver-classic-theme", Boolean(driverIdentity?.is_driver));
+    const isDriver = Boolean(driverIdentity?.is_driver);
+    setCustomerDesktopMobileViewport(isDriver);
+    document.body.classList.toggle("driver-classic-theme", isDriver);
 }
 
 // يمسح المنطقة المحفوظة عند فتح الصفحة من زر تغيير المنطقة.

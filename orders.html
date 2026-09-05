@@ -7,7 +7,7 @@
     <script>document.documentElement.classList.add("cart-theme-pending");</script>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=1460, viewport-fit=cover">
 
     <title>السلة</title>
 
@@ -528,6 +528,15 @@
 let cartOrder = null;
 let cartItems = [];
 let isLinkedDriverCart = false;
+
+function setCartMobileViewport(isDriver = false) {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const isPhone = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 800;
+    if (!viewport) return;
+    viewport.setAttribute("content", !isDriver && isPhone
+        ? "width=1460, viewport-fit=cover"
+        : "width=device-width, initial-scale=1.0, viewport-fit=cover");
+}
 const quantitySaveTimers = new Map();
 const CUSTOMER_TAX_RATE = 0.15;
 
@@ -794,6 +803,7 @@ async function fillLinkedDriverNumber() {
     try {
         const { data: identity, error } = await supabaseClient.rpc("get_my_driver_identity");
         isLinkedDriverCart = Boolean(!error && identity?.is_driver);
+        setCartMobileViewport(isLinkedDriverCart);
         document.body.classList.toggle("customer-cart", !isLinkedDriverCart);
         document.body.classList.toggle("driver-cart", isLinkedDriverCart);
         if (!isLinkedDriverCart || !driverInput) return;
