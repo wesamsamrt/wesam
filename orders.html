@@ -917,7 +917,7 @@ async function loadOrders() {
         });
     // بعض السجلات القديمة تعرض «متقدم» للعميل بينما تظهر «جديد» في الإدارة.
     if (requestedCartEditId) {
-        cartOrderQuery = cartOrderQuery.in("status", ["جديد", "متقدم"]).eq("id", requestedCartEditId);
+        cartOrderQuery = cartOrderQuery.in("status", ["جديد", "مقدم", "متقدم"]).eq("id", requestedCartEditId);
     } else {
         cartOrderQuery = cartOrderQuery.eq("status", "جديد");
     }
@@ -1749,7 +1749,8 @@ async function showPreviousOrders() {
         .from("orders")
         .select("*")
         .eq("user_id", user.id)
-        .neq("status", "جديد")
+            .neq("status", "جديد")
+            .neq("status", "ملغي")
         .order("id", {
             ascending: false
         });

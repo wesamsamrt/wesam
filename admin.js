@@ -1353,6 +1353,9 @@ checkSession();
    بيانات لوحة التحكم الفعلية
 ========================================================= */
 const formatAdminCurrency = value => `${Number(value || 0).toFixed(2)} ر.س`;
+const isCancelledOrder = order => String(order?.status || "").trim() === "ملغي";
+const isSubmittedOrder = order => ["مقدم", "متقدم"].includes(String(order?.status || "").trim());
+const needsOrderFollowUp = order => ["جديد", "مقدم", "متقدم"].includes(String(order?.status || "جديد").trim());
 let dashboardOrdersCache = [];
 
 // يجلب جميع منتجات المخزن على دفعات لتكون إحصاءات اللوحة صحيحة حتى مع أكثر من ألف منتج.
@@ -1394,23 +1397,23 @@ async function loadDashboardData() {
 
         // تأتي الطلبات عبر دالة تتحقق من صلاحية الحساب والمخزن حتى تظهر الإحصاءات للحسابات المقيّدة.
         const safeOrders = Array.isArray(ordersResult) ? ordersResult : [];
-        dashboardOrdersCache = safeOrders;
         const safeProducts = Array.isArray(products) ? products : [];
-        const nonCancelled = safeOrders.filter(order => order.status !== "ملغي");
+        const nonCancelled = safeOrders.filter(order => !isCancelledOrder(order));
+        dashboardOrdersCache = nonCancelled;
         const monthStart = new Date();
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
         const monthOrders = nonCancelled.filter(order => new Date(order.created_at) >= monthStart);
         const monthSales = monthOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
 
-        document.getElementById("dashboardCustomersCount").textContent = new Set(safeOrders.map(order => order.user_id).filter(Boolean)).size;
+        document.getElementById("dashboardCustomersCount").textContent = new Set(nonCancelled.map(order => order.user_id).filter(Boolean)).size;
         document.getElementById("dashboardSalesTotal").textContent = formatAdminCurrency(nonCancelled.reduce((sum, order) => sum + Number(order.total || 0), 0));
         document.getElementById("dashboardProductsCount").textContent = safeProducts.length;
-        document.getElementById("dashboardOrdersCount").textContent = safeOrders.length;
+        document.getElementById("dashboardOrdersCount").textContent = nonCancelled.length;
         document.getElementById("dashboardSalesSummary").textContent = formatAdminCurrency(monthSales);
 
         const lowStock = safeProducts.filter(product => Number(product.quantity || 0) <= 5);
-        const followUpOrders = safeOrders.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
+        const followUpOrders = nonCancelled.filter(needsOrderFollowUp);
         if (alerts) {
             alerts.innerHTML = `
                 <button type="button" class="dashboard-alert new-orders-alert" id="dashboardNewOrdersAlert">
@@ -1422,7 +1425,7 @@ async function loadDashboardData() {
             `;
             document.getElementById("dashboardNewOrdersAlert")?.addEventListener("click", () => {
                 ordersButton.click();
-                setTimeout(() => { if (adminOrderStatusFilter) adminOrderStatusFilter.value = ""; renderAdminOrdersList(); }, 0);
+                setTimeout(() => { if (adminOrderStatusFilter) adminOrderStatusFilter.value = "متابعة"; renderAdminOrdersList(); }, 0);
             });
             document.getElementById("dashboardLowStockAlert")?.addEventListener("click", () => openLowStockInventory());
         }
@@ -1517,10 +1520,10 @@ async function loadAnalyticsData() {
         ]);
         if (ordersError) throw ordersError;
 
-        const allOrders = Array.isArray(ordersResult) ? ordersResult : [];
+        const allOrders = (Array.isArray(ordersResult) ? ordersResult : []).filter(order => !isCancelledOrder(order));
         const start = analyticsPeriodStart(period);
         const orders = start ? allOrders.filter(order => new Date(order.created_at) >= start) : allOrders;
-        const nonCancelled = orders.filter(order => order.status !== "ملغي");
+        const nonCancelled = orders;
         const todayKey = saudiDateKey();
         const monthKey = todayKey.slice(0, 7);
         const todayOrders = orders.filter(order => saudiDateKey(order.created_at) === todayKey);
@@ -1543,7 +1546,7 @@ async function loadAnalyticsData() {
             ["مبيعات هذا الشهر", formatAdminCurrency(monthRevenue), "باستثناء الملغي"],
             ["متوسط قيمة الطلب", formatAdminCurrency(average), `${nonCancelled.length} طلب غير ملغي`],
             ["نسبة التسليم", `${nonCancelled.length ? Math.round((completed / nonCancelled.length) * 100) : 0}%`, `${completed} طلب مكتمل`],
-            ["طلبات تحت المتابعة", active, "جديد أو قيد التجهيز أو الشحن"],
+            ["طلبات تحت المتابعة", nonCancelled.filter(needsOrderFollowUp).length, "الطلبات الجديدة والمقدمة"],
             ["القطع المطلوبة", totalPieces, `${customers} عميل خلال الفترة`]
         ];
         if (kpis) kpis.innerHTML = cards.map(([label, value, hint]) => `<article class="analytics-kpi"><span>${label}</span><strong>${value}</strong><small>${hint}</small></article>`).join("");
@@ -1563,7 +1566,7 @@ async function loadAnalyticsData() {
             const date = new Date();
             date.setMonth(date.getMonth() - (5 - index), 1);
             const key = saudiDateKey(date).slice(0, 7);
-            return { key, sales: allOrders.filter(order => order.status !== "ملغي" && saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
+            return { key, sales: allOrders.filter(order => saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
         });
         renderAnalyticsBars("analyticsMonthlyChart", monthlyRows, "sales", row => row.key.slice(5));
         const sixMonthSales = monthlyRows.reduce((sum, row) => sum + row.sales, 0);
@@ -4065,7 +4068,11 @@ function renderAdminOrdersList() {
             .filter(Boolean)
             .join(" ")
             .toLowerCase();
-        return (!search || searchable.includes(search)) && (!status || order.status === status);
+        const statusMatches = !status
+            || (status === "مقدم" && isSubmittedOrder(order))
+            || (status === "متابعة" && needsOrderFollowUp(order))
+            || order.status === status;
+        return (!search || searchable.includes(search)) && statusMatches;
     });
 
     adminOrders.innerHTML = "";
@@ -4080,9 +4087,10 @@ function renderAdminOrdersList() {
 // يحسب ملخص عدد الطلبات والمبيعات والطلبات قيد المتابعة للمخزن الحالي.
 function updateOrdersSummary() {
     if (!ordersSummary) return;
-    const activeOrders = adminOrdersData.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد"));
-    const total = adminOrdersData.reduce((sum, order) => sum + Number(order.total || 0), 0);
-    ordersSummary.innerHTML = `<span><strong>${adminOrdersData.length}</strong> إجمالي الطلبات</span><span><strong>${activeOrders.length}</strong> قيد المتابعة</span><span><strong>${total.toFixed(2)}</strong> ر.س إجمالي المبيعات</span>`;
+    const nonCancelled = adminOrdersData.filter(order => !isCancelledOrder(order));
+    const activeOrders = nonCancelled.filter(needsOrderFollowUp);
+    const total = nonCancelled.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    ordersSummary.innerHTML = `<span><strong>${nonCancelled.length}</strong> إجمالي الطلبات</span><span><strong>${activeOrders.length}</strong> تحتاج متابعة</span><span><strong>${total.toFixed(2)}</strong> ر.س إجمالي المبيعات</span>`;
 }
 
 adminOrderSearch?.addEventListener("input", renderAdminOrdersList);
@@ -4220,7 +4228,7 @@ function buildAdminCustomers(orders) {
     const groups = new Map();
     (orders || [])
         // الفاتورة قد ينشئها العميل أو المندوب؛ اسم العميل فيها هو المرجع في الحالتين.
-        .filter(order => order.status !== "جديد" && String(order.customer_name || "").trim())
+        .filter(order => order.status !== "جديد" && !isCancelledOrder(order) && String(order.customer_name || "").trim())
         .forEach(order => {
             const key = customerKeyFromOrder(order);
             const customer = groups.get(key) || {
@@ -4830,6 +4838,13 @@ Object.entries(typeCodes).forEach(
                     ${order.status === "جديد" ? "selected" : ""}
                 >
                     جديد
+                </option>
+
+                <option
+                    value="مقدم"
+                    ${isSubmittedOrder(order) ? "selected" : ""}
+                >
+                    مقدم
                 </option>
 
 
