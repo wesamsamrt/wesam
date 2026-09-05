@@ -2644,6 +2644,21 @@ body {
     color: #6557ed;
 }
 
+/* لوحة الإحصائيات والتحليلات */
+.analytics-admin { width: min(1440px, calc(100% - 48px)); margin: 28px auto 55px; }
+.analytics-header { margin-bottom: 16px; }
+.analytics-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 15px; border: 1px solid #e6e6f2; border-radius: 14px; background: #fff; color: #74788b; font-size: 12px; box-shadow: 0 7px 20px rgba(35,45,90,.04); }
+.analytics-toolbar label { display: flex; align-items: center; gap: 8px; color: #373a52; font-weight: 800; }
+.analytics-toolbar select { min-height: 37px; border: 1px solid #dcd8f6; border-radius: 9px; padding: 0 10px; background: #faf9ff; color: #4f40bd; font: inherit; font-weight: 700; }
+.analytics-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.analytics-kpi { min-height: 118px; padding: 16px; border: 1px solid #e4e2f4; border-radius: 16px; background: linear-gradient(145deg, #fff, #f8f7ff); box-shadow: 0 10px 23px rgba(46,48,100,.05); }
+.analytics-kpi span { display: block; color: #77718d; font-size: 12px; font-weight: 700; }.analytics-kpi strong { display: block; margin: 8px 0 4px; color: #4e40c7; font-size: 22px; line-height: 1.2; }.analytics-kpi small { color: #9792ab; font-size: 10px; }
+.analytics-grid { display: grid; gap: 15px; margin-top: 15px; }.analytics-charts-grid, .analytics-insights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.analytics-tables-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.analytics-card { min-width: 0; overflow: hidden; border: 1px solid #e5e4ef; border-radius: 17px; background: #fff; box-shadow: 0 10px 24px rgba(35,45,90,.045); }
+.analytics-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 16px 17px 10px; }.analytics-card-head h3 { margin: 0; color: #28243e; font-size: 15px; }.analytics-card-head p { margin: 4px 0 0; color: #8b879b; font-size: 11px; }.analytics-card-head > strong { color: #5b4bd5; font-size: 13px; white-space: nowrap; }
+.analytics-bars { display: flex; align-items: end; justify-content: space-between; gap: 8px; height: 205px; padding: 22px 18px 15px; direction: ltr; border-top: 1px solid #f0eff6; background: repeating-linear-gradient(to top, #fafaff 0 1px, transparent 1px 46px); }.analytics-bar-item { display: grid; grid-template-rows: 21px 1fr 19px; align-items: end; width: 100%; height: 100%; min-width: 0; text-align: center; }.analytics-bar-item i { display: block; width: min(38px, 78%); min-height: 3px; margin: 0 auto; border-radius: 8px 8px 2px 2px; background: linear-gradient(180deg, #8c80f6, #5946d5); box-shadow: 0 4px 10px rgba(87,70,210,.18); }.sales-bars .analytics-bar-item i { background: linear-gradient(180deg, #57c598, #249365); }.analytics-bar-value { overflow: hidden; color: #6559ad; font-size: 10px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }.sales-bars .analytics-bar-value { color: #29855f; }.analytics-bar-item small { color: #8d899c; font-size: 10px; }
+.analytics-status-list, .analytics-stock-list, .analytics-ranking { padding: 4px 17px 15px; }.analytics-status-list > div, .analytics-stock-row, .analytics-ranking-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; border-bottom: 1px solid #f0eff5; font-size: 12px; }.analytics-status-list > div:last-child, .analytics-stock-row:last-child, .analytics-ranking-row:last-child { border-bottom: 0; }.analytics-status-list span { color: #5e5970; }.analytics-status-list b { padding: 5px 9px; border-radius: 99px; background: #f0edff; color: #5748ca; font-size: 11px; }.analytics-stock-summary { display: flex; align-items: center; gap: 10px; margin: 7px 0; padding: 10px; border-radius: 11px; background: #fff5e8; color: #a96717; }.analytics-stock-summary strong { font-size: 22px; }.analytics-stock-summary span { font-size: 11px; font-weight: 700; }.analytics-stock-row span { overflow: hidden; color: #605b70; text-overflow: ellipsis; white-space: nowrap; }.analytics-stock-row b { color: #c37716; white-space: nowrap; }.analytics-rank { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 auto; border-radius: 8px; background: #f0edff; color: #5e4dd0; font-size: 11px; font-weight: 900; }.analytics-ranking-row strong { flex: 1; overflow: hidden; color: #4a4559; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.analytics-ranking-row b { color: #2b9a68; font-size: 11px; white-space: nowrap; }.analytics-empty { padding: 22px 4px; color: #9792a6; font-size: 12px; text-align: center; }
+
 /* شاشة تعديل الفاتورة: صفحة واسعة مستقلة لتظهر الأعمدة بوضوح. */
 .edit-order-modal.edit-order-page {
     align-items: stretch;
@@ -2730,3 +2745,22 @@ body {
 /* قسم رفع وإدارة صور عروض اليوم. */
 .offers-admin{width:min(1100px,calc(100% - 32px));margin:30px auto}.offers-admin-form{margin-top:18px;padding:20px;border-radius:18px;background:#fff;box-shadow:0 8px 25px rgba(31,36,70,.06)}.offers-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.offers-form-grid label{display:grid;gap:6px;color:#383a4a;font-size:12px;font-weight:700}.offers-form-grid input{width:100%;height:42px;padding:0 12px;border:1px solid #e3e5ef;border-radius:10px;background:#fafbff;color:#262838;font-family:inherit}.offers-form-grid input:focus{outline:0;border-color:#6557ed}.daily-offer-image-field small{color:#858796;font-weight:400}.daily-offer-preview{display:grid;place-items:center;overflow:hidden;height:180px;margin-top:14px;border:1px dashed #cfd3e8;border-radius:14px;background:#f8f9fd;color:#858796;font-size:12px}.daily-offer-preview img{width:100%;height:100%;object-fit:cover}.offers-admin-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:15px}.offers-admin-actions button,.daily-offer-admin-actions button{border:0;border-radius:10px;padding:10px 14px;background:#6557ed;color:#fff;font-family:inherit;font-weight:700;cursor:pointer}.offers-admin-actions .secondary-offer-button{background:#eeecff;color:#5144d8}.offers-admin-actions span{font-size:11px;color:#74788b}.daily-offers-list{display:grid;gap:10px}.daily-offer-admin-card{display:grid;grid-template-columns:155px 1fr auto;align-items:center;gap:14px;padding:12px;border:1px solid #ececf4;border-radius:15px;background:#fff}.daily-offer-admin-card>img{width:155px;height:92px;object-fit:cover;border-radius:10px;background:#f3f4fb}.daily-offer-admin-card h3{font-size:14px}.daily-offer-admin-card p,.daily-offer-admin-card small{display:block;margin-top:5px;color:#74788b;font-size:11px}.daily-offer-admin-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.daily-offer-admin-actions button{padding:8px 10px;font-size:11px}.daily-offer-admin-actions .delete-daily-offer{background:#fff0f2;color:#c14359}
 @media (max-width:650px){.offers-form-grid{grid-template-columns:1fr}.daily-offer-admin-card{grid-template-columns:90px 1fr}.daily-offer-admin-card>img{width:90px;height:75px}.daily-offer-admin-actions{grid-column:1/-1;justify-content:flex-start}}
+
+@media (max-width: 1100px) {
+    .analytics-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .analytics-tables-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 750px) {
+    .analytics-admin { width: calc(100% - 28px); margin-top: 18px; }
+    .analytics-header { align-items: flex-start; }
+    .analytics-header .open-invoice-button { font-size: 11px; }
+    .analytics-toolbar { align-items: flex-start; flex-direction: column; }
+    .analytics-charts-grid, .analytics-insights-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .analytics-kpis { grid-template-columns: 1fr; }
+    .analytics-bars { height: 180px; padding-right: 10px; padding-left: 10px; gap: 4px; }
+    .analytics-bar-value { font-size: 8px; }
+}

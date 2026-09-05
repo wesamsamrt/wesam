@@ -180,6 +180,7 @@ function applyTeamAccessToInterface() {
         ordersButton: "orders",
         customersButton: "customers",
         salesButton: "sales",
+        analyticsButton: "analytics",
         offersButton: "offers",
         driversButton: "drivers",
         transfersButton: "transfers",
@@ -1195,7 +1196,7 @@ async function loadAccounts() {
     accountsList.innerHTML = accounts.map(account => {
         const permissions = account.permissions || {};
         const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
-        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", customers: "العملاء", sales: "المبيعات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", customers: "العملاء", sales: "المبيعات", analytics: "الإحصائيات والتحليلات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
         return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
     }).join("");
 }
@@ -1465,6 +1466,171 @@ async function loadDashboardBestProducts(orders) {
         </div>
     `).join("") : '<div class="dashboard-empty">لا توجد منتجات مباعة حتى الآن.</div>';
 }
+
+/* =========================================================
+   الإحصائيات والتحليلات
+========================================================= */
+const analyticsButton = document.getElementById("analyticsButton");
+const analyticsAdmin = document.getElementById("analyticsAdmin");
+const analyticsPeriod = document.getElementById("analyticsPeriod");
+
+function saudiDateKey(value = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date(value));
+    const get = type => parts.find(part => part.type === type)?.value || "";
+    return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function analyticsPeriodStart(period) {
+    if (period === "all") return null;
+    const start = new Date();
+    start.setDate(start.getDate() - (Math.max(1, Number(period) || 30) - 1));
+    start.setHours(0, 0, 0, 0);
+    return start;
+}
+
+function analyticsRankRows(entries, emptyText, valueFormatter) {
+    return entries.length ? entries.map((entry, index) => `<div class="analytics-ranking-row"><span class="analytics-rank">${index + 1}</span><strong>${transferText(entry.name)}</strong><b>${valueFormatter(entry)}</b></div>`).join("") : `<div class="analytics-empty">${emptyText}</div>`;
+}
+
+function renderAnalyticsBars(containerId, rows, valueKey, labelFormatter) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const max = Math.max(1, ...rows.map(row => Number(row[valueKey] || 0)));
+    container.innerHTML = rows.map(row => {
+        const value = Number(row[valueKey] || 0);
+        const height = value ? Math.max(8, Math.round((value / max) * 100)) : 3;
+        return `<div class="analytics-bar-item"><span class="analytics-bar-value">${valueKey === "sales" ? formatAdminCurrency(value) : value}</span><i style="height:${height}%"></i><small>${labelFormatter(row)}</small></div>`;
+    }).join("");
+}
+
+async function loadAnalyticsData() {
+    if (!analyticsAdmin) return;
+    const kpis = document.getElementById("analyticsKpis");
+    const period = analyticsPeriod?.value || "30";
+    if (kpis) kpis.innerHTML = '<div class="message">جاري تحديث الإحصائيات...</div>';
+    try {
+        const [{ data: ordersResult, error: ordersError }, products] = await Promise.all([
+            supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
+            loadAllDashboardWarehouseProducts()
+        ]);
+        if (ordersError) throw ordersError;
+
+        const allOrders = Array.isArray(ordersResult) ? ordersResult : [];
+        const start = analyticsPeriodStart(period);
+        const orders = start ? allOrders.filter(order => new Date(order.created_at) >= start) : allOrders;
+        const nonCancelled = orders.filter(order => order.status !== "ملغي");
+        const todayKey = saudiDateKey();
+        const monthKey = todayKey.slice(0, 7);
+        const todayOrders = orders.filter(order => saudiDateKey(order.created_at) === todayKey);
+        const monthOrders = orders.filter(order => saudiDateKey(order.created_at).startsWith(monthKey));
+        const todayRevenue = todayOrders.filter(order => order.status !== "ملغي").reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const monthRevenue = monthOrders.filter(order => order.status !== "ملغي").reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const totalRevenue = nonCancelled.reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const completed = nonCancelled.filter(order => ["تم التسليم", "تم استلام طلبك"].includes(order.status || "")).length;
+        const active = nonCancelled.filter(order => !["تم التسليم", "تم استلام طلبك"].includes(order.status || "")).length;
+        const soldItems = nonCancelled.flatMap(order => Array.isArray(order.items) ? order.items : []);
+        const totalPieces = soldItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const average = nonCancelled.length ? totalRevenue / nonCancelled.length : 0;
+        const customers = new Set(nonCancelled.map(order => String(order.user_id || order.customer_phone || order.customer_name || "").trim()).filter(Boolean)).size;
+        const lowStock = (products || []).filter(product => Number(product.quantity || 0) <= 5);
+
+        const cards = [
+            ["طلبات اليوم", todayOrders.length, `في ${todayKey}`],
+            ["طلبات هذا الشهر", monthOrders.length, "من بداية الشهر"],
+            ["مبيعات اليوم", formatAdminCurrency(todayRevenue), "باستثناء الملغي"],
+            ["مبيعات هذا الشهر", formatAdminCurrency(monthRevenue), "باستثناء الملغي"],
+            ["متوسط قيمة الطلب", formatAdminCurrency(average), `${nonCancelled.length} طلب غير ملغي`],
+            ["نسبة التسليم", `${nonCancelled.length ? Math.round((completed / nonCancelled.length) * 100) : 0}%`, `${completed} طلب مكتمل`],
+            ["طلبات تحت المتابعة", active, "جديد أو قيد التجهيز أو الشحن"],
+            ["القطع المطلوبة", totalPieces, `${customers} عميل خلال الفترة`]
+        ];
+        if (kpis) kpis.innerHTML = cards.map(([label, value, hint]) => `<article class="analytics-kpi"><span>${label}</span><strong>${value}</strong><small>${hint}</small></article>`).join("");
+
+        const dailyRows = Array.from({ length: 7 }, (_, index) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (6 - index));
+            const key = saudiDateKey(date);
+            return { key, orders: allOrders.filter(order => saudiDateKey(order.created_at) === key).length };
+        });
+        renderAnalyticsBars("analyticsDailyChart", dailyRows, "orders", row => row.key.slice(5).replace("-", "/"));
+        const weekOrders = dailyRows.reduce((sum, row) => sum + row.orders, 0);
+        const weekElement = document.getElementById("analyticsWeekOrders");
+        if (weekElement) weekElement.textContent = `${weekOrders} طلب`;
+
+        const monthlyRows = Array.from({ length: 6 }, (_, index) => {
+            const date = new Date();
+            date.setMonth(date.getMonth() - (5 - index), 1);
+            const key = saudiDateKey(date).slice(0, 7);
+            return { key, sales: allOrders.filter(order => order.status !== "ملغي" && saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
+        });
+        renderAnalyticsBars("analyticsMonthlyChart", monthlyRows, "sales", row => row.key.slice(5));
+        const sixMonthSales = monthlyRows.reduce((sum, row) => sum + row.sales, 0);
+        const sixMonthElement = document.getElementById("analyticsSixMonthSales");
+        if (sixMonthElement) sixMonthElement.textContent = formatAdminCurrency(sixMonthSales);
+
+        const statuses = new Map();
+        orders.forEach(order => {
+            const status = order.status || "جديد";
+            statuses.set(status, (statuses.get(status) || 0) + 1);
+        });
+        const statusList = document.getElementById("analyticsStatusList");
+        if (statusList) statusList.innerHTML = [...statuses.entries()].sort((a, b) => b[1] - a[1]).map(([status, count]) => `<div><span>${transferText(status)}</span><b>${count} طلب</b></div>`).join("") || '<div class="analytics-empty">لا توجد طلبات في هذه الفترة.</div>';
+
+        const stockList = document.getElementById("analyticsStockList");
+        if (stockList) stockList.innerHTML = lowStock.length ? `<div class="analytics-stock-summary"><strong>${lowStock.length}</strong><span>منتج بكمية 5 أو أقل</span></div>${lowStock.slice(0, 5).map(product => `<div class="analytics-stock-row"><span>${transferText([product.company, product.model, product.product_code].filter(Boolean).join(" · ") || "منتج")}</span><b>${Number(product.quantity || 0)} قطعة</b></div>`).join("")}` : '<div class="analytics-empty">المخزون بحالة جيدة، لا توجد أصناف منخفضة.</div>';
+
+        const productTotals = new Map();
+        const categoryTotals = new Map();
+        soldItems.forEach(item => {
+            const quantity = Number(item.quantity || 0);
+            const productName = [item.company, item.model, item.type || item.product_type, item.product_code].filter(Boolean).join(" · ") || "منتج بدون اسم";
+            productTotals.set(productName, (productTotals.get(productName) || 0) + quantity);
+            const category = item.category || item.product_type || "غير مصنف";
+            categoryTotals.set(category, (categoryTotals.get(category) || 0) + quantity);
+        });
+        const customerTotals = new Map();
+        nonCancelled.forEach(order => {
+            const name = order.customer_name || "عميل بدون اسم";
+            customerTotals.set(name, (customerTotals.get(name) || 0) + Number(order.total || 0));
+        });
+        const toRank = map => [...map.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+        const topProducts = document.getElementById("analyticsTopProducts");
+        const topCategories = document.getElementById("analyticsTopCategories");
+        const topCustomers = document.getElementById("analyticsTopCustomers");
+        if (topProducts) topProducts.innerHTML = analyticsRankRows(toRank(productTotals), "لا توجد منتجات مطلوبة في هذه الفترة.", entry => `${entry.value} قطعة`);
+        if (topCategories) topCategories.innerHTML = analyticsRankRows(toRank(categoryTotals), "لا توجد تصنيفات مطلوبة في هذه الفترة.", entry => `${entry.value} قطعة`);
+        if (topCustomers) topCustomers.innerHTML = analyticsRankRows(toRank(customerTotals), "لا توجد مشتريات مسجلة في هذه الفترة.", entry => formatAdminCurrency(entry.value));
+
+        const warehouseName = document.getElementById("analyticsWarehouseName");
+        if (warehouseName) warehouseName.textContent = selectedWarehouse || "الحالي";
+        const updatedAt = document.getElementById("analyticsUpdatedAt");
+        if (updatedAt) updatedAt.textContent = `آخر تحديث: ${new Date().toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" })}`;
+    } catch (error) {
+        console.error("Analytics data error:", error);
+        if (kpis) kpis.innerHTML = `<div class="message error">تعذر تحميل الإحصائيات: ${transferText(error.message)}</div>`;
+    }
+}
+
+analyticsButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => {
+        const page = document.getElementById(id);
+        if (page) page.style.display = "none";
+    });
+    analyticsAdmin.style.display = "block";
+    await loadAnalyticsData();
+});
+document.getElementById("backFromAnalytics")?.addEventListener("click", () => {
+    if (analyticsAdmin) analyticsAdmin.style.display = "none";
+    const page = document.getElementById("adminPage");
+    if (page) page.style.display = "block";
+});
+document.getElementById("refreshAnalyticsButton")?.addEventListener("click", loadAnalyticsData);
+analyticsPeriod?.addEventListener("change", loadAnalyticsData);
+["dashboardButton", "productsButton", "ordersButton", "customersButton", "shortagesButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
+    if (analyticsAdmin) analyticsAdmin.style.display = "none";
+}));
 
 // ينشئ ملف CSV لتقرير مبيعات المخزن الحالي ويبدأ تنزيله.
 function exportSalesReport() {
