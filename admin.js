@@ -4392,6 +4392,7 @@ const customersSummary = document.getElementById("customersSummary");
 const customerProfilePanel = document.getElementById("customerProfilePanel");
 const adminCustomerSearch = document.getElementById("adminCustomerSearch");
 let adminCustomersData = [];
+let adminCustomerReturnsData = [];
 let selectedAdminCustomerKey = "";
 
 function customerKeyFromOrder(order) {
@@ -4429,7 +4430,20 @@ function buildAdminCustomers(orders) {
             groups.set(key, customer);
         });
     return [...groups.values()]
-        .map(customer => ({ ...customer, total: Math.round(customer.total * 100) / 100 }))
+        .map(customer => {
+            const orderIds = new Set(customer.orders.map(order => String(order.id)));
+            const returns = adminCustomerReturnsData.filter(record => {
+                const sameOrder = orderIds.has(String(record.order_id));
+                const sameCustomer = customerKeyFromOrder(record) === customer.key;
+                return sameOrder || sameCustomer;
+            });
+            return {
+                ...customer,
+                total: Math.round(customer.total * 100) / 100,
+                returns,
+                returnsTotal: returns.reduce((sum, record) => sum + Number(record.total || 0), 0)
+            };
+        })
         .sort((a, b) => new Date(b.latestOrder.created_at) - new Date(a.latestOrder.created_at));
 }
 
@@ -4442,7 +4456,11 @@ function renderCustomerProfile(customer) {
     const activeOrders = customer.orders.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد")).length;
     const history = [...customer.orders]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(order => `<div class="customer-history-row"><div><strong>طلب #${transferText(order.id)}</strong><span>${transferText(order.status || "جديد")} · ${customerOrderDate(order.created_at)}</span></div><b>${Number(order.total || 0).toFixed(2)} ر.س</b></div>`)
+        .map(order => `<button type="button" class="customer-history-row customer-order-view" data-customer-order-view="${Number(order.id)}"><div><strong>طلب #${transferText(order.id)}</strong><span>${transferText(order.status || "جديد")} · ${customerOrderDate(order.created_at)} · اضغط لعرض الفاتورة</span></div><b>${Number(order.total || 0).toFixed(2)} ر.س</b></button>`)
+        .join("");
+    const returnHistory = [...(customer.returns || [])]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .map(record => `<div class="customer-history-row customer-return-row"><div><strong>مرتجع #${transferText(record.id)} من الفاتورة #${transferText(record.order_id)}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></div>`)
         .join("");
     customerProfilePanel.innerHTML = `
         <div class="customer-profile-head"><h3>${transferText(customer.name)}</h3><p>${transferText(customer.phone || "لم يسجل رقم جوال")}</p></div>
@@ -4452,10 +4470,16 @@ function renderCustomerProfile(customer) {
                 <div class="customer-profile-field">إجمالي المشتريات<strong>${customer.total.toFixed(2)} ر.س</strong></div>
                 <div class="customer-profile-field">طلبات قيد المتابعة<strong>${activeOrders} طلب</strong></div>
                 <div class="customer-profile-field">المخزن<strong>${transferText(customer.warehouse)}</strong></div>
+                <div class="customer-profile-field">المرتجعات<strong>${(customer.returns || []).length} مرتجع</strong></div>
+                <div class="customer-profile-field">قيمة المرتجعات<strong>${Number(customer.returnsTotal || 0).toFixed(2)} ر.س</strong></div>
                 <div class="customer-profile-field" style="grid-column:1/-1;">عنوان الاستلام<strong>${transferText(customer.address || "لم يتم تسجيل عنوان")}</strong></div>
             </div>
             <div class="customer-order-history"><h4>سجل الطلبات</h4>${history || '<div class="customer-profile-empty">لا توجد طلبات مكتملة.</div>'}</div>
+            <div class="customer-order-history customer-returns-history"><h4>سجل المرتجعات</h4>${returnHistory || '<div class="customer-profile-empty">لا توجد مرتجعات لهذا العميل.</div>'}</div>
         </div>`;
+    customerProfilePanel.querySelectorAll("[data-customer-order-view]").forEach(button => button.addEventListener("click", () => {
+        openCustomerOrderView(Number(button.dataset.customerOrderView));
+    }));
 }
 
 function renderAdminCustomers() {
@@ -4485,6 +4509,10 @@ async function loadAdminCustomers() {
         customersList.innerHTML = `<div class="message error">تعذر تحميل العملاء: ${transferText(error.message)}</div>`;
         return;
     }
+    // سجل المرتجعات مستقل؛ تعذر تحميله لا يمنع ظهور العملاء أو فواتيرهم.
+    const { data: returnsData, error: returnsError } = await supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse });
+    if (returnsError) console.warn("Customers returns load error:", returnsError);
+    adminCustomerReturnsData = returnsError ? [] : (Array.isArray(returnsData) ? returnsData : []);
     adminCustomersData = buildAdminCustomers(data || []);
     const totalOrders = adminCustomersData.reduce((sum, customer) => sum + customer.orders.length, 0);
     const totalSales = adminCustomersData.reduce((sum, customer) => sum + customer.total, 0);
@@ -6223,6 +6251,29 @@ const editOrderTotal =
 const editOrderMessage =
     document.getElementById("editOrderMessage");
 
+function setEditOrderViewMode(viewOnly) {
+    if (!editOrderModal) return;
+    editOrderModal.classList.toggle("invoice-view-only", viewOnly);
+    const title = editOrderModal.querySelector(".edit-order-header h2");
+    if (title) title.textContent = viewOnly ? "عرض الفاتورة" : "تعديل الطلب";
+    if (addOrderItemButton) addOrderItemButton.style.display = viewOnly ? "none" : "";
+    if (saveOrderEditButton) saveOrderEditButton.style.display = viewOnly ? "none" : "";
+    if (cancelOrderEditButton) cancelOrderEditButton.textContent = viewOnly ? "إغلاق" : "إلغاء";
+    editOrderModal.querySelectorAll(".edit-order-field input, #editOrderItems input").forEach(input => {
+        input.readOnly = viewOnly || input.hasAttribute("readonly");
+        input.disabled = false;
+    });
+    editOrderModal.querySelectorAll("#editOrderItems button").forEach(button => {
+        button.style.display = viewOnly ? "none" : "";
+    });
+}
+
+// من سجل العميل: نفس فاتورة التعديل، لكنها مقفلة بالكامل للعرض والطباعة فقط.
+async function openCustomerOrderView(orderId) {
+    await editOrder(orderId);
+    if (editOrderModal?.style.display === "flex") setEditOrderViewMode(true);
+}
+
 
 /* =========================================================
    فتح تعديل الطلب
@@ -6233,6 +6284,7 @@ async function editOrder(orderId) {
     try {
 
         editOrderMessage.textContent = "";
+        setEditOrderViewMode(false);
 
         editingOrderId = orderId;
 
