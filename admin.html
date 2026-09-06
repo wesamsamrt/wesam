@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260905-analytics"
+        href="admin.css?v=20260906-returns"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -167,6 +167,11 @@
             >
                 <span>📋</span>
                 <strong>الطلبات</strong>
+            </button>
+
+            <button class="admin-nav-item" id="returnsButton">
+                <span>↩</span>
+                <strong>المرتجعات</strong>
             </button>
 
             <button class="admin-nav-item" id="customersButton">
@@ -1229,6 +1234,28 @@
 
 </section>
 
+<section class="returns-admin" id="returnsAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromReturns">← رجوع</button>
+        <div><h2>المرتجعات</h2><p>سجّل المنتجات المرتجعة من الفاتورة دون حذفها من الفاتورة الأصلية.</p></div>
+    </div>
+
+    <section class="return-create-card">
+        <div class="return-invoice-lookup">
+            <label for="returnInvoiceNumber">رقم الفاتورة</label>
+            <div><input id="returnInvoiceNumber" type="search" inputmode="numeric" placeholder="مثال: 145 أو #145"><button type="button" id="loadReturnInvoiceButton">عرض المنتجات</button></div>
+            <small id="returnInvoiceMessage"></small>
+        </div>
+        <div id="returnInvoiceDetails" class="return-invoice-details"></div>
+        <div id="returnItems" class="return-items"><div class="message">اكتب رقم الفاتورة لعرض منتجاتها.</div></div>
+        <label class="return-notes-label">ملاحظات المرتجع<textarea id="returnNotes" rows="3" placeholder="سبب الإرجاع أو أي ملاحظة للمخزن (اختياري)"></textarea></label>
+        <div class="return-save-actions"><button type="button" id="saveReturnButton" disabled>حفظ المرتجع</button><span>لن يتم حذف أو تعديل منتجات الفاتورة الأصلية.</span></div>
+    </section>
+
+    <div class="returns-list-header"><h3>سجل المرتجعات</h3><button type="button" id="refreshReturnsButton">↻ تحديث</button></div>
+    <div class="returns-list" id="returnsList"><div class="message">جاري تحميل المرتجعات...</div></div>
+</section>
+
 <section class="customers-admin" id="shortagesAdmin" style="display:none;">
     <div class="orders-admin-header"><button class="back-admin" id="backFromShortages">← رجوع</button><div><h2>النواقص</h2><p>الأصناف التي تم تعليمها «غير متوفر» أثناء تعديل الطلبات.</p></div><button type="button" id="requestShortagesTransfer" class="open-invoice-button">طلب تحويل المحدد</button></div>
     <div class="customers-list" id="shortagesList"><div class="message">جاري تحميل النواقص...</div></div>
@@ -1620,7 +1647,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260905-cancelled-and-submitted-status"></script>
+    <script src="admin.js?v=20260906-returns"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

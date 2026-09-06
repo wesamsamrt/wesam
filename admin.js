@@ -178,6 +178,7 @@ function applyTeamAccessToInterface() {
         dashboardButton: "dashboard",
         productsButton: "products",
         ordersButton: "orders",
+        returnsButton: "orders",
         customersButton: "customers",
         salesButton: "sales",
         analyticsButton: "analytics",
@@ -325,6 +326,8 @@ function showAdmin() {
     if (driversPage) driversPage.style.display = "none";
     const customersPage = document.getElementById("customersAdmin");
     if (customersPage) customersPage.style.display = "none";
+    const returnsPage = document.getElementById("returnsAdmin");
+    if (returnsPage) returnsPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
@@ -1617,7 +1620,7 @@ async function loadAnalyticsData() {
 }
 
 analyticsButton?.addEventListener("click", async () => {
-    ["productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => {
+    ["productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "returnsAdmin"].forEach(id => {
         const page = document.getElementById(id);
         if (page) page.style.display = "none";
     });
@@ -1637,7 +1640,7 @@ document.getElementById("backFromAnalytics")?.addEventListener("click", () => {
 });
 document.getElementById("refreshAnalyticsButton")?.addEventListener("click", loadAnalyticsData);
 analyticsPeriod?.addEventListener("change", loadAnalyticsData);
-["dashboardButton", "productsButton", "ordersButton", "customersButton", "shortagesButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
+["dashboardButton", "productsButton", "ordersButton", "customersButton", "shortagesButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton", "returnsButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
     if (analyticsAdmin) analyticsAdmin.style.display = "none";
     const dashboard = document.querySelector(".admin-dashboard-content");
     if (dashboard) dashboard.style.display = "block";
@@ -4196,6 +4199,184 @@ async function loadAdminOrders() {
     renderAdminOrdersList();
 
 }
+
+/* =========================================================
+   المرتجعات — سجل مستقل عن الفاتورة الأصلية
+========================================================= */
+const returnsButton = document.getElementById("returnsButton");
+const returnsAdmin = document.getElementById("returnsAdmin");
+const returnInvoiceNumber = document.getElementById("returnInvoiceNumber");
+const returnInvoiceMessage = document.getElementById("returnInvoiceMessage");
+const returnInvoiceDetails = document.getElementById("returnInvoiceDetails");
+const returnItems = document.getElementById("returnItems");
+const returnNotes = document.getElementById("returnNotes");
+const saveReturnButton = document.getElementById("saveReturnButton");
+const returnsList = document.getElementById("returnsList");
+let selectedReturnOrder = null;
+
+function returnItemTitle(item) {
+    return [item.company, item.type || item.product_type, item.model].filter(Boolean).join(" · ") || item.product_code || "منتج";
+}
+
+function setReturnInvoiceMessage(text = "", isError = false) {
+    if (!returnInvoiceMessage) return;
+    returnInvoiceMessage.textContent = text;
+    returnInvoiceMessage.className = isError ? "return-message error" : "return-message";
+}
+
+function updateReturnSaveButton() {
+    if (!saveReturnButton || !returnItems) return;
+    const hasSelectedItem = [...returnItems.querySelectorAll("[data-return-choice]")].some(choice => {
+        const quantity = returnItems.querySelector(`[data-return-quantity="${choice.dataset.returnChoice}"]`);
+        return choice.checked && Number(quantity?.value || 0) > 0;
+    });
+    saveReturnButton.disabled = !selectedReturnOrder || !hasSelectedItem;
+}
+
+function renderReturnInvoice() {
+    if (!selectedReturnOrder || !returnItems || !returnInvoiceDetails) return;
+    const order = selectedReturnOrder;
+    const orderDate = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
+    returnInvoiceDetails.innerHTML = `
+        <div><strong>الفاتورة #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span></div>
+        <div><strong>الحالة</strong><span>${transferText(order.status || "جديد")}</span></div>
+        <div><strong>التاريخ</strong><span>${transferText(orderDate)}</span></div>`;
+
+    const items = Array.isArray(order.items) ? order.items : [];
+    if (!items.length) {
+        returnItems.innerHTML = `<div class="message">لا توجد منتجات في هذه الفاتورة.</div>`;
+        updateReturnSaveButton();
+        return;
+    }
+    returnItems.innerHTML = items.map(item => {
+        const quantity = Math.max(0, Number(item.quantity || 0));
+        return `<article class="return-item-card">
+            <label class="return-item-select"><input type="checkbox" data-return-choice="${Number(item.id)}"><span>إرجاع المنتج</span></label>
+            <div class="return-item-info"><strong>${transferText(returnItemTitle(item))}</strong><small>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية بالفاتورة: ${quantity}</small></div>
+            <label class="return-quantity-label">الكمية المرتجعة<input type="number" min="1" max="${quantity}" value="1" disabled data-return-quantity="${Number(item.id)}"></label>
+        </article>`;
+    }).join("");
+    returnItems.querySelectorAll("[data-return-choice]").forEach(choice => choice.addEventListener("change", () => {
+        const quantity = returnItems.querySelector(`[data-return-quantity="${choice.dataset.returnChoice}"]`);
+        if (quantity) quantity.disabled = !choice.checked;
+        updateReturnSaveButton();
+    }));
+    returnItems.querySelectorAll("[data-return-quantity]").forEach(input => input.addEventListener("input", updateReturnSaveButton));
+    updateReturnSaveButton();
+}
+
+async function loadReturnInvoice() {
+    const orderId = Number(String(returnInvoiceNumber?.value || "").replace(/[^0-9]/g, ""));
+    selectedReturnOrder = null;
+    if (!orderId) {
+        setReturnInvoiceMessage("اكتب رقم الفاتورة بشكل صحيح.", true);
+        if (returnItems) returnItems.innerHTML = `<div class="message">اكتب رقم الفاتورة لعرض منتجاتها.</div>`;
+        if (returnInvoiceDetails) returnInvoiceDetails.innerHTML = "";
+        updateReturnSaveButton();
+        return;
+    }
+    setReturnInvoiceMessage("جاري البحث عن الفاتورة...");
+    let order = adminOrdersData.find(entry => Number(entry.id) === orderId);
+    if (!order) {
+        const { data, error } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
+        if (error) {
+            setReturnInvoiceMessage(`تعذر تحميل الفاتورة: ${error.message}`, true);
+            return;
+        }
+        order = (Array.isArray(data) ? data : []).find(entry => Number(entry.id) === orderId);
+    }
+    if (!order) {
+        setReturnInvoiceMessage("لم نجد فاتورة بهذا الرقم في المخزن الحالي.", true);
+        if (returnItems) returnItems.innerHTML = `<div class="message">الفاتورة غير موجودة.</div>`;
+        if (returnInvoiceDetails) returnInvoiceDetails.innerHTML = "";
+        return;
+    }
+    if (!(order.items || []).every(item => Number(item.id))) {
+        setReturnInvoiceMessage("هذه الفاتورة لا تحتوي معرفات منتجات صالحة للمرتجع. حدّث الصفحة ثم حاول مجددًا.", true);
+        return;
+    }
+    selectedReturnOrder = { ...order, items: order.items || [] };
+    setReturnInvoiceMessage("تم تحميل الفاتورة. حدّد المنتجات والكميات المرتجعة.");
+    renderReturnInvoice();
+}
+
+function renderReturnsList(records) {
+    if (!returnsList) return;
+    if (!records.length) {
+        returnsList.innerHTML = `<div class="message">لا توجد مرتجعات مسجلة لهذا المخزن.</div>`;
+        return;
+    }
+    returnsList.innerHTML = records.map(record => {
+        const date = record.created_at ? new Date(record.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
+        const items = Array.isArray(record.items) ? record.items : [];
+        return `<article class="return-record-card">
+            <header><div><strong>مرتجع #${transferText(record.id)}</strong><span>من الفاتورة #${transferText(record.order_id)}</span></div><time>${transferText(date)}</time></header>
+            <p>${transferText(record.customer_name || "عميل")} · ${transferText(record.customer_phone || "بدون جوال")}</p>
+            <div class="return-record-items">${items.map(item => `<span>${transferText(returnItemTitle(item))} — ${Number(item.quantity || 0)} قطعة${item.color ? ` (${transferText(item.color)})` : ""}</span>`).join("")}</div>
+            ${record.notes ? `<small>ملاحظة: ${transferText(record.notes)}</small>` : ""}
+            <footer>إجمالي المرتجع: ${formatAdminCurrency(record.total || 0)}</footer>
+        </article>`;
+    }).join("");
+}
+
+async function loadWarehouseReturns() {
+    if (!returnsList) return;
+    returnsList.innerHTML = `<div class="message">جاري تحميل المرتجعات...</div>`;
+    const { data, error } = await supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse });
+    if (error) {
+        returnsList.innerHTML = `<div class="message error">تعذر تحميل المرتجعات: ${transferText(error.message)}</div>`;
+        return;
+    }
+    renderReturnsList(Array.isArray(data) ? data : []);
+}
+
+async function saveOrderReturn() {
+    if (!selectedReturnOrder || !returnItems) return;
+    const items = [...returnItems.querySelectorAll("[data-return-choice]:checked")].map(choice => {
+        const quantity = returnItems.querySelector(`[data-return-quantity="${choice.dataset.returnChoice}"]`);
+        return { order_item_id: Number(choice.dataset.returnChoice), quantity: Number(quantity?.value || 0) };
+    }).filter(item => item.order_item_id && item.quantity > 0);
+    if (!items.length) {
+        setReturnInvoiceMessage("حدّد منتجًا واحدًا وكمية صحيحة على الأقل.", true);
+        return;
+    }
+    saveReturnButton.disabled = true;
+    const { data, error } = await supabaseClient.rpc("create_order_return", {
+        p_order_id: Number(selectedReturnOrder.id), p_items: items, p_notes: returnNotes?.value || null
+    });
+    if (error) {
+        setReturnInvoiceMessage(`تعذر حفظ المرتجع: ${error.message}`, true);
+        updateReturnSaveButton();
+        return;
+    }
+    setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""} بنجاح. لم يتم تعديل الفاتورة الأصلية.`);
+    selectedReturnOrder = null;
+    if (returnInvoiceNumber) returnInvoiceNumber.value = "";
+    if (returnNotes) returnNotes.value = "";
+    if (returnInvoiceDetails) returnInvoiceDetails.innerHTML = "";
+    if (returnItems) returnItems.innerHTML = `<div class="message">اكتب رقم الفاتورة لعرض منتجاتها.</div>`;
+    updateReturnSaveButton();
+    loadWarehouseReturns();
+}
+
+returnsButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => {
+        const page = document.getElementById(id);
+        if (page) page.style.display = "none";
+    });
+    if (returnsAdmin) returnsAdmin.style.display = "block";
+    await loadWarehouseReturns();
+});
+document.getElementById("backFromReturns")?.addEventListener("click", showAdmin);
+document.getElementById("loadReturnInvoiceButton")?.addEventListener("click", loadReturnInvoice);
+returnInvoiceNumber?.addEventListener("keydown", event => { if (event.key === "Enter") loadReturnInvoice(); });
+document.getElementById("saveReturnButton")?.addEventListener("click", saveOrderReturn);
+document.getElementById("refreshReturnsButton")?.addEventListener("click", loadWarehouseReturns);
+["dashboardButton", "productsButton", "ordersButton", "customersButton", "shortagesButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton", "analyticsButton"].forEach(id => {
+    document.getElementById(id)?.addEventListener("click", () => {
+        if (returnsAdmin) returnsAdmin.style.display = "none";
+    });
+});
 
 /* =========================================================
    العملاء — تُبنى ملفاتهم من بيانات الفواتير نفسها
