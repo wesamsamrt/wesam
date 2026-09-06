@@ -4349,7 +4349,7 @@ async function saveOrderReturn() {
         updateReturnSaveButton();
         return;
     }
-    setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""} بنجاح. لم يتم تعديل الفاتورة الأصلية.`);
+    setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""} وإرجاع كمياته إلى مخزون الفاتورة. لم يتم تعديل الفاتورة الأصلية.`);
     selectedReturnOrder = null;
     if (returnInvoiceNumber) returnInvoiceNumber.value = "";
     if (returnNotes) returnNotes.value = "";
