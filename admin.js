@@ -6370,6 +6370,28 @@ window.changeEditPreparedColorQuantity = function (groupIndex, productId, value)
     renderEditOrderItems();
 };
 
+// الكمية الإجمالية لصنف «ألوان مختلفة» قابلة للتعديل أيضاً، وليست مقصورة
+// على مربعات الألوان. إن كان الصنف لم يُوزّع بعد نحدّث السطر مباشرة؛ وبعد
+// التوزيع تبقى الكمية المطلوبة مرجعاً ويُطلب من المحضّر تعديل الألوان حتى
+// يساوي مجموعها هذه الكمية.
+window.changeEditDifferentColorGroupQuantity = function (groupIndex, value) {
+    const group = editingDifferentColorGroups[groupIndex];
+    if (!group) return;
+
+    const quantity = Math.max(1, Number.parseInt(value, 10) || 1);
+    group.targetQuantity = quantity;
+
+    if (group.isPendingDistribution) {
+        const sourceItem = editingOrderItems.find(item =>
+            String(item.color || "").trim() === "ألوان مختلفة" &&
+            editDifferentColorGroupKey(item) === group.key
+        );
+        if (sourceItem) sourceItem.quantity = quantity;
+    }
+
+    renderEditOrderItems();
+};
+
 window.removeEditDifferentColorGroup = function (groupIndex) {
     const group = editingDifferentColorGroups[groupIndex];
     if (!group) return;
@@ -6798,8 +6820,8 @@ renderEditOrderItems = function () {
             <td>${escapeHtmlAttribute(item.product_type || "-")}</td><td>${escapeHtmlAttribute(item.type || "-")}</td><td>${escapeHtmlAttribute(item.company || "-")}</td>
             <td>${escapeHtmlAttribute(item.model || "-")}</td><td><strong>ألوان مختلفة</strong></td>
             <td><span class="prepared-colors-preview">${colors}</span><button type="button" class="edit-prepared-colors-button" onclick="openEditPreparedColors(${groupIndex})">تعديل</button></td>
-            <td>${escapeHtmlAttribute(item.storage_location || "غير محدد")}</td><td>${selectedTotal}</td><td>${Number(item.price || 0).toFixed(2)} ر.س</td>
-            <td>${(selectedTotal * Number(item.price || 0)).toFixed(2)} ر.س</td>
+            <td>${escapeHtmlAttribute(item.storage_location || "غير محدد")}</td><td><input type="number" min="1" value="${Number(group.targetQuantity || selectedTotal || 1)}" onchange="changeEditDifferentColorGroupQuantity(${groupIndex}, this.value)" title="الكمية الإجمالية المطلوبة"></td><td>${Number(item.price || 0).toFixed(2)} ر.س</td>
+            <td>${(Number(group.targetQuantity || selectedTotal) * Number(item.price || 0)).toFixed(2)} ر.س</td>
             <td class="invoice-edit-actions"><button type="button" onclick="removeEditDifferentColorGroup(${groupIndex})">حذف</button><button type="button" onclick="markEditDifferentColorGroupUnavailable(${groupIndex})">غير متوفر</button></td></tr>`;
     }).join("");
 
@@ -7432,6 +7454,17 @@ function closeEditOrder() {
     if (currentUrl.searchParams.has("editOrder")) {
         currentUrl.searchParams.delete("editOrder");
         window.history.replaceState({}, "", currentUrl);
+    }
+
+    const unmatchedColorDistribution = editingDifferentColorGroups.find(group => {
+        if (group.isPendingDistribution) return false;
+        const preparedTotal = [...group.quantities.values()]
+            .reduce((sum, quantity) => sum + Number(quantity || 0), 0);
+        return preparedTotal !== Number(group.targetQuantity || 0);
+    });
+    if (unmatchedColorDistribution) {
+        alert(`مجموع كميات الألوان يجب أن يساوي الكمية الإجمالية المطلوبة (${Number(unmatchedColorDistribution.targetQuantity || 0)} قطعة). اضغط «تعديل» أمام الألوان لتوزيع الكمية.`);
+        return;
     }
 
     document.body.style.overflow =
