@@ -4643,8 +4643,11 @@ async function openShortageProductStats(selectedProduct = null) {
         const matchingOrderItems = (Array.isArray(ordersData) ? ordersData : [])
             .filter(order => !isCancelledOrder(order))
             .flatMap(order => (order.items || []).filter(item => shortageItemMatches(shortage, item)).map(item => ({ order, item })));
-        const totalUnits = matchingOrderItems.reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
-        const invoiceCount = new Set(matchingOrderItems.map(entry => String(entry.order.id))).size;
+        // كل أرقام المبيعات مبنية على فواتير خرجت فعليًا: تم الشحن أو تم التسليم.
+        const completedSalesStatuses = new Set(["تم الشحن", "تم التسليم"]);
+        const salesOrderItems = matchingOrderItems.filter(entry => completedSalesStatuses.has(String(entry.order.status || "").trim()));
+        const totalUnits = salesOrderItems.reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
+        const invoiceCount = new Set(salesOrderItems.map(entry => String(entry.order.id))).size;
         const activeStatuses = new Set(["جديد", "مقدم", "قيد التجهيز", "تم الشحن"]);
         const pendingUnits = matchingOrderItems.filter(entry => activeStatuses.has(String(entry.order.status || "جديد").trim()))
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
@@ -4662,9 +4665,9 @@ async function openShortageProductStats(selectedProduct = null) {
         const nowSaudiParts = saudiParts(now);
         const startOfMonth = Date.UTC(nowSaudiParts.year, nowSaudiParts.month - 1, 1);
         const startOfLast30Days = todaySaudi - (29 * 86400000);
-        const quantitySince = start => matchingOrderItems.filter(entry => saudiDayNumber(entry.order.created_at) >= start)
+        const quantitySince = start => salesOrderItems.filter(entry => saudiDayNumber(entry.order.created_at) >= start)
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
-        const todaySales = matchingOrderItems
+        const todaySales = salesOrderItems
             .filter(entry => saudiDayNumber(entry.order.created_at) === todaySaudi)
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
         const weekSales = quantitySince(startOfWeek);
@@ -4675,8 +4678,12 @@ async function openShortageProductStats(selectedProduct = null) {
         const stockCoverageDays = dailyDemand > 0 ? stockQuantity / dailyDemand : null;
         const targetStockFor30Days = Math.ceil(dailyDemand * 30);
         const recommendedOrderQuantity = Math.max(targetStockFor30Days - stockQuantity, 0);
-        const latestDate = matchingOrderItems.map(entry => new Date(entry.order.created_at)).filter(date => !Number.isNaN(date.getTime())).sort((a, b) => b - a)[0];
+        const latestDate = salesOrderItems.map(entry => new Date(entry.order.created_at)).filter(date => !Number.isNaN(date.getTime())).sort((a, b) => b - a)[0];
         const daysSinceLatest = latestDate ? Math.max(0, Math.floor((now - latestDate) / 86400000)) : null;
+        const { data: shortagesData, error: shortagesError } = await supabaseClient.rpc("list_warehouse_shortages", { p_warehouse: selectedWarehouse });
+        if (shortagesError) console.warn("تعذر تحميل الطلبات المهدرة:", shortagesError);
+        const wastedRequests = (Array.isArray(shortagesData) ? shortagesData : []).filter(item => shortageItemMatches(shortage, item));
+        const wastedQuantity = wastedRequests.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         const box = modal.querySelector(".shortage-product-stats-box");
         if (!box) return;
         box.innerHTML = `<button type="button" class="shortage-stats-close" data-close>×</button>
@@ -4684,11 +4691,12 @@ async function openShortageProductStats(selectedProduct = null) {
             <div class="shortage-stats-grid">
                 ${shortageStatsMetric("المتاح بالمخزون", `${stockQuantity} قطعة`, matchedProducts.length ? `${matchedProducts.length} نسخة مطابقة` : "لم نجد نسخة مطابقة")}
                 ${shortageStatsMetric("طلبات قيد المتابعة", `${pendingUnits} قطعة`, "جديد، مقدم، قيد التجهيز أو تم الشحن")}
-                ${shortageStatsMetric("عدد الفواتير", `${invoiceCount}`, "فواتير غير ملغية")}
-                ${shortageStatsMetric("إجمالي المبيعات", `${totalUnits} قطعة`, "من كل الفواتير المسجلة")}
+                ${shortageStatsMetric("عدد الفواتير", `${invoiceCount}`, "تم الشحن أو تم التسليم")}
+                ${shortageStatsMetric("إجمالي المبيعات", `${totalUnits} قطعة`, "من الفواتير المشحونة أو المسلّمة")}
                 ${shortageStatsMetric("مبيعات اليوم", `${todaySales} قطعة`)}
                 ${shortageStatsMetric("مبيعات الأسبوع", `${weekSales} قطعة`)}
                 ${shortageStatsMetric("مبيعات الشهر", `${monthSales} قطعة`)}
+                ${shortageStatsMetric("الطلبات المهدرة", `${wastedQuantity} قطعة`, `${wastedRequests.length} طلب تم تسجيله غير متوفر`)}
                 ${shortageStatsMetric("آخر حركة", latestDate ? customerOrderDate(latestDate) : "لا توجد", daysSinceLatest === null ? "" : `منذ ${daysSinceLatest} يوم`)}
             </div>
             <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
