@@ -4550,6 +4550,98 @@ async function loadAdminShortages() {
     }).join("")}</tbody></table></div>` : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
 }
 
+function shortageItemName(item) {
+    return [item.company, item.type || item.product_type, item.model, item.color]
+        .filter(Boolean).join(" · ") || item.product_code || "الصنف المحدد";
+}
+
+function shortageItemMatches(first, second) {
+    if (first.product_id && second.product_id) return String(first.product_id) === String(second.product_id);
+    const fields = ["product_code", "category", "product_type", "type", "company", "model", "color"];
+    return fields.every(field => !first[field] || !second[field] || String(first[field]).trim() === String(second[field]).trim());
+}
+
+function shortageStatsMetric(label, value, hint = "") {
+    return `<div class="shortage-stat-metric"><span>${transferText(label)}</span><strong>${transferText(value)}</strong>${hint ? `<small>${transferText(hint)}</small>` : ""}</div>`;
+}
+
+// F4 يفتح تقريرًا سريعًا للصنف المحدد في صفحة النواقص.
+async function openShortageProductStats() {
+    const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
+    const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
+    if (selectedItems.length !== 1) {
+        alert("حدد صنفًا واحدًا فقط من صفحة النواقص ثم اضغط F4.");
+        return;
+    }
+    const shortage = selectedItems[0];
+    document.getElementById("shortageProductStatsModal")?.remove();
+    const modal = document.createElement("div");
+    modal.id = "shortageProductStatsModal";
+    modal.className = "shortage-product-stats-modal";
+    modal.innerHTML = `<div class="shortage-product-stats-box"><button type="button" class="shortage-stats-close" data-close>×</button><div class="shortage-stats-loading">جاري تجهيز بيانات الصنف...</div></div>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.querySelector("[data-close]")?.addEventListener("click", close);
+    modal.addEventListener("click", event => { if (event.target === modal) close(); });
+
+    try {
+        const { data: products, error: productsError } = await supabaseClient
+            .from("products")
+            .select("id, product_code, category, product_type, type, company, model, color, quantity")
+            .eq("warehouse", selectedWarehouse)
+            .eq("product_code", shortage.product_code || "");
+        if (productsError) throw productsError;
+        const matchedProducts = (products || []).filter(product => shortageItemMatches(shortage, product));
+        const stockQuantity = matchedProducts.reduce((sum, product) => sum + Number(product.quantity || 0), 0);
+
+        const { data: ordersData, error: ordersError } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
+        if (ordersError) throw ordersError;
+        const matchingOrderItems = (Array.isArray(ordersData) ? ordersData : [])
+            .filter(order => !isCancelledOrder(order))
+            .flatMap(order => (order.items || []).filter(item => shortageItemMatches(shortage, item)).map(item => ({ order, item })));
+        const totalUnits = matchingOrderItems.reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
+        const invoiceCount = new Set(matchingOrderItems.map(entry => String(entry.order.id))).size;
+        const activeStatuses = new Set(["جديد", "مقدم", "قيد التجهيز", "تم الشحن"]);
+        const pendingUnits = matchingOrderItems.filter(entry => activeStatuses.has(String(entry.order.status || "جديد").trim()))
+            .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const quantitySince = start => matchingOrderItems.filter(entry => new Date(entry.order.created_at) >= start)
+            .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
+        const latestDate = matchingOrderItems.map(entry => new Date(entry.order.created_at)).filter(date => !Number.isNaN(date.getTime())).sort((a, b) => b - a)[0];
+        const daysSinceLatest = latestDate ? Math.max(0, Math.floor((now - latestDate) / 86400000)) : null;
+        const box = modal.querySelector(".shortage-product-stats-box");
+        if (!box) return;
+        box.innerHTML = `<button type="button" class="shortage-stats-close" data-close>×</button>
+            <header class="shortage-stats-head"><div><span>تفاصيل الصنف · F4</span><h2>${transferText(shortageItemName(shortage))}</h2><p>رقم الصنف: <b>${transferText(shortage.product_code || "—")}</b> · مخزن ${transferText(selectedWarehouse || "—")}</p></div><div class="shortage-stats-stock"><span>كمية المخزون</span><strong>${stockQuantity}</strong></div></header>
+            <div class="shortage-stats-grid">
+                ${shortageStatsMetric("المتاح بالمخزون", `${stockQuantity} قطعة`, matchedProducts.length ? `${matchedProducts.length} نسخة مطابقة` : "لم نجد نسخة مطابقة")}
+                ${shortageStatsMetric("طلبات قيد المتابعة", `${pendingUnits} قطعة`, "جديد، مقدم، قيد التجهيز أو تم الشحن")}
+                ${shortageStatsMetric("عدد الفواتير", `${invoiceCount}`, "فواتير غير ملغية")}
+                ${shortageStatsMetric("إجمالي المبيعات", `${totalUnits} قطعة`, "من كل الفواتير المسجلة")}
+                ${shortageStatsMetric("مبيعات اليوم", `${quantitySince(startOfDay)} قطعة`)}
+                ${shortageStatsMetric("مبيعات الأسبوع", `${quantitySince(startOfWeek)} قطعة`)}
+                ${shortageStatsMetric("مبيعات الشهر", `${quantitySince(startOfMonth)} قطعة`)}
+                ${shortageStatsMetric("آخر حركة", latestDate ? customerOrderDate(latestDate) : "لا توجد", daysSinceLatest === null ? "" : `منذ ${daysSinceLatest} يوم`)}
+            </div>
+            <footer class="shortage-stats-footer">الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong></footer>`;
+        box.querySelector("[data-close]")?.addEventListener("click", close);
+    } catch (error) {
+        console.error("Shortage product stats error:", error);
+        const target = modal.querySelector(".shortage-product-stats-box");
+        if (target) target.innerHTML = `<button type="button" class="shortage-stats-close" data-close>×</button><div class="message error">تعذر تحميل تفاصيل الصنف: ${transferText(error.message)}</div>`;
+        target?.querySelector("[data-close]")?.addEventListener("click", close);
+    }
+}
+
+document.addEventListener("keydown", event => {
+    if (event.key !== "F4" || shortagesAdmin?.style.display === "none") return;
+    event.preventDefault();
+    openShortageProductStats();
+});
+
 document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {
     const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
     const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
