@@ -753,8 +753,8 @@
             <div class="analytics-kpis" id="analyticsKpis"><div class="message">جاري تجهيز الإحصائيات...</div></div>
 
             <div class="analytics-grid analytics-charts-grid">
-                <section class="analytics-card"><div class="analytics-card-head"><div><h3>الطلبات خلال آخر 7 أيام</h3><p>عدد الطلبات المنشأة يوميًا</p></div><strong id="analyticsWeekOrders">0</strong></div><div class="analytics-bars" id="analyticsDailyChart"></div></section>
-                <section class="analytics-card"><div class="analytics-card-head"><div><h3>المبيعات خلال آخر 6 أشهر</h3><p>إجمالي الطلبات غير الملغاة</p></div><strong id="analyticsSixMonthSales">0 ر.س</strong></div><div class="analytics-bars sales-bars" id="analyticsMonthlyChart"></div></section>
+                <section class="analytics-card"><div class="analytics-card-head"><div><h3 id="analyticsOrdersChartTitle">الطلبات خلال آخر 7 أيام</h3><p id="analyticsOrdersChartHint">عدد الطلبات المنشأة يوميًا</p></div><strong id="analyticsWeekOrders">0</strong></div><div class="analytics-bars" id="analyticsDailyChart"></div></section>
+                <section class="analytics-card"><div class="analytics-card-head"><div><h3 id="analyticsSalesChartTitle">المبيعات خلال آخر 6 أشهر</h3><p id="analyticsSalesChartHint">الفواتير التي تم شحنها أو تسليمها</p></div><strong id="analyticsSixMonthSales">0 ر.س</strong></div><div class="analytics-bars sales-bars" id="analyticsMonthlyChart"></div></section>
             </div>
 
             <div class="analytics-grid analytics-insights-grid">
@@ -1647,7 +1647,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260907-completed-sales-analytics"></script>
+    <script src="admin.js?v=20260907-period-analytics"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

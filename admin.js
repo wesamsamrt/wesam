@@ -1531,12 +1531,6 @@ async function loadAnalyticsData() {
         const salesStatuses = new Set(["تم الشحن", "تم التسليم"]);
         const salesOrders = allOrders.filter(order => salesStatuses.has(String(order.status || "").trim()));
         const periodSalesOrders = start ? salesOrders.filter(order => new Date(order.created_at) >= start) : salesOrders;
-        const todayKey = saudiDateKey();
-        const monthKey = todayKey.slice(0, 7);
-        const todayOrders = orders.filter(order => saudiDateKey(order.created_at) === todayKey);
-        const monthOrders = orders.filter(order => saudiDateKey(order.created_at).startsWith(monthKey));
-        const todayRevenue = salesOrders.filter(order => saudiDateKey(order.created_at) === todayKey).reduce((sum, order) => sum + Number(order.total || 0), 0);
-        const monthRevenue = salesOrders.filter(order => saudiDateKey(order.created_at).startsWith(monthKey)).reduce((sum, order) => sum + Number(order.total || 0), 0);
         const totalRevenue = periodSalesOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
         const completed = nonCancelled.filter(order => ["تم التسليم", "تم استلام طلبك"].includes(order.status || "")).length;
         const active = nonCancelled.filter(order => !["تم التسليم", "تم استلام طلبك"].includes(order.status || "")).length;
@@ -1546,11 +1540,12 @@ async function loadAnalyticsData() {
         const customers = new Set(nonCancelled.map(order => String(order.user_id || order.customer_phone || order.customer_name || "").trim()).filter(Boolean)).size;
         const lowStock = (products || []).filter(product => Number(product.quantity || 0) <= 5);
 
+        const periodLabel = period === "all" ? "كل الفترة" : `آخر ${period} يوم`;
         const cards = [
-            ["طلبات اليوم", todayOrders.length, `في ${todayKey}`],
-            ["طلبات هذا الشهر", monthOrders.length, "من بداية الشهر"],
-            ["مبيعات اليوم", formatAdminCurrency(todayRevenue), "تم الشحن أو تم التسليم فقط"],
-            ["مبيعات هذا الشهر", formatAdminCurrency(monthRevenue), "تم الشحن أو تم التسليم فقط"],
+            ["طلبات الفترة", nonCancelled.length, periodLabel],
+            ["فواتير المبيعات", periodSalesOrders.length, "تم الشحن أو تم التسليم فقط"],
+            ["مبيعات الفترة", formatAdminCurrency(totalRevenue), periodLabel],
+            ["العملاء خلال الفترة", customers, "من الطلبات غير الملغاة"],
             ["متوسط قيمة الطلب", formatAdminCurrency(average), `${periodSalesOrders.length} فاتورة مبيعات`],
             ["نسبة التسليم", `${nonCancelled.length ? Math.round((completed / nonCancelled.length) * 100) : 0}%`, `${completed} طلب مكتمل`],
             ["طلبات تحت المتابعة", nonCancelled.filter(needsOrderFollowUp).length, "الطلبات الجديدة والمقدمة"],
@@ -1558,27 +1553,38 @@ async function loadAnalyticsData() {
         ];
         if (kpis) kpis.innerHTML = cards.map(([label, value, hint]) => `<article class="analytics-kpi"><span>${label}</span><strong>${value}</strong><small>${hint}</small></article>`).join("");
 
-        const dailyRows = Array.from({ length: 7 }, (_, index) => {
+        const selectedDays = period === "all" ? 30 : Math.max(1, Number(period) || 30);
+        const chartDays = Math.min(selectedDays, 30);
+        const dailyRows = Array.from({ length: chartDays }, (_, index) => {
             const date = new Date();
-            date.setDate(date.getDate() - (6 - index));
+            date.setDate(date.getDate() - (chartDays - 1 - index));
             const key = saudiDateKey(date);
-            return { key, orders: allOrders.filter(order => saudiDateKey(order.created_at) === key).length };
+            return { key, orders: orders.filter(order => saudiDateKey(order.created_at) === key).length };
         });
         renderAnalyticsBars("analyticsDailyChart", dailyRows, "orders", row => row.key.slice(5).replace("-", "/"));
-        const weekOrders = dailyRows.reduce((sum, row) => sum + row.orders, 0);
+        const chartOrders = dailyRows.reduce((sum, row) => sum + row.orders, 0);
         const weekElement = document.getElementById("analyticsWeekOrders");
-        if (weekElement) weekElement.textContent = `${weekOrders} طلب`;
+        if (weekElement) weekElement.textContent = `${chartOrders} طلب`;
+        const ordersChartTitle = document.getElementById("analyticsOrdersChartTitle");
+        const ordersChartHint = document.getElementById("analyticsOrdersChartHint");
+        if (ordersChartTitle) ordersChartTitle.textContent = `الطلبات خلال ${chartDays} يوم`;
+        if (ordersChartHint) ordersChartHint.textContent = `طلبات غير ملغاة ضمن ${periodLabel}`;
 
-        const monthlyRows = Array.from({ length: 6 }, (_, index) => {
+        const monthsToShow = period === "all" ? 6 : Math.max(1, Math.ceil((Number(period) || 30) / 30));
+        const monthlyRows = Array.from({ length: monthsToShow }, (_, index) => {
             const date = new Date();
-            date.setMonth(date.getMonth() - (5 - index), 1);
+            date.setMonth(date.getMonth() - (monthsToShow - 1 - index), 1);
             const key = saudiDateKey(date).slice(0, 7);
-            return { key, sales: salesOrders.filter(order => saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
+            return { key, sales: periodSalesOrders.filter(order => saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
         });
         renderAnalyticsBars("analyticsMonthlyChart", monthlyRows, "sales", row => row.key.slice(5));
-        const sixMonthSales = monthlyRows.reduce((sum, row) => sum + row.sales, 0);
+        const selectedPeriodSales = monthlyRows.reduce((sum, row) => sum + row.sales, 0);
         const sixMonthElement = document.getElementById("analyticsSixMonthSales");
-        if (sixMonthElement) sixMonthElement.textContent = formatAdminCurrency(sixMonthSales);
+        if (sixMonthElement) sixMonthElement.textContent = formatAdminCurrency(selectedPeriodSales);
+        const salesChartTitle = document.getElementById("analyticsSalesChartTitle");
+        const salesChartHint = document.getElementById("analyticsSalesChartHint");
+        if (salesChartTitle) salesChartTitle.textContent = `المبيعات خلال ${period === "all" ? "آخر 6 أشهر" : periodLabel}`;
+        if (salesChartHint) salesChartHint.textContent = "تم الشحن أو تم التسليم فقط";
 
         const statuses = new Map();
         orders.forEach(order => {
