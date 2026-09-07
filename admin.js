@@ -4515,7 +4515,7 @@ function renderCustomerProfile(customer) {
         .join("");
     const returnHistory = [...(customer.returns || [])]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(record => `<div class="customer-history-row customer-return-row"><div><strong>مرتجع #${transferText(record.id)} من الفاتورة #${transferText(record.order_id)}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></div>`)
+        .map(record => `<button type="button" class="customer-history-row customer-return-row customer-return-view" data-customer-return-view="${Number(record.id)}"><div><strong>مرتجع #${transferText(record.id)} من الفاتورة #${transferText(record.order_id)}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة · اضغط لعرض المرتجع</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></button>`)
         .join("");
     customerProfilePanel.innerHTML = `
         <div class="customer-profile-head"><h3>${transferText(customer.name)}</h3><p>${transferText(customer.phone || "لم يسجل رقم جوال")}</p></div>
@@ -4535,7 +4535,31 @@ function renderCustomerProfile(customer) {
     customerProfilePanel.querySelectorAll("[data-customer-order-view]").forEach(button => button.addEventListener("click", () => {
         openCustomerOrderView(Number(button.dataset.customerOrderView));
     }));
+    customerProfilePanel.querySelectorAll("[data-customer-return-view]").forEach(button => button.addEventListener("click", () => {
+        openCustomerReturnView(Number(button.dataset.customerReturnView));
+    }));
 }
+
+// يعرض تفاصيل المرتجع من سجل العميل، مع رابط مباشر للفواتير الأصلية عند الحاجة.
+window.openCustomerReturnView = function (returnId) {
+    const record = adminCustomerReturnsData.find(item => String(item.id) === String(returnId));
+    if (!record) return;
+    document.getElementById("customerReturnViewDialog")?.remove();
+    const date = customerOrderDate(record.created_at);
+    const items = Array.isArray(record.items) ? record.items : [];
+    const dialog = document.createElement("div");
+    dialog.id = "customerReturnViewDialog";
+    dialog.className = "customer-return-view-dialog";
+    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>من الفاتورة #${transferText(record.order_id)} · ${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>إجمالي المرتجع: <b>${Number(record.total || 0).toFixed(2)} ر.س</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer><button type="button" data-open-order>فتح الفاتورة الأصلية</button><button type="button" data-close>إغلاق</button></footer></section>`;
+    document.body.appendChild(dialog);
+    const close = () => dialog.remove();
+    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
+    dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
+    dialog.querySelector("[data-open-order]")?.addEventListener("click", () => {
+        close();
+        openCustomerOrderView(Number(record.order_id));
+    });
+};
 
 function renderAdminCustomers() {
     if (!customersList) return;
