@@ -1527,27 +1527,31 @@ async function loadAnalyticsData() {
         const start = analyticsPeriodStart(period);
         const orders = start ? allOrders.filter(order => new Date(order.created_at) >= start) : allOrders;
         const nonCancelled = orders;
+        // الإيرادات لا تُسجل إلا للفواتير التي تم شحنها أو تسليمها فعليًا.
+        const salesStatuses = new Set(["تم الشحن", "تم التسليم"]);
+        const salesOrders = allOrders.filter(order => salesStatuses.has(String(order.status || "").trim()));
+        const periodSalesOrders = start ? salesOrders.filter(order => new Date(order.created_at) >= start) : salesOrders;
         const todayKey = saudiDateKey();
         const monthKey = todayKey.slice(0, 7);
         const todayOrders = orders.filter(order => saudiDateKey(order.created_at) === todayKey);
         const monthOrders = orders.filter(order => saudiDateKey(order.created_at).startsWith(monthKey));
-        const todayRevenue = todayOrders.filter(order => order.status !== "ملغي").reduce((sum, order) => sum + Number(order.total || 0), 0);
-        const monthRevenue = monthOrders.filter(order => order.status !== "ملغي").reduce((sum, order) => sum + Number(order.total || 0), 0);
-        const totalRevenue = nonCancelled.reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const todayRevenue = salesOrders.filter(order => saudiDateKey(order.created_at) === todayKey).reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const monthRevenue = salesOrders.filter(order => saudiDateKey(order.created_at).startsWith(monthKey)).reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const totalRevenue = periodSalesOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
         const completed = nonCancelled.filter(order => ["تم التسليم", "تم استلام طلبك"].includes(order.status || "")).length;
         const active = nonCancelled.filter(order => !["تم التسليم", "تم استلام طلبك"].includes(order.status || "")).length;
         const soldItems = nonCancelled.flatMap(order => Array.isArray(order.items) ? order.items : []);
         const totalPieces = soldItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        const average = nonCancelled.length ? totalRevenue / nonCancelled.length : 0;
+        const average = periodSalesOrders.length ? totalRevenue / periodSalesOrders.length : 0;
         const customers = new Set(nonCancelled.map(order => String(order.user_id || order.customer_phone || order.customer_name || "").trim()).filter(Boolean)).size;
         const lowStock = (products || []).filter(product => Number(product.quantity || 0) <= 5);
 
         const cards = [
             ["طلبات اليوم", todayOrders.length, `في ${todayKey}`],
             ["طلبات هذا الشهر", monthOrders.length, "من بداية الشهر"],
-            ["مبيعات اليوم", formatAdminCurrency(todayRevenue), "باستثناء الملغي"],
-            ["مبيعات هذا الشهر", formatAdminCurrency(monthRevenue), "باستثناء الملغي"],
-            ["متوسط قيمة الطلب", formatAdminCurrency(average), `${nonCancelled.length} طلب غير ملغي`],
+            ["مبيعات اليوم", formatAdminCurrency(todayRevenue), "تم الشحن أو تم التسليم فقط"],
+            ["مبيعات هذا الشهر", formatAdminCurrency(monthRevenue), "تم الشحن أو تم التسليم فقط"],
+            ["متوسط قيمة الطلب", formatAdminCurrency(average), `${periodSalesOrders.length} فاتورة مبيعات`],
             ["نسبة التسليم", `${nonCancelled.length ? Math.round((completed / nonCancelled.length) * 100) : 0}%`, `${completed} طلب مكتمل`],
             ["طلبات تحت المتابعة", nonCancelled.filter(needsOrderFollowUp).length, "الطلبات الجديدة والمقدمة"],
             ["القطع المطلوبة", totalPieces, `${customers} عميل خلال الفترة`]
@@ -1569,7 +1573,7 @@ async function loadAnalyticsData() {
             const date = new Date();
             date.setMonth(date.getMonth() - (5 - index), 1);
             const key = saudiDateKey(date).slice(0, 7);
-            return { key, sales: allOrders.filter(order => saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
+            return { key, sales: salesOrders.filter(order => saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
         });
         renderAnalyticsBars("analyticsMonthlyChart", monthlyRows, "sales", row => row.key.slice(5));
         const sixMonthSales = monthlyRows.reduce((sum, row) => sum + row.sales, 0);
@@ -1587,9 +1591,10 @@ async function loadAnalyticsData() {
         const stockList = document.getElementById("analyticsStockList");
         if (stockList) stockList.innerHTML = lowStock.length ? `<div class="analytics-stock-summary"><strong>${lowStock.length}</strong><span>منتج بكمية 5 أو أقل</span></div>${lowStock.slice(0, 5).map(product => `<div class="analytics-stock-row"><span>${transferText([product.company, product.model, product.product_code].filter(Boolean).join(" · ") || "منتج")}</span><b>${Number(product.quantity || 0)} قطعة</b></div>`).join("")}` : '<div class="analytics-empty">المخزون بحالة جيدة، لا توجد أصناف منخفضة.</div>';
 
+        const salesItems = periodSalesOrders.flatMap(order => Array.isArray(order.items) ? order.items : []);
         const productTotals = new Map();
         const categoryTotals = new Map();
-        soldItems.forEach(item => {
+        salesItems.forEach(item => {
             const quantity = Number(item.quantity || 0);
             const productName = [item.company, item.model, item.type || item.product_type, item.product_code].filter(Boolean).join(" · ") || "منتج بدون اسم";
             productTotals.set(productName, (productTotals.get(productName) || 0) + quantity);
@@ -1597,7 +1602,7 @@ async function loadAnalyticsData() {
             categoryTotals.set(category, (categoryTotals.get(category) || 0) + quantity);
         });
         const customerTotals = new Map();
-        nonCancelled.forEach(order => {
+        periodSalesOrders.forEach(order => {
             const name = order.customer_name || "عميل بدون اسم";
             customerTotals.set(name, (customerTotals.get(name) || 0) + Number(order.total || 0));
         });
