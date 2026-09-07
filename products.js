@@ -1255,10 +1255,11 @@ function openProductModal(variants) {
     const orderPriceOverrideBox = modal.querySelector("#orderPriceOverrideBox");
     const orderPriceOverrideInput = modal.querySelector("#orderPriceOverride");
 
-    // خيار للمندوب عند طلب كمية موزعة على ألوان متعددة. لا يظهر إلا إذا
-    // كان للصنف لونان فعليان أو أكثر، ويُبقي كل لون كصنف مستقل في السلة.
+    // خيار للمندوب عند طلب كمية موزعة على ألوان متعددة. يظهر تلقائياً لكل
+    // صنف له لونان فعليان أو أكثر، حتى لو لم تكن الألوان متطابقة الاسم بين
+    // الموديلات المختارة؛ فالمحضّر يحدد الألوان لاحقاً عند التجهيز.
     function appendDifferentColorsOption(colorProducts, allProducts) {
-        const colorKeys = [...new Set(colorProducts
+        const colorKeys = [...new Set(allProducts
             .map(product => String(product.color || "").trim().toLowerCase())
             .filter(Boolean))];
         if (colorKeys.length < 2) return;
@@ -1283,16 +1284,7 @@ function openProductModal(variants) {
             .slice(0, colorCount)
             .reduce((sum, quantity) => sum + quantity, 0)));
 
-        const colorGroups = colorKeys.map(colorKey => {
-            const products = allProducts.filter(product => String(product.color || "").trim().toLowerCase() === colorKey);
-            // عند اختيار عدة موديلات، كمية اللون هي الكمية الممكنة لكل موديل.
-            const available = Math.min(...products.map(product => Math.max(0, Number(product.quantity) || 0)));
-            return { colorKey, products, available };
-        }).filter(group => group.available > 0);
-        if (colorGroups.length < 2) return;
-
         differentColorInfo = {
-            groups: colorGroups,
             modelGroups,
             maxColorCount,
             maxQuantity: maxQuantityForModels(2),
@@ -1880,10 +1872,15 @@ if (compatibilityType === "general") {
         });
 
         if (sharedColorProducts.length === 0) {
-
-            stockSummary.textContent =
-                "لا توجد ألوان مشتركة بين الموديلات المختارة";
-
+            // قد تختلف أسماء الألوان المتاحة من موديل لآخر. لا نعرض صفوف
+            // الألوان الفردية حينها، لكن نُبقي خيار «ألوان مختلفة» متاحاً.
+            selectedColorProducts = modelProducts;
+            const hint = document.createElement("div");
+            hint.className = "detail-choice-hint";
+            hint.textContent = "لا توجد ألوان مشتركة؛ يمكنك طلب ألوان مختلفة.";
+            colorsContainer.appendChild(hint);
+            appendDifferentColorsOption(modelProducts, modelProducts);
+            updateStockSummary();
             return;
         }
 
@@ -2095,7 +2092,9 @@ plus.addEventListener("pointerdown", function (e) {
 
         });
 
-        appendDifferentColorsOption(sharedColorProducts, modelProducts);
+        // نمرر كل ألوان الأصناف، لا الألوان المشتركة فقط، حتى يظهر الخيار
+        // لأي موديل له أكثر من لون.
+        appendDifferentColorsOption(modelProducts, modelProducts);
 
 
         updateStockSummary();
