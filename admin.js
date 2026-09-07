@@ -4285,9 +4285,17 @@ function renderReturnInvoice() {
     const order = selectedReturnOrder;
     const orderDate = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
     returnInvoiceDetails.innerHTML = `
-        <div><strong>الفاتورة #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span></div>
+        <button type="button" class="return-invoice-open" data-return-open-invoice="${Number(order.id)}"><strong>الفاتورة #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span><small>اضغط لفتح الفاتورة وتعديلها</small></button>
         <div><strong>الحالة</strong><span>${transferText(order.status || "جديد")}</span></div>
-        <div><strong>التاريخ</strong><span>${transferText(orderDate)}</span></div>`;
+        <div><strong>التاريخ</strong><span>${transferText(orderDate)}</span></div>
+        <div class="return-invoice-actions"><button type="button" data-return-open-invoice="${Number(order.id)}">فتح / تعديل الفاتورة</button><button type="button" data-return-print-invoice="${Number(order.id)}">🖨️ طباعة الفاتورة</button></div>`;
+
+    returnInvoiceDetails.querySelectorAll("[data-return-open-invoice]").forEach(button => {
+        button.addEventListener("click", () => editOrder(Number(button.dataset.returnOpenInvoice)));
+    });
+    returnInvoiceDetails.querySelectorAll("[data-return-print-invoice]").forEach(button => {
+        button.addEventListener("click", () => printOrder(Number(button.dataset.returnPrintInvoice)));
+    });
 
     const items = Array.isArray(order.items) ? order.items : [];
     if (!items.length) {
@@ -4343,7 +4351,7 @@ async function loadReturnInvoice() {
         return;
     }
     selectedReturnOrder = { ...order, items: order.items || [] };
-    setReturnInvoiceMessage("تم تحميل الفاتورة. حدّد المنتجات والكميات المرتجعة.");
+    setReturnInvoiceMessage("تم تحميل الفاتورة. يمكنك فتحها أو تعديلها أو طباعتها، أو تحديد المنتجات وحفظها كمرتجع.");
     renderReturnInvoice();
 }
 
