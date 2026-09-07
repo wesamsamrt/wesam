@@ -1278,18 +1278,19 @@ function openProductModal(variants) {
         const maxColorCount = Math.min(...modelColorCounts);
         if (maxColorCount < 2) return;
 
-        const maxQuantityForModels = colorCount => Math.min(...modelGroups.map(group => group.products
-            .map(product => Math.max(0, Number(product.quantity) || 0))
-            .sort((first, second) => second - first)
-            .slice(0, colorCount)
-            .reduce((sum, quantity) => sum + quantity, 0)));
+        // كمية اللون ليست مخزوناً إضافياً: الألوان تشترك في كمية الصنف
+        // نفسها حسب كود المنتج والموديل. لذلك لا نجمع أرصدة الألوان.
+        const maxQuantityForModels = () => Math.min(...modelGroups.map(group => Math.max(
+            0,
+            ...group.products.map(product => Math.max(0, Number(product.quantity) || 0))
+        )));
 
         differentColorInfo = {
             modelGroups,
             maxColorCount,
-            maxQuantity: maxQuantityForModels(2),
+            maxQuantity: maxQuantityForModels(),
             selectedColorCount: 2,
-            maxPerColor: maxQuantityForModels(2)
+            maxPerColor: maxQuantityForModels()
         };
         const row = document.createElement("div");
         row.className = "different-colors-row";
@@ -1299,7 +1300,7 @@ function openProductModal(variants) {
         const updateDifferentColors = () => {
             let colorCount = Number.parseInt(colorsCountInput.value, 10) || 2;
             colorCount = Math.max(2, Math.min(differentColorInfo.maxColorCount, colorCount));
-            differentColorInfo.maxQuantity = maxQuantityForModels(colorCount);
+            differentColorInfo.maxQuantity = maxQuantityForModels();
             let quantity = Number.parseInt(quantityInput.value, 10) || 0;
             quantity = Math.max(0, Math.min(differentColorInfo.maxQuantity, quantity));
             differentColorInfo.selectedColorCount = colorCount;
@@ -2153,6 +2154,18 @@ plus.addEventListener("pointerdown", function (e) {
             const modelCount = differentColorInfo.modelGroups.length;
             totalSelected = differentQuantity * modelCount;
             totalStock = differentColorInfo.maxQuantity * modelCount;
+        } else {
+            // لا نجمع اللون الأحمر والفضي... لأنهما يعرضان نفس المخزون
+            // المشترك للصنف. نأخذ أعلى رصيد لكل (كود منتج + موديل) مرةً واحدة.
+            const sharedInventory = new Map();
+            selectedColorProducts.forEach(product => {
+                const code = String(product.product_code || "").trim();
+                const model = String(product.model || "").trim();
+                const key = code ? `${code}\u001f${model}` : `id:${product.id}`;
+                const quantity = Math.max(0, Number(product.quantity) || 0);
+                sharedInventory.set(key, Math.max(sharedInventory.get(key) || 0, quantity));
+            });
+            totalStock = [...sharedInventory.values()].reduce((sum, quantity) => sum + quantity, 0);
         }
 
 
@@ -2180,7 +2193,7 @@ plus.addEventListener("pointerdown", function (e) {
         */
 
         addButton.disabled =
-            totalSelected <= 0;
+            totalSelected <= 0 || totalSelected > totalStock;
 
         }
 
