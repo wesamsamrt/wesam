@@ -1537,7 +1537,10 @@ async function loadAnalyticsData() {
         const soldItems = nonCancelled.flatMap(order => Array.isArray(order.items) ? order.items : []);
         const totalPieces = soldItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         const average = periodSalesOrders.length ? totalRevenue / periodSalesOrders.length : 0;
-        const customers = new Set(nonCancelled.map(order => String(order.user_id || order.customer_phone || order.customer_name || "").trim()).filter(Boolean)).size;
+        // عدد العملاء = الأسماء الفريدة فقط، حتى لا يتكرر العميل عند وجود عدة فواتير أو أرقام جوال مختلفة.
+        const customers = new Set(nonCancelled
+            .map(order => String(order.customer_name || "").trim().toLocaleLowerCase("ar-SA"))
+            .filter(Boolean)).size;
         const lowStock = (products || []).filter(product => Number(product.quantity || 0) <= 5);
 
         const periodLabel = period === "all" ? "كل الفترة" : `آخر ${period} يوم`;
