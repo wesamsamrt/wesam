@@ -2000,6 +2000,7 @@ const adminProductSearch =
 
 let adminProductsData = [];
 let selectedProductImage = null;
+let selectedAdminProductStatIds = new Set();
 
 // يصدر جميع منتجات المخزن المختار حالياً إلى ملف Excel منظم.
 function exportSelectedWarehouseProducts() {
@@ -2205,6 +2206,11 @@ function renderAdminProducts(products) {
 
         item.innerHTML = `
 
+            <label class="admin-product-select" title="حدد ثم اضغط F4 لعرض تحليل الصنف">
+                <input type="checkbox" data-product-stats-id="${Number(product.id)}" ${selectedAdminProductStatIds.has(String(product.id)) ? "checked" : ""}>
+                <span>تحديد</span>
+            </label>
+
             <div class="admin-product-info">
 
                 <h3>
@@ -2259,6 +2265,12 @@ function renderAdminProducts(products) {
 
 
         adminProducts.appendChild(item);
+
+        item.querySelector("[data-product-stats-id]")?.addEventListener("change", event => {
+            const productId = String(event.target.dataset.productStatsId);
+            if (event.target.checked) selectedAdminProductStatIds.add(productId);
+            else selectedAdminProductStatIds.delete(productId);
+        });
 
     });
 
@@ -4062,6 +4074,19 @@ async function assignDriverWarehouse() {
     loadDashboardLatestOrders();
 }
 
+// من صفحة المنتجات: اختر صنفًا واحدًا ثم F4 لفتح نفس تقرير النواقص.
+document.addEventListener("keydown", event => {
+    if (event.key !== "F4" || productsAdmin?.style.display === "none") return;
+    event.preventDefault();
+    const selectedProducts = getProductsForSelectedWarehouse()
+        .filter(product => selectedAdminProductStatIds.has(String(product.id)));
+    if (selectedProducts.length !== 1) {
+        alert("حدد صنفًا واحدًا فقط من صفحة المنتجات ثم اضغط F4.");
+        return;
+    }
+    openShortageProductStats(selectedProducts[0]);
+});
+
 // يفلتر ويرسم طلبات المخزن الحالي وفق البحث وحالة الطلب.
 function renderAdminOrdersList() {
     const search = (adminOrderSearch?.value || "").trim().toLowerCase();
@@ -4566,14 +4591,18 @@ function shortageStatsMetric(label, value, hint = "") {
 }
 
 // F4 يفتح تقريرًا سريعًا للصنف المحدد في صفحة النواقص.
-async function openShortageProductStats() {
-    const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
-    const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
-    if (selectedItems.length !== 1) {
-        alert("حدد صنفًا واحدًا فقط من صفحة النواقص ثم اضغط F4.");
-        return;
+async function openShortageProductStats(selectedProduct = null) {
+    const isShortageView = !selectedProduct;
+    let shortage = selectedProduct;
+    if (!shortage) {
+        const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
+        const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
+        if (selectedItems.length !== 1) {
+            alert("حدد صنفًا واحدًا فقط من صفحة النواقص ثم اضغط F4.");
+            return;
+        }
+        shortage = selectedItems[0];
     }
-    const shortage = selectedItems[0];
     document.getElementById("shortageProductStatsModal")?.remove();
     const modal = document.createElement("div");
     modal.id = "shortageProductStatsModal";
@@ -4635,7 +4664,7 @@ async function openShortageProductStats() {
                 ${shortageStatsMetric("آخر حركة", latestDate ? customerOrderDate(latestDate) : "لا توجد", daysSinceLatest === null ? "" : `منذ ${daysSinceLatest} يوم`)}
             </div>
             <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا · لا تُدخل كمية النواقص في هذا الحساب.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
-            <footer class="shortage-stats-footer">الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong></footer>`;
+            <footer class="shortage-stats-footer">${isShortageView ? `الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong>` : "تم فتح التحليل من صفحة المنتجات."}</footer>`;
         box.querySelector("[data-close]")?.addEventListener("click", close);
     } catch (error) {
         console.error("Shortage product stats error:", error);
