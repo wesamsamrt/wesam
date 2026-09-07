@@ -4581,6 +4581,13 @@ async function loadAdminShortages() {
             <td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>—</td><td>—</td><td>${quantity}</td><td>${price.toFixed(2)} ر.س</td><td>${(quantity * price).toFixed(2)} ر.س</td>
             <td><span class="shortage-status ${isRequested ? "requested" : "new"}">${transferText(item.status || "جديد")}</span></td><td>${item.transfer_id ? `#${transferText(item.transfer_id)}` : "—"}</td></tr>`;
     }).join("")}</tbody></table></div>` : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
+    // F4 يعرض تقرير صنف واحد؛ تحديد صنف جديد يلغي السابق تلقائيًا.
+    shortagesList.querySelectorAll("[data-shortage-id]").forEach(input => input.addEventListener("change", event => {
+        if (!event.target.checked) return;
+        shortagesList.querySelectorAll("[data-shortage-id]").forEach(other => {
+            if (other !== event.target) other.checked = false;
+        });
+    }));
 }
 
 function shortageItemName(item) {
@@ -4642,22 +4649,29 @@ async function openShortageProductStats(selectedProduct = null) {
         const pendingUnits = matchingOrderItems.filter(entry => activeStatuses.has(String(entry.order.status || "جديد").trim()))
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
         const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfLast30Days = new Date(now); startOfLast30Days.setDate(startOfLast30Days.getDate() - 30);
-        const quantitySince = start => matchingOrderItems.filter(entry => new Date(entry.order.created_at) >= start)
+        // نحسب حدود اليوم/الأسبوع/الشهر من تقويم السعودية نفسه، لا من منطقة جهاز الموظف.
+        const saudiParts = value => Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" })
+            .formatToParts(new Date(value)).filter(part => part.type !== "literal").map(part => [part.type, Number(part.value)]));
+        const saudiDayNumber = value => {
+            const parts = saudiParts(value);
+            return Date.UTC(parts.year, parts.month - 1, parts.day);
+        };
+        const todaySaudi = saudiDayNumber(now);
+        const saudiWeekday = new Date(todaySaudi).getUTCDay();
+        const startOfWeek = todaySaudi - (((saudiWeekday + 6) % 7) * 86400000); // يبدأ الأسبوع يوم الإثنين
+        const nowSaudiParts = saudiParts(now);
+        const startOfMonth = Date.UTC(nowSaudiParts.year, nowSaudiParts.month - 1, 1);
+        const startOfLast30Days = todaySaudi - (29 * 86400000);
+        const quantitySince = start => matchingOrderItems.filter(entry => saudiDayNumber(entry.order.created_at) >= start)
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
-        // نحلل اليوم والأسبوع والشهر معًا، ثم نأخذ أسرع معدل طلب منها
-        // حتى لا تتجاهل التوصية ارتفاع المبيعات الأخير.
-        const last30DaysSales = quantitySince(startOfLast30Days);
-        const todaySales = quantitySince(startOfDay);
+        const todaySales = matchingOrderItems
+            .filter(entry => saudiDayNumber(entry.order.created_at) === todaySaudi)
+            .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
         const weekSales = quantitySince(startOfWeek);
         const monthSales = quantitySince(startOfMonth);
-        const todayDailyRate = todaySales;
-        const weekDailyRate = weekSales / 7;
-        const monthDailyRate = monthSales / Math.max(1, now.getDate());
-        const dailyDemand = Math.max(todayDailyRate, weekDailyRate, monthDailyRate);
+        // التوصية الأصلية: متوسط المبيعات خلال آخر 30 يوم فقط.
+        const last30DaysSales = quantitySince(startOfLast30Days);
+        const dailyDemand = last30DaysSales / 30;
         const stockCoverageDays = dailyDemand > 0 ? stockQuantity / dailyDemand : null;
         const targetStockFor30Days = Math.ceil(dailyDemand * 30);
         const recommendedOrderQuantity = Math.max(targetStockFor30Days - stockQuantity, 0);
@@ -4677,7 +4691,7 @@ async function openShortageProductStats(selectedProduct = null) {
                 ${shortageStatsMetric("مبيعات الشهر", `${monthSales} قطعة`)}
                 ${shortageStatsMetric("آخر حركة", latestDate ? customerOrderDate(latestDate) : "لا توجد", daysSinceLatest === null ? "" : `منذ ${daysSinceLatest} يوم`)}
             </div>
-            <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>معدل التوقع اليومي: <b>${dailyDemand.toFixed(2)} قطعة</b> — محسوب من أعلى معدل بين اليوم (${todayDailyRate.toFixed(2)}) والأسبوع (${weekDailyRate.toFixed(2)}) والشهر (${monthDailyRate.toFixed(2)}). هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
+            <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
             <footer class="shortage-stats-footer">${isShortageView ? `الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong>` : "تم فتح التحليل من صفحة المنتجات."}</footer>`;
         box.querySelector("[data-close]")?.addEventListener("click", close);
     } catch (error) {
