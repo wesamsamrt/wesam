@@ -4611,13 +4611,13 @@ async function openShortageProductStats() {
         const startOfLast30Days = new Date(now); startOfLast30Days.setDate(startOfLast30Days.getDate() - 30);
         const quantitySince = start => matchingOrderItems.filter(entry => new Date(entry.order.created_at) >= start)
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
-        // نتنبأ من آخر 30 يوم: الهدف إبقاء مخزون يغطي 30 يومًا، ولا يقل عن كمية النقص المسجلة.
+        // نتنبأ من آخر 30 يوم فقط: الهدف إبقاء مخزون يغطي 30 يومًا.
+        // كمية النقص تبقى معلومة منفصلة ولا تدخل في توصية الشراء.
         const last30DaysSales = quantitySince(startOfLast30Days);
         const dailyDemand = last30DaysSales / 30;
         const stockCoverageDays = dailyDemand > 0 ? stockQuantity / dailyDemand : null;
         const targetStockFor30Days = Math.ceil(dailyDemand * 30);
-        const shortageQuantity = Math.max(0, Number(shortage.quantity || 0));
-        const recommendedOrderQuantity = Math.max(shortageQuantity, targetStockFor30Days - stockQuantity, 0);
+        const recommendedOrderQuantity = Math.max(targetStockFor30Days - stockQuantity, 0);
         const latestDate = matchingOrderItems.map(entry => new Date(entry.order.created_at)).filter(date => !Number.isNaN(date.getTime())).sort((a, b) => b - a)[0];
         const daysSinceLatest = latestDate ? Math.max(0, Math.floor((now - latestDate) / 86400000)) : null;
         const box = modal.querySelector(".shortage-product-stats-box");
@@ -4634,7 +4634,7 @@ async function openShortageProductStats() {
                 ${shortageStatsMetric("مبيعات الشهر", `${quantitySince(startOfMonth)} قطعة`)}
                 ${shortageStatsMetric("آخر حركة", latestDate ? customerOrderDate(latestDate) : "لا توجد", daysSinceLatest === null ? "" : `منذ ${daysSinceLatest} يوم`)}
             </div>
-            <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>كمية الطلب المقترحة</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
+            <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا · لا تُدخل كمية النواقص في هذا الحساب.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
             <footer class="shortage-stats-footer">الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong></footer>`;
         box.querySelector("[data-close]")?.addEventListener("click", close);
     } catch (error) {
