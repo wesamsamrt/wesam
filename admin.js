@@ -4285,13 +4285,13 @@ function renderReturnInvoice() {
     const order = selectedReturnOrder;
     const orderDate = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
     returnInvoiceDetails.innerHTML = `
-        <button type="button" class="return-invoice-open" data-return-open-invoice="${Number(order.id)}"><strong>الفاتورة #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span><small>اضغط لفتح الفاتورة وتعديلها</small></button>
+        <button type="button" class="return-invoice-open" data-return-open-editor="${Number(order.id)}"><strong>الفاتورة #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span><small>اضغط لفتحها كتعديل مرتجع</small></button>
         <div><strong>الحالة</strong><span>${transferText(order.status || "جديد")}</span></div>
         <div><strong>التاريخ</strong><span>${transferText(orderDate)}</span></div>
-        <div class="return-invoice-actions"><button type="button" data-return-open-invoice="${Number(order.id)}">فتح / تعديل الفاتورة</button><button type="button" data-return-print-invoice="${Number(order.id)}">🖨️ طباعة الفاتورة</button></div>`;
+        <div class="return-invoice-actions"><button type="button" data-return-open-editor="${Number(order.id)}">فتح / تعديل المرتجع</button><button type="button" data-return-print-invoice="${Number(order.id)}">🖨️ طباعة الفاتورة</button></div>`;
 
-    returnInvoiceDetails.querySelectorAll("[data-return-open-invoice]").forEach(button => {
-        button.addEventListener("click", () => editOrder(Number(button.dataset.returnOpenInvoice)));
+    returnInvoiceDetails.querySelectorAll("[data-return-open-editor]").forEach(button => {
+        button.addEventListener("click", () => openReturnInvoiceEditor(Number(button.dataset.returnOpenEditor)));
     });
     returnInvoiceDetails.querySelectorAll("[data-return-print-invoice]").forEach(button => {
         button.addEventListener("click", () => printOrder(Number(button.dataset.returnPrintInvoice)));
@@ -4318,6 +4318,62 @@ function renderReturnInvoice() {
     }));
     returnItems.querySelectorAll("[data-return-quantity]").forEach(input => input.addEventListener("input", updateReturnSaveButton));
     updateReturnSaveButton();
+}
+
+// نموذج تعديل خاص بالمرتجع: يعرض الفاتورة كمرجع فقط ولا يستدعي حفظ الطلب.
+function openReturnInvoiceEditor(orderId) {
+    const order = selectedReturnOrder && Number(selectedReturnOrder.id) === Number(orderId)
+        ? selectedReturnOrder
+        : adminOrdersData.find(item => Number(item.id) === Number(orderId));
+    if (!order) return;
+    document.getElementById("returnInvoiceEditorDialog")?.remove();
+    const items = Array.isArray(order.items) ? order.items : [];
+    const dialog = document.createElement("div");
+    dialog.id = "returnInvoiceEditorDialog";
+    dialog.className = "return-invoice-editor-dialog";
+    dialog.innerHTML = `<section class="return-invoice-editor-box" role="dialog" aria-modal="true" aria-label="تعديل مرتجع"><button type="button" class="return-invoice-editor-close" data-close aria-label="إغلاق">×</button><h3>مرتجع من الفاتورة #${transferText(order.id)}</h3><p>حدّد المنتجات والكميات المرتجعة. الحفظ هنا يسجل مرتجعًا فقط ولا يعدّل الفاتورة الأصلية.</p><div class="return-invoice-editor-customer"><span>العميل: <b>${transferText(order.customer_name || "عميل")}</b></span><span>حالة الفاتورة: <b>${transferText(order.status || "جديد")}</b></span></div><div class="return-invoice-editor-table-wrap"><table><thead><tr><th>إرجاع</th><th>الكود</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>كمية الفاتورة</th><th>الكمية المرتجعة</th></tr></thead><tbody>${items.map(item => { const quantity = Math.max(0, Number(item.quantity || 0)); return `<tr><td><input type="checkbox" data-return-editor-choice="${Number(item.id)}"></td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>${quantity}</td><td><input type="number" min="1" max="${quantity}" value="1" disabled data-return-editor-quantity="${Number(item.id)}"></td></tr>`; }).join("") || '<tr><td colspan="7">لا توجد منتجات في الفاتورة.</td></tr>'}</tbody></table></div><label class="return-invoice-editor-notes">ملاحظات المرتجع<textarea rows="3" placeholder="سبب الإرجاع أو ملاحظة (اختياري)"></textarea></label><div class="return-invoice-editor-actions"><button type="button" data-print>🖨️ طباعة الفاتورة</button><button type="button" class="save" data-save disabled>حفظ كمرتجع</button><button type="button" data-close>إلغاء</button></div></section>`;
+    document.body.appendChild(dialog);
+    const close = () => dialog.remove();
+    const updateSave = () => {
+        const canSave = [...dialog.querySelectorAll("[data-return-editor-choice]")].some(choice => {
+            const input = dialog.querySelector(`[data-return-editor-quantity="${choice.dataset.returnEditorChoice}"]`);
+            return choice.checked && Number(input?.value || 0) > 0;
+        });
+        const save = dialog.querySelector("[data-save]");
+        if (save) save.disabled = !canSave;
+    };
+    dialog.querySelectorAll("[data-return-editor-choice]").forEach(choice => choice.addEventListener("change", () => {
+        const input = dialog.querySelector(`[data-return-editor-quantity="${choice.dataset.returnEditorChoice}"]`);
+        if (input) input.disabled = !choice.checked;
+        updateSave();
+    }));
+    dialog.querySelectorAll("[data-return-editor-quantity]").forEach(input => input.addEventListener("input", updateSave));
+    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
+    dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
+    dialog.querySelector("[data-print]")?.addEventListener("click", () => printOrder(Number(order.id)));
+    dialog.querySelector("[data-save]")?.addEventListener("click", async event => {
+        const returnItemsData = [...dialog.querySelectorAll("[data-return-editor-choice]:checked")].map(choice => {
+            const input = dialog.querySelector(`[data-return-editor-quantity="${choice.dataset.returnEditorChoice}"]`);
+            return { order_item_id: Number(choice.dataset.returnEditorChoice), quantity: Number(input?.value || 0) };
+        }).filter(item => item.order_item_id && item.quantity > 0);
+        if (!returnItemsData.length) return;
+        const save = event.currentTarget;
+        save.disabled = true;
+        save.textContent = "جاري الحفظ...";
+        const { data, error } = await supabaseClient.rpc("create_order_return", {
+            p_order_id: Number(order.id), p_items: returnItemsData,
+            p_notes: dialog.querySelector("textarea")?.value || null
+        });
+        if (error) {
+            alert(`تعذر حفظ المرتجع: ${error.message}`);
+            save.disabled = false;
+            save.textContent = "حفظ كمرتجع";
+            return;
+        }
+        setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""}. لم يتم تعديل الفاتورة الأصلية.`);
+        close();
+        await loadWarehouseReturns();
+    });
 }
 
 async function loadReturnInvoice() {
