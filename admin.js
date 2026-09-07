@@ -4664,7 +4664,6 @@ async function openShortageProductStats(selectedProduct = null) {
         const startOfWeek = todaySaudi - (((saudiWeekday + 6) % 7) * 86400000); // يبدأ الأسبوع يوم الإثنين
         const nowSaudiParts = saudiParts(now);
         const startOfMonth = Date.UTC(nowSaudiParts.year, nowSaudiParts.month - 1, 1);
-        const startOfLast30Days = todaySaudi - (29 * 86400000);
         const quantitySince = start => salesOrderItems.filter(entry => saudiDayNumber(entry.order.created_at) >= start)
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
         const todaySales = salesOrderItems
@@ -4672,9 +4671,12 @@ async function openShortageProductStats(selectedProduct = null) {
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
         const weekSales = quantitySince(startOfWeek);
         const monthSales = quantitySince(startOfMonth);
-        // التوصية الأصلية: متوسط المبيعات خلال آخر 30 يوم فقط.
-        const last30DaysSales = quantitySince(startOfLast30Days);
-        const dailyDemand = last30DaysSales / 30;
+        // نتنبأ من اليوم والأسبوع والشهر معًا، ونأخذ أعلى معدل طلب
+        // حتى تتجاوب التوصية مع الارتفاع السريع في المبيعات.
+        const todayDailyRate = todaySales;
+        const weekDailyRate = weekSales / 7;
+        const monthDailyRate = monthSales / Math.max(1, nowSaudiParts.day);
+        const dailyDemand = Math.max(todayDailyRate, weekDailyRate, monthDailyRate);
         const stockCoverageDays = dailyDemand > 0 ? stockQuantity / dailyDemand : null;
         const targetStockFor30Days = Math.ceil(dailyDemand * 30);
         const recommendedOrderQuantity = Math.max(targetStockFor30Days - stockQuantity, 0);
@@ -4697,7 +4699,7 @@ async function openShortageProductStats(selectedProduct = null) {
                 ${shortageStatsMetric("مبيعات الشهر", `${monthSales} قطعة`)}
                 ${shortageStatsMetric("الطلبات المهدرة", `${wastedRequests.length} مرة`, "عدد مرات الضغط على غير متوفر")}
             </div>
-            <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
+            <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>معدل التوقع اليومي: <b>${dailyDemand.toFixed(2)} قطعة</b> — أعلى معدل بين اليوم (${todayDailyRate.toFixed(2)}) والأسبوع (${weekDailyRate.toFixed(2)}) والشهر (${monthDailyRate.toFixed(2)}). هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
             <footer class="shortage-stats-footer">${isShortageView ? `الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong>` : "تم فتح التحليل من صفحة المنتجات."}</footer>`;
         box.querySelector("[data-close]")?.addEventListener("click", close);
     } catch (error) {
