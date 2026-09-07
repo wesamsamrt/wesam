@@ -4683,11 +4683,10 @@ async function openShortageProductStats(selectedProduct = null) {
         const { data: shortagesData, error: shortagesError } = await supabaseClient.rpc("list_warehouse_shortages", { p_warehouse: selectedWarehouse });
         if (shortagesError) console.warn("تعذر تحميل الطلبات المهدرة:", shortagesError);
         const wastedRequests = (Array.isArray(shortagesData) ? shortagesData : []).filter(item => shortageItemMatches(shortage, item));
-        const wastedQuantity = wastedRequests.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         const box = modal.querySelector(".shortage-product-stats-box");
         if (!box) return;
         box.innerHTML = `<button type="button" class="shortage-stats-close" data-close>×</button>
-            <header class="shortage-stats-head"><div><span>تفاصيل الصنف · F4</span><h2>${transferText(shortageItemName(shortage))}</h2><p>رقم الصنف: <b>${transferText(shortage.product_code || "—")}</b> · مخزن ${transferText(selectedWarehouse || "—")}</p></div><div class="shortage-stats-stock"><span>كمية المخزون</span><strong>${stockQuantity}</strong></div></header>
+            <header class="shortage-stats-head"><div><span>تفاصيل الصنف · F4</span><h2>${transferText(shortageItemName(shortage))}</h2><p class="shortage-last-movement">آخر حركة: <b>${latestDate ? customerOrderDate(latestDate) : "لا توجد"}</b>${daysSinceLatest === null ? "" : ` · منذ ${daysSinceLatest} يوم`}</p><p>رقم الصنف: <b>${transferText(shortage.product_code || "—")}</b> · مخزن ${transferText(selectedWarehouse || "—")}</p></div><div class="shortage-stats-stock"><span>كمية المخزون</span><strong>${stockQuantity}</strong></div></header>
             <div class="shortage-stats-grid">
                 ${shortageStatsMetric("المتاح بالمخزون", `${stockQuantity} قطعة`, matchedProducts.length ? `${matchedProducts.length} نسخة مطابقة` : "لم نجد نسخة مطابقة")}
                 ${shortageStatsMetric("طلبات قيد المتابعة", `${pendingUnits} قطعة`, "جديد، مقدم، قيد التجهيز أو تم الشحن")}
@@ -4696,8 +4695,7 @@ async function openShortageProductStats(selectedProduct = null) {
                 ${shortageStatsMetric("مبيعات اليوم", `${todaySales} قطعة`)}
                 ${shortageStatsMetric("مبيعات الأسبوع", `${weekSales} قطعة`)}
                 ${shortageStatsMetric("مبيعات الشهر", `${monthSales} قطعة`)}
-                ${shortageStatsMetric("الطلبات المهدرة", `${wastedQuantity} قطعة`, `${wastedRequests.length} طلب تم تسجيله غير متوفر`)}
-                ${shortageStatsMetric("آخر حركة", latestDate ? customerOrderDate(latestDate) : "لا توجد", daysSinceLatest === null ? "" : `منذ ${daysSinceLatest} يوم`)}
+                ${shortageStatsMetric("الطلبات المهدرة", `${wastedRequests.length} مرة`, "عدد مرات الضغط على غير متوفر")}
             </div>
             <section class="shortage-forecast"><div><span>تحليل طلب الشراء</span><h3>${stockCoverageDays === null ? "لا توجد مبيعات كافية لحساب مدة التغطية" : `المخزون يكفي تقريبًا ${stockCoverageDays.toFixed(1)} يوم`}</h3><p>متوسط الطلب اليومي خلال آخر 30 يوم: <b>${dailyDemand.toFixed(2)} قطعة</b> · هدف التغطية: 30 يومًا.</p></div><div class="shortage-forecast-order"><span>${recommendedOrderQuantity ? "كمية الطلب المقترحة" : "لا تحتاج طلب الآن"}</span><strong>${recommendedOrderQuantity}</strong><small>قطعة</small></div></section>
             <footer class="shortage-stats-footer">${isShortageView ? `الكمية المطلوبة في النواقص: <strong>${Number(shortage.quantity || 0)} قطعة</strong>` : "تم فتح التحليل من صفحة المنتجات."}</footer>`;
