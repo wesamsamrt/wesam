@@ -49,7 +49,10 @@ declare
     selected_phone text := nullif(trim(coalesce(p_return->>'customer_phone', '')), '');
     requested_item jsonb;
     requested_quantity integer;
+    requested_document_quantity integer;
     requested_price numeric;
+    prepared_quantity integer;
+    already_returned_quantity integer;
     matched_product public.products%rowtype;
     new_return_id bigint;
     return_total numeric := 0;
@@ -86,18 +89,37 @@ begin
         if not found then
             raise exception 'لم نجد الصنف المطابق للكود % والموديل واللون في هذا المخزن', requested_item->>'product_code';
         end if;
-        if not exists (
-            select 1
-            from public.orders order_doc
-            join public.order_items order_item on order_item.order_id = order_doc.id
-            where trim(order_doc.warehouse) = target_warehouse
-              and lower(trim(coalesce(order_doc.customer_name, ''))) = lower(selected_customer)
-              and coalesce(order_doc.status, '') <> 'ملغي'
-              and trim(coalesce(order_item.product_code, '')) = trim(requested_item->>'product_code')
-              and lower(trim(coalesce(order_item.model, ''))) = lower(trim(coalesce(requested_item->>'model', '')))
-              and lower(trim(coalesce(order_item.color, ''))) = lower(trim(coalesce(requested_item->>'color', '')))
-        ) then
+        select coalesce(sum(order_item.quantity), 0)::integer into prepared_quantity
+        from public.orders order_doc
+        join public.order_items order_item on order_item.order_id = order_doc.id
+        where trim(order_doc.warehouse) = target_warehouse
+          and lower(trim(coalesce(order_doc.customer_name, ''))) = lower(selected_customer)
+          and coalesce(order_doc.status, '') <> 'ملغي'
+          and trim(coalesce(order_item.product_code, '')) = trim(requested_item->>'product_code')
+          and lower(trim(coalesce(order_item.model, ''))) = lower(trim(coalesce(requested_item->>'model', '')))
+          and lower(trim(coalesce(order_item.color, ''))) = lower(trim(coalesce(requested_item->>'color', '')));
+        if prepared_quantity <= 0 then
             raise exception 'هذا المنتج غير موجود ضمن تحضيرات العميل المحدد';
+        end if;
+
+        select coalesce(sum(return_item.quantity), 0)::integer into already_returned_quantity
+        from public.manual_warehouse_return_items return_item
+        join public.manual_warehouse_returns return_doc on return_doc.id = return_item.return_id
+        where trim(return_doc.warehouse) = target_warehouse
+          and lower(trim(coalesce(return_doc.customer_name, ''))) = lower(selected_customer)
+          and coalesce(return_doc.status, '') <> 'ملغي'
+          and trim(coalesce(return_item.product_code, '')) = trim(requested_item->>'product_code')
+          and lower(trim(coalesce(return_item.model, ''))) = lower(trim(coalesce(requested_item->>'model', '')))
+          and lower(trim(coalesce(return_item.color, ''))) = lower(trim(coalesce(requested_item->>'color', '')));
+
+        select coalesce(sum(greatest(0, coalesce((candidate.value->>'quantity')::integer, 0))), 0)::integer
+        into requested_document_quantity
+        from jsonb_array_elements(p_return->'items') candidate(value)
+        where trim(coalesce(candidate.value->>'product_code', '')) = trim(requested_item->>'product_code')
+          and lower(trim(coalesce(candidate.value->>'model', ''))) = lower(trim(coalesce(requested_item->>'model', '')))
+          and lower(trim(coalesce(candidate.value->>'color', ''))) = lower(trim(coalesce(requested_item->>'color', '')));
+        if requested_document_quantity > greatest(0, prepared_quantity - already_returned_quantity) then
+            raise exception 'كمية المرتجع تتجاوز الكمية المتاحة في التحضير (% قطعة)', greatest(0, prepared_quantity - already_returned_quantity);
         end if;
     end loop;
 
