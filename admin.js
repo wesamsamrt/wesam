@@ -6838,7 +6838,6 @@ function setEditPreparedColorQuantity(group, product, value) {
     }
     const quantity = Math.max(0, Number.parseInt(value, 10) || 0);
     const itemIndex = editingOrderItems.findIndex(item =>
-        String(item.color || "").trim() === "ألوان مختلفة" &&
         editDifferentColorGroupKey(item) === group.key &&
         String(item.product_id) === String(product.id)
     );
@@ -6859,7 +6858,8 @@ function setEditPreparedColorQuantity(group, product, value) {
             type: product.type,
             company: product.company,
             model: product.model,
-            color: "ألوان مختلفة",
+            // بعد أن يحدد المحضّر الكمية، يصبح هذا صف اللون الحقيقي في التحضير.
+            color: product.color,
             quantity,
             price: Number(product.price ?? group.template.price ?? 0),
             image: product.image || group.template.image || null
@@ -7366,6 +7366,8 @@ window.openEditPreparedColors = function (groupIndex) {
             const product = group.variants.find(item => String(item.id) === String(input.dataset.productId));
             if (product) setEditPreparedColorQuantity(group, product, input.value);
         });
+        // بعد توزيع الكمية لا نُبقي صف «ألوان مختلفة»؛ تصبح الألوان صفوفاً مستقلة.
+        editingDifferentColorGroups.splice(groupIndex, 1);
         renderEditOrderItems();
         close();
     });
