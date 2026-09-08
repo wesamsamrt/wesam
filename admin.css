@@ -590,6 +590,12 @@ body {
     font-size: 10px;
 }
 
+.admin-product-info .admin-product-code { margin-top: 5px; color: #5d4fd1; font-weight: 800; }
+
+.admin-product-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.admin-product-filters select { min-width: 0; height: 40px; border: 1px solid #e0ddf5; border-radius: 10px; background: #fbfaff; color: #46415b; padding: 0 10px; font-family: inherit; font-size: 12px; }
+.admin-product-filters select:disabled { color: #a6a4b4; background: #f3f3f7; }
+
 .admin-product-info .admin-product-storage-location {
     color: #5b4bd4;
     font-weight: 700;
@@ -655,6 +661,8 @@ body {
 }
 
 @media (max-width: 600px) {
+
+    .admin-product-filters { grid-template-columns: 1fr; }
 
     .products-admin-header {
         flex-wrap: wrap;

@@ -2011,6 +2011,15 @@ const adminProducts =
 const adminProductSearch =
     document.getElementById("adminProductSearch");
 
+const adminProductCompanyFilter =
+    document.getElementById("adminProductCompanyFilter");
+
+const adminProductModelFilter =
+    document.getElementById("adminProductModelFilter");
+
+const adminProductColorFilter =
+    document.getElementById("adminProductColorFilter");
+
 
 let adminProductsData = [];
 let selectedProductImage = null;
@@ -2052,7 +2061,69 @@ function getProductsForSelectedWarehouse() {
 
 // يعرض قائمة منتجات المخزن الحالي في صفحة إدارة المنتجات.
 function renderSelectedWarehouseProducts() {
-    renderAdminProducts(getProductsForSelectedWarehouse());
+    refreshAdminProductFilters();
+    applyAdminProductFilters();
+}
+
+function adminProductFilterValue(product, field) {
+    return String(product[field] || "").trim() || "__EMPTY__";
+}
+
+function adminProductFilterLabel(value) {
+    return value === "__EMPTY__" ? "بدون تحديد" : value;
+}
+
+function fillAdminProductFilter(select, values, placeholder, selectedValue = "") {
+    if (!select) return;
+    select.innerHTML = "";
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = placeholder;
+    select.appendChild(defaultOption);
+    [...new Set(values)].sort((a, b) => adminProductFilterLabel(a).localeCompare(adminProductFilterLabel(b), "ar-SA"))
+        .forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = adminProductFilterLabel(value);
+            option.selected = value === selectedValue;
+            select.appendChild(option);
+        });
+}
+
+// تصفيات متدرجة: الماركة أولاً، ثم الموديل، ثم اللون.
+function refreshAdminProductFilters() {
+    if (!adminProductCompanyFilter || !adminProductModelFilter || !adminProductColorFilter) return;
+    const products = getProductsForSelectedWarehouse();
+    const currentCompany = adminProductCompanyFilter.value;
+    fillAdminProductFilter(adminProductCompanyFilter, products.map(product => adminProductFilterValue(product, "company")), "كل الماركات", currentCompany);
+
+    const company = adminProductCompanyFilter.value;
+    const companyProducts = company ? products.filter(product => adminProductFilterValue(product, "company") === company) : [];
+    const currentModel = adminProductModelFilter.value;
+    fillAdminProductFilter(adminProductModelFilter, companyProducts.map(product => adminProductFilterValue(product, "model")), company ? "كل الموديلات" : "اختر الماركة أولاً", currentModel);
+    adminProductModelFilter.disabled = !company;
+
+    const model = adminProductModelFilter.value;
+    const modelProducts = model ? companyProducts.filter(product => adminProductFilterValue(product, "model") === model) : [];
+    const currentColor = adminProductColorFilter.value;
+    fillAdminProductFilter(adminProductColorFilter, modelProducts.map(product => adminProductFilterValue(product, "color")), model ? "كل الألوان" : "اختر الموديل أولاً", currentColor);
+    adminProductColorFilter.disabled = !model;
+}
+
+function applyAdminProductFilters() {
+    const search = String(adminProductSearch?.value || "").toLowerCase().trim();
+    const company = adminProductCompanyFilter?.value || "";
+    const model = adminProductModelFilter?.value || "";
+    const color = adminProductColorFilter?.value || "";
+    const filtered = getProductsForSelectedWarehouse().filter(product => {
+        const text = [product.product_code, product.model, product.company, product.color, product.category, product.product_type, product.type, product.storage_location]
+            .filter(Boolean).join(" ").toLowerCase();
+        return (!search || text.includes(search)) &&
+            (!company || adminProductFilterValue(product, "company") === company) &&
+            (!model || adminProductFilterValue(product, "model") === model) &&
+            (!color || adminProductFilterValue(product, "color") === color);
+    });
+    renderAdminProducts(filtered);
 }
 
 const productImage =
@@ -2241,6 +2312,10 @@ function renderAdminProducts(products) {
                     ${product.company || ""}
                 </p>
 
+                <p class="admin-product-code">
+                    كود المنتج: ${product.product_code || "بدون كود"}
+                </p>
+
                 <p class="admin-product-storage-location">
                     📍 الموقع: ${product.storage_location || "غير محدد"}
                 </p>
@@ -2301,41 +2376,19 @@ function renderAdminProducts(products) {
 
 /* البحث */
 
-adminProductSearch.addEventListener(
-    "input",
-    function () {
-
-        const search =
-            this.value
-                .toLowerCase()
-                .trim();
-
-
-        const filtered =
-            getProductsForSelectedWarehouse().filter(product => {
-
-               const text = `
-
-                 ${product.product_code || ""}
-                ${product.model || ""}
-                 ${product.company || ""}
-                     ${product.category || ""}
-                 ${product.product_type || ""}
-                 ${product.type || ""}
-                 ${product.storage_location || ""}
-
-                `.toLowerCase();
-
-
-                return text.includes(search);
-
-            });
-
-
-        renderAdminProducts(filtered);
-
-    }
-);
+adminProductSearch.addEventListener("input", applyAdminProductFilters);
+adminProductCompanyFilter?.addEventListener("change", () => {
+    if (adminProductModelFilter) adminProductModelFilter.value = "";
+    if (adminProductColorFilter) adminProductColorFilter.value = "";
+    refreshAdminProductFilters();
+    applyAdminProductFilters();
+});
+adminProductModelFilter?.addEventListener("change", () => {
+    if (adminProductColorFilter) adminProductColorFilter.value = "";
+    refreshAdminProductFilters();
+    applyAdminProductFilters();
+});
+adminProductColorFilter?.addEventListener("change", applyAdminProductFilters);
 
 document.getElementById("addProductDashboardButton")?.addEventListener("click", async () => {
     document.getElementById("adminPage").style.display = "none";
