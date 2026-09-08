@@ -1549,7 +1549,7 @@ async function loadAnalyticsData() {
             ["فواتير المبيعات", periodSalesOrders.length, "تم الشحن أو تم التسليم فقط"],
             ["مبيعات الفترة", formatAdminCurrency(totalRevenue), periodLabel],
             ["العملاء خلال الفترة", customers, "من الطلبات غير الملغاة"],
-            ["متوسط قيمة الطلب", formatAdminCurrency(average), `${periodSalesOrders.length} فاتورة مبيعات`],
+            ["متوسط قيمة الطلب", formatAdminCurrency(average), `${periodSalesOrders.length} تحضير مبيعات`],
             ["نسبة التسليم", `${nonCancelled.length ? Math.round((completed / nonCancelled.length) * 100) : 0}%`, `${completed} طلب مكتمل`],
             ["طلبات تحت المتابعة", nonCancelled.filter(needsOrderFollowUp).length, "الطلبات الجديدة والمقدمة"],
             ["القطع المطلوبة", totalPieces, `${customers} عميل خلال الفترة`]
@@ -1771,7 +1771,7 @@ async function loadSalesReport() {
     );
     document.getElementById("salesRecentOrders").innerHTML = renderRows(
         [...salesOrdersCache].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 12),
-        order => `<div class="sales-report-row sales-order-row"><span>طلب #${order.id} · ${transferText(order.driver_name || "بدون مندوب")}<br><small>${new Date(order.created_at).toLocaleString("ar-SA", { timeZone:"Asia/Riyadh" })} · ${transferText(order.status || "—")}</small></span><div><strong>${formatAdminCurrency(order.total)}</strong><button type="button" class="open-invoice-button" onclick="openInvoice(${order.id})">فتح الفاتورة</button></div></div>`,
+        order => `<div class="sales-report-row sales-order-row"><span>طلب #${order.id} · ${transferText(order.driver_name || "بدون مندوب")}<br><small>${new Date(order.created_at).toLocaleString("ar-SA", { timeZone:"Asia/Riyadh" })} · ${transferText(order.status || "—")}</small></span><div><strong>${formatAdminCurrency(order.total)}</strong><button type="button" class="open-invoice-button" onclick="openInvoice(${order.id})">فتح التحضير</button></div></div>`,
         "لا توجد مبيعات ضمن الفترة المحددة."
     );
 }
@@ -4240,7 +4240,7 @@ async function loadAdminOrders() {
     }
 
 
-    // الدالة تعيد عناصر كل طلب معه لتبقى بيانات الفاتورة متاحة دون طلب إضافي محجوب بالصلاحيات.
+    // الدالة تعيد عناصر كل طلب معه لتبقى بيانات التحضير متاحة دون طلب إضافي محجوب بالصلاحيات.
     adminOrdersData = orders.map(order => ({ ...order, items: order.items || [] }));
     updateOrdersSummary();
     renderAdminOrdersList();
@@ -4248,7 +4248,7 @@ async function loadAdminOrders() {
 }
 
 /* =========================================================
-   المرتجعات — سجل مستقل عن الفاتورة الأصلية
+   المرتجعات — سجل مستقل عن التحضير الأصلي
 ========================================================= */
 const returnsButton = document.getElementById("returnsButton");
 const returnsAdmin = document.getElementById("returnsAdmin");
@@ -4286,10 +4286,10 @@ function renderReturnInvoice() {
     const order = selectedReturnOrder;
     const orderDate = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
     returnInvoiceDetails.innerHTML = `
-        <button type="button" class="return-invoice-open" data-return-open-editor="${Number(order.id)}"><strong>الفاتورة #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span><small>اضغط لفتحها كتعديل مرتجع</small></button>
+        <button type="button" class="return-invoice-open" data-return-open-editor="${Number(order.id)}"><strong>التحضير #${transferText(order.id)}</strong><span>${transferText(order.customer_name || "عميل")}</span><small>اضغط لفتحه كتعديل مرتجع</small></button>
         <div><strong>الحالة</strong><span>${transferText(order.status || "جديد")}</span></div>
         <div><strong>التاريخ</strong><span>${transferText(orderDate)}</span></div>
-        <div class="return-invoice-actions"><button type="button" data-return-open-editor="${Number(order.id)}">فتح / تعديل المرتجع</button><button type="button" data-return-print-invoice="${Number(order.id)}">🖨️ طباعة الفاتورة</button></div>`;
+        <div class="return-invoice-actions"><button type="button" data-return-open-editor="${Number(order.id)}">فتح / تعديل المرتجع</button><button type="button" data-return-print-invoice="${Number(order.id)}">🖨️ طباعة التحضير</button></div>`;
 
     returnInvoiceDetails.querySelectorAll("[data-return-open-editor]").forEach(button => {
         button.addEventListener("click", () => openReturnInvoiceEditor(Number(button.dataset.returnOpenEditor)));
@@ -4300,7 +4300,7 @@ function renderReturnInvoice() {
 
     const items = Array.isArray(order.items) ? order.items : [];
     if (!items.length) {
-        returnItems.innerHTML = `<div class="message">لا توجد منتجات في هذه الفاتورة.</div>`;
+        returnItems.innerHTML = `<div class="message">لا توجد منتجات في هذا التحضير.</div>`;
         updateReturnSaveButton();
         return;
     }
@@ -4308,7 +4308,7 @@ function renderReturnInvoice() {
         const quantity = Math.max(0, Number(item.quantity || 0));
         return `<article class="return-item-card">
             <label class="return-item-select"><input type="checkbox" data-return-choice="${Number(item.id)}"><span>إرجاع المنتج</span></label>
-            <div class="return-item-info"><strong>${transferText(returnItemTitle(item))}</strong><small>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية بالفاتورة: ${quantity}</small></div>
+            <div class="return-item-info"><strong>${transferText(returnItemTitle(item))}</strong><small>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية بالتحضير: ${quantity}</small></div>
             <label class="return-quantity-label">الكمية المرتجعة<input type="number" min="1" max="${quantity}" value="1" disabled data-return-quantity="${Number(item.id)}"></label>
         </article>`;
     }).join("");
@@ -4321,7 +4321,7 @@ function renderReturnInvoice() {
     updateReturnSaveButton();
 }
 
-// نموذج تعديل خاص بالمرتجع: يعرض الفاتورة كمرجع فقط ولا يستدعي حفظ الطلب.
+// نموذج تعديل خاص بالمرتجع: يعرض التحضير كمرجع فقط ولا يستدعي حفظ الطلب.
 function openReturnInvoiceEditor(orderId) {
     const order = selectedReturnOrder && Number(selectedReturnOrder.id) === Number(orderId)
         ? selectedReturnOrder
@@ -4332,7 +4332,7 @@ function openReturnInvoiceEditor(orderId) {
     const dialog = document.createElement("div");
     dialog.id = "returnInvoiceEditorDialog";
     dialog.className = "return-invoice-editor-dialog";
-    dialog.innerHTML = `<section class="return-invoice-editor-box" role="dialog" aria-modal="true" aria-label="تعديل مرتجع"><button type="button" class="return-invoice-editor-close" data-close aria-label="إغلاق">×</button><h3>مرتجع من الفاتورة #${transferText(order.id)}</h3><p>حدّد المنتجات والكميات المرتجعة. الحفظ هنا يسجل مرتجعًا فقط ولا يعدّل الفاتورة الأصلية.</p><div class="return-invoice-editor-customer"><span>العميل: <b>${transferText(order.customer_name || "عميل")}</b></span><span>حالة الفاتورة: <b>${transferText(order.status || "جديد")}</b></span></div><div class="return-invoice-editor-table-wrap"><table><thead><tr><th>إرجاع</th><th>الكود</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>كمية الفاتورة</th><th>الكمية المرتجعة</th></tr></thead><tbody>${items.map(item => { const quantity = Math.max(0, Number(item.quantity || 0)); return `<tr><td><input type="checkbox" data-return-editor-choice="${Number(item.id)}"></td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>${quantity}</td><td><input type="number" min="1" max="${quantity}" value="1" disabled data-return-editor-quantity="${Number(item.id)}"></td></tr>`; }).join("") || '<tr><td colspan="7">لا توجد منتجات في الفاتورة.</td></tr>'}</tbody></table></div><label class="return-invoice-editor-notes">ملاحظات المرتجع<textarea rows="3" placeholder="سبب الإرجاع أو ملاحظة (اختياري)"></textarea></label><div class="return-invoice-editor-actions"><button type="button" data-print>🖨️ طباعة الفاتورة</button><button type="button" class="save" data-save disabled>حفظ كمرتجع</button><button type="button" data-close>إلغاء</button></div></section>`;
+    dialog.innerHTML = `<section class="return-invoice-editor-box" role="dialog" aria-modal="true" aria-label="تعديل مرتجع"><button type="button" class="return-invoice-editor-close" data-close aria-label="إغلاق">×</button><h3>مرتجع من التحضير #${transferText(order.id)}</h3><p>حدّد المنتجات والكميات المرتجعة. الحفظ هنا يسجل مرتجعًا فقط ولا يعدّل التحضير الأصلي.</p><div class="return-invoice-editor-customer"><span>العميل: <b>${transferText(order.customer_name || "عميل")}</b></span><span>حالة التحضير: <b>${transferText(order.status || "جديد")}</b></span></div><div class="return-invoice-editor-table-wrap"><table><thead><tr><th>إرجاع</th><th>الكود</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>كمية التحضير</th><th>الكمية المرتجعة</th></tr></thead><tbody>${items.map(item => { const quantity = Math.max(0, Number(item.quantity || 0)); return `<tr><td><input type="checkbox" data-return-editor-choice="${Number(item.id)}"></td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>${quantity}</td><td><input type="number" min="1" max="${quantity}" value="1" disabled data-return-editor-quantity="${Number(item.id)}"></td></tr>`; }).join("") || '<tr><td colspan="7">لا توجد منتجات في التحضير.</td></tr>'}</tbody></table></div><label class="return-invoice-editor-notes">ملاحظات المرتجع<textarea rows="3" placeholder="سبب الإرجاع أو ملاحظة (اختياري)"></textarea></label><div class="return-invoice-editor-actions"><button type="button" data-print>🖨️ طباعة التحضير</button><button type="button" class="save" data-save disabled>حفظ كمرتجع</button><button type="button" data-close>إلغاء</button></div></section>`;
     document.body.appendChild(dialog);
     const close = () => dialog.remove();
     const updateSave = () => {
@@ -4371,7 +4371,7 @@ function openReturnInvoiceEditor(orderId) {
             save.textContent = "حفظ كمرتجع";
             return;
         }
-        setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""}. لم يتم تعديل الفاتورة الأصلية.`);
+        setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""}. لم يتم تعديل التحضير الأصلي.`);
         close();
         await loadWarehouseReturns();
     });
@@ -4381,34 +4381,34 @@ async function loadReturnInvoice() {
     const orderId = Number(String(returnInvoiceNumber?.value || "").replace(/[^0-9]/g, ""));
     selectedReturnOrder = null;
     if (!orderId) {
-        setReturnInvoiceMessage("اكتب رقم الفاتورة بشكل صحيح.", true);
-        if (returnItems) returnItems.innerHTML = `<div class="message">اكتب رقم الفاتورة لعرض منتجاتها.</div>`;
+        setReturnInvoiceMessage("اكتب رقم التحضير بشكل صحيح.", true);
+        if (returnItems) returnItems.innerHTML = `<div class="message">اكتب رقم التحضير لعرض منتجاته.</div>`;
         if (returnInvoiceDetails) returnInvoiceDetails.innerHTML = "";
         updateReturnSaveButton();
         return;
     }
-    setReturnInvoiceMessage("جاري البحث عن الفاتورة...");
+    setReturnInvoiceMessage("جاري البحث عن التحضير...");
     let order = adminOrdersData.find(entry => Number(entry.id) === orderId);
     if (!order) {
         const { data, error } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
         if (error) {
-            setReturnInvoiceMessage(`تعذر تحميل الفاتورة: ${error.message}`, true);
+            setReturnInvoiceMessage(`تعذر تحميل التحضير: ${error.message}`, true);
             return;
         }
         order = (Array.isArray(data) ? data : []).find(entry => Number(entry.id) === orderId);
     }
     if (!order) {
-        setReturnInvoiceMessage("لم نجد فاتورة بهذا الرقم في المخزن الحالي.", true);
-        if (returnItems) returnItems.innerHTML = `<div class="message">الفاتورة غير موجودة.</div>`;
+        setReturnInvoiceMessage("لم نجد تحضيرًا بهذا الرقم في المخزن الحالي.", true);
+        if (returnItems) returnItems.innerHTML = `<div class="message">التحضير غير موجود.</div>`;
         if (returnInvoiceDetails) returnInvoiceDetails.innerHTML = "";
         return;
     }
     if (!(order.items || []).every(item => Number(item.id))) {
-        setReturnInvoiceMessage("هذه الفاتورة لا تحتوي معرفات منتجات صالحة للمرتجع. حدّث الصفحة ثم حاول مجددًا.", true);
+        setReturnInvoiceMessage("هذا التحضير لا يحتوي معرفات منتجات صالحة للمرتجع. حدّث الصفحة ثم حاول مجددًا.", true);
         return;
     }
     selectedReturnOrder = { ...order, items: order.items || [] };
-    setReturnInvoiceMessage("تم تحميل الفاتورة. يمكنك فتحها أو تعديلها أو طباعتها، أو تحديد المنتجات وحفظها كمرتجع.");
+    setReturnInvoiceMessage("تم تحميل التحضير. يمكنك فتحه أو تعديله أو طباعته، أو تحديد المنتجات وحفظها كمرتجع.");
     renderReturnInvoice();
 }
 
@@ -4454,7 +4454,7 @@ function getReturnRecordWithOrder(returnId) {
     return { record, order: adminOrdersData.find(item => String(item.id) === String(record.order_id)) };
 }
 
-// فتح سجل مرتجع مستقل عن الفاتورة؛ للعرض والطباعة فقط.
+// فتح سجل مرتجع مستقل عن التحضير؛ للعرض والطباعة فقط.
 function openReturnRecordView(returnId) {
     const result = getReturnRecordWithOrder(returnId);
     if (!result) return;
@@ -4507,12 +4507,12 @@ async function saveOrderReturn() {
         updateReturnSaveButton();
         return;
     }
-    setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""} وإرجاع كمياته إلى مخزون الفاتورة. لم يتم تعديل الفاتورة الأصلية.`);
+    setReturnInvoiceMessage(`تم حفظ المرتجع #${data?.id || ""} وإرجاع كمياته إلى مخزون التحضير. لم يتم تعديل التحضير الأصلي.`);
     selectedReturnOrder = null;
     if (returnInvoiceNumber) returnInvoiceNumber.value = "";
     if (returnNotes) returnNotes.value = "";
     if (returnInvoiceDetails) returnInvoiceDetails.innerHTML = "";
-    if (returnItems) returnItems.innerHTML = `<div class="message">اكتب رقم الفاتورة لعرض منتجاتها.</div>`;
+    if (returnItems) returnItems.innerHTML = `<div class="message">اكتب رقم التحضير لعرض منتجاته.</div>`;
     updateReturnSaveButton();
     loadWarehouseReturns();
 }
@@ -4537,7 +4537,7 @@ document.getElementById("refreshReturnsButton")?.addEventListener("click", loadW
 });
 
 /* =========================================================
-   العملاء — تُبنى ملفاتهم من بيانات الفواتير نفسها
+   العملاء — تُبنى ملفاتهم من بيانات التحضيرات نفسها
 ========================================================= */
 const customersButton = document.getElementById("customersButton");
 const shortagesButton = document.getElementById("shortagesButton");
@@ -4567,7 +4567,7 @@ function customerOrderDate(value) {
 function buildAdminCustomers(orders) {
     const groups = new Map();
     (orders || [])
-        // الفاتورة قد ينشئها العميل أو المندوب؛ اسم العميل فيها هو المرجع في الحالتين.
+        // التحضير قد ينشئه العميل أو المندوب؛ اسم العميل فيه هو المرجع في الحالتين.
         .filter(order => order.status !== "جديد" && !isCancelledOrder(order) && String(order.customer_name || "").trim())
         .forEach(order => {
             const key = customerKeyFromOrder(order);
@@ -4614,11 +4614,11 @@ function renderCustomerProfile(customer) {
     const activeOrders = customer.orders.filter(order => !["تم التسليم", "تم استلام طلبك", "ملغي"].includes(order.status || "جديد")).length;
     const history = [...customer.orders]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(order => `<button type="button" class="customer-history-row customer-order-view" data-customer-order-view="${Number(order.id)}"><div><strong>طلب #${transferText(order.id)}</strong><span>${transferText(order.status || "جديد")} · ${customerOrderDate(order.created_at)} · اضغط لعرض الفاتورة</span></div><b>${Number(order.total || 0).toFixed(2)} ر.س</b></button>`)
+        .map(order => `<button type="button" class="customer-history-row customer-order-view" data-customer-order-view="${Number(order.id)}"><div><strong>طلب #${transferText(order.id)}</strong><span>${transferText(order.status || "جديد")} · ${customerOrderDate(order.created_at)} · اضغط لعرض التحضير</span></div><b>${Number(order.total || 0).toFixed(2)} ر.س</b></button>`)
         .join("");
     const returnHistory = [...(customer.returns || [])]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(record => `<button type="button" class="customer-history-row customer-return-row customer-return-view" data-customer-return-view="${Number(record.id)}"><div><strong>مرتجع #${transferText(record.id)} من الفاتورة #${transferText(record.order_id)}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة · اضغط لعرض المرتجع</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></button>`)
+        .map(record => `<button type="button" class="customer-history-row customer-return-row customer-return-view" data-customer-return-view="${Number(record.id)}"><div><strong>مرتجع #${transferText(record.id)} من التحضير #${transferText(record.order_id)}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة · اضغط لعرض المرتجع</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></button>`)
         .join("");
     customerProfilePanel.innerHTML = `
         <div class="customer-profile-head"><h3>${transferText(customer.name)}</h3><p>${transferText(customer.phone || "لم يسجل رقم جوال")}</p></div>
@@ -4653,7 +4653,7 @@ window.openCustomerReturnView = function (returnId) {
     const dialog = document.createElement("div");
     dialog.id = "customerReturnViewDialog";
     dialog.className = "customer-return-view-dialog";
-    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>من الفاتورة #${transferText(record.order_id)} · ${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>إجمالي المرتجع: <b>${Number(record.total || 0).toFixed(2)} ر.س</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer><button type="button" data-open-order>فتح الفاتورة الأصلية</button><button type="button" data-close>إغلاق</button></footer></section>`;
+    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>من التحضير #${transferText(record.order_id)} · ${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>إجمالي المرتجع: <b>${Number(record.total || 0).toFixed(2)} ر.س</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer><button type="button" data-open-order>فتح التحضير الأصلي</button><button type="button" data-close>إغلاق</button></footer></section>`;
     document.body.appendChild(dialog);
     const close = () => dialog.remove();
     dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
@@ -4698,7 +4698,7 @@ async function loadAdminCustomers() {
     adminCustomersData = buildAdminCustomers(data || []);
     const totalOrders = adminCustomersData.reduce((sum, customer) => sum + customer.orders.length, 0);
     const totalSales = adminCustomersData.reduce((sum, customer) => sum + customer.total, 0);
-    if (customersSummary) customersSummary.innerHTML = `<span><strong>${adminCustomersData.length}</strong> عميل مسجل من الفواتير</span><span><strong>${totalOrders}</strong> إجمالي الطلبات</span><span><strong>${totalSales.toFixed(2)} ر.س</strong> إجمالي مشتريات العملاء</span>`;
+    if (customersSummary) customersSummary.innerHTML = `<span><strong>${adminCustomersData.length}</strong> عميل مسجل من التحضيرات</span><span><strong>${totalOrders}</strong> إجمالي الطلبات</span><span><strong>${totalSales.toFixed(2)} ر.س</strong> إجمالي مشتريات العملاء</span>`;
     if (!adminCustomersData.some(customer => customer.key === selectedAdminCustomerKey)) selectedAdminCustomerKey = "";
     renderAdminCustomers();
 }
@@ -4841,8 +4841,8 @@ async function openShortageProductStats(selectedProduct = null) {
             <div class="shortage-stats-grid">
                 ${shortageStatsMetric("المتاح بالمخزون", `${stockQuantity} قطعة`, matchedProducts.length ? `${matchedProducts.length} نسخة مطابقة` : "لم نجد نسخة مطابقة")}
                 ${shortageStatsMetric("طلبات قيد المتابعة", `${pendingUnits} قطعة`, "جديد، مقدم، قيد التجهيز أو تم الشحن")}
-                ${shortageStatsMetric("عدد الفواتير", `${invoiceCount}`, "تم الشحن أو تم التسليم")}
-                ${shortageStatsMetric("إجمالي المبيعات", `${totalUnits} قطعة`, "من الفواتير المشحونة أو المسلّمة")}
+                ${shortageStatsMetric("عدد التحضيرات", `${invoiceCount}`, "تم الشحن أو تم التسليم")}
+                ${shortageStatsMetric("إجمالي المبيعات", `${totalUnits} قطعة`, "من التحضيرات المشحونة أو المسلّمة")}
                 ${shortageStatsMetric("مبيعات اليوم", `${todaySales} قطعة`)}
                 ${shortageStatsMetric("مبيعات الأسبوع", `${weekSales} قطعة`)}
                 ${shortageStatsMetric("مبيعات الشهر", `${monthSales} قطعة`)}
@@ -5321,7 +5321,7 @@ Object.entries(typeCodes).forEach(
         class="open-invoice-button"
         onclick="openInvoice(${order.id})"
     >
-        👁 فتح الفاتورة
+        👁 فتح التحضير
     </button>
 
     <button
@@ -5584,7 +5584,7 @@ async function printOrder(orderId) {
             specialItemCountByProduct.set(productKey, (specialItemCountByProduct.get(productKey) || 0) + 1);
         });
 
-        // ألوان «ألوان مختلفة» لا تُخزن داخل الفاتورة، لذا نجلب الألوان المتوفرة
+        // ألوان «ألوان مختلفة» لا تُخزن داخل التحضير، لذا نجلب الألوان المتوفرة
         // حاليًا في مخزن الطلب لتظهر للمحضّر كقائمة تجهيز.
         if (hasDifferentColorItems) {
             const productCodes = [...new Set(items
@@ -5621,7 +5621,7 @@ async function printOrder(orderId) {
             return firstKey.localeCompare(secondKey, "ar-SA", { numeric: true, sensitivity: "base" });
         });
         // للطباعة فقط: ندمج السطور المتطابقة في كل شيء عدا اللون. بهذا تبقى
-        // حركة المخزون منفصلة حسب اللون، لكن الفاتورة لا تكرر نفس المنتج عشرات المرات.
+        // حركة المخزون منفصلة حسب اللون، لكن التحضير لا يكرر نفس المنتج عشرات المرات.
         const groupedPrintMap = new Map();
         printItems.forEach(item => {
             const groupKey = [
@@ -6404,7 +6404,7 @@ Object.entries(typeCodes).forEach(
 
 let editingOrderId = null;
 
-// يفتح نموذج الفاتورة الموحد من قائمة الطلبات أو تقرير المبيعات.
+// يفتح نموذج التحضير الموحد من قائمة الطلبات أو تقرير المبيعات.
 window.openInvoice = function (orderId) {
     editOrder(orderId);
 };
@@ -6530,7 +6530,7 @@ window.changeEditDifferentColorGroupQuantity = function (groupIndex, value) {
 window.removeEditDifferentColorGroup = function (groupIndex) {
     const group = editingDifferentColorGroups[groupIndex];
     if (!group) return;
-    if (!confirm("هل تريد حذف هذا الصنف من الفاتورة؟")) return;
+    if (!confirm("هل تريد حذف هذا الصنف من التحضير؟")) return;
     editingOrderItems = editingOrderItems.filter(item => !(
         String(item.color || "").trim() === "ألوان مختلفة" &&
         editDifferentColorGroupKey(item) === group.key
@@ -6542,7 +6542,7 @@ window.removeEditDifferentColorGroup = function (groupIndex) {
 window.markEditDifferentColorGroupUnavailable = async function (groupIndex) {
     const group = editingDifferentColorGroups[groupIndex];
     if (!group || !editingOrderId) return;
-    if (!confirm("سيُنقل الصنف إلى صفحة النواقص ويُحذف من الفاتورة. متابعة؟")) return;
+    if (!confirm("سيُنقل الصنف إلى صفحة النواقص ويُحذف من التحضير. متابعة؟")) return;
     const quantity = group.isPendingDistribution
         ? Number(group.targetQuantity || 0)
         : [...group.quantities.values()].reduce((sum, value) => sum + Number(value || 0), 0);
@@ -6557,7 +6557,7 @@ window.markEditDifferentColorGroupUnavailable = async function (groupIndex) {
     ));
     editingDifferentColorGroups.splice(groupIndex, 1);
     renderEditOrderItems();
-    editOrderMessage.textContent = "تم نقل الصنف إلى النواقص. احفظ التعديلات لتحديث الفاتورة.";
+    editOrderMessage.textContent = "تم نقل الصنف إلى النواقص. احفظ التعديلات لتحديث التحضير.";
     editOrderMessage.style.color = "#2e9d69";
 };
 
@@ -6592,7 +6592,7 @@ function setEditOrderViewMode(viewOnly) {
     if (!editOrderModal) return;
     editOrderModal.classList.toggle("invoice-view-only", viewOnly);
     const title = editOrderModal.querySelector(".edit-order-header h2");
-    if (title) title.textContent = viewOnly ? "عرض الفاتورة" : "تعديل الطلب";
+    if (title) title.textContent = viewOnly ? "عرض التحضير" : "تعديل الطلب";
     if (addOrderItemButton) addOrderItemButton.style.display = viewOnly ? "none" : "";
     if (saveOrderEditButton) saveOrderEditButton.style.display = viewOnly ? "none" : "";
     if (cancelOrderEditButton) cancelOrderEditButton.textContent = viewOnly ? "إغلاق" : "إلغاء";
@@ -6605,7 +6605,7 @@ function setEditOrderViewMode(viewOnly) {
     });
 }
 
-// من سجل العميل: نفس فاتورة التعديل، لكنها مقفلة بالكامل للعرض والطباعة فقط.
+// من سجل العميل: نفس شاشة تعديل التحضير، لكنها مقفلة بالكامل للعرض والطباعة فقط.
 async function openCustomerOrderView(orderId) {
     await editOrder(orderId);
     if (editOrderModal?.style.display === "flex") setEditOrderViewMode(true);
@@ -6742,7 +6742,7 @@ function renderEditOrderItems() {
 
     editOrderItems.innerHTML = "";
 
-    // نفس ترتيب الطباعة حتى يرى الموظف الفاتورة بالطريقة نفسها قبل حفظها:
+    // نفس ترتيب الطباعة حتى يرى الموظف التحضير بالطريقة نفسها قبل حفظه:
     // الشركة، نوع المنتج، النوع، الموديل، ثم اللون.
     editingOrderItems.sort((first, second) => {
         const firstKey = [first.company, first.product_type, first.type, first.model, first.color]
@@ -6922,7 +6922,7 @@ function renderEditOrderItems() {
 
 }
 
-// عرض الفاتورة في جدول أعمدة واضح داخل صفحة التعديل بدل بطاقات ضيقة.
+// عرض التحضير في جدول أعمدة واضح داخل صفحة التعديل بدل بطاقات ضيقة.
 renderEditOrderItems = function () {
     const normalItems = editingOrderItems
         .map((item, index) => ({ item, index }))
@@ -7101,12 +7101,12 @@ function removeEditOrderItem(index) {
 window.markEditOrderItemUnavailable = async function (index) {
     const item = editingOrderItems[index];
     if (!item || !editingOrderId) return;
-    if (!confirm("سيُنقل الصنف إلى صفحة النواقص ويُحذف من الفاتورة. متابعة؟")) return;
+    if (!confirm("سيُنقل الصنف إلى صفحة النواقص ويُحذف من التحضير. متابعة؟")) return;
     const { error } = await supabaseClient.rpc("report_order_shortage", { p_order_id: editingOrderId, p_item: item });
     if (error) { alert(`تعذر تسجيل النقص: ${error.message}`); return; }
     editingOrderItems.splice(index, 1);
     renderEditOrderItems();
-    editOrderMessage.textContent = "تم نقل الصنف إلى النواقص. احفظ التعديلات لتحديث الفاتورة.";
+    editOrderMessage.textContent = "تم نقل الصنف إلى النواقص. احفظ التعديلات لتحديث التحضير.";
     editOrderMessage.style.color = "#2e9d69";
 };
 
