@@ -972,7 +972,7 @@ document.getElementById("createTransferButton")?.addEventListener("click", async
         p_creation_mode: transferMode
     });
     if (error) { setTransferMessage(`تعذر إنشاء التحويل: ${error.message}`, true); return; }
-    const shortageIds = transferDraft.map(item => item.shortage_id).filter(Boolean);
+    const shortageIds = [...new Set(transferDraft.flatMap(item => item.shortage_ids || [item.shortage_id]).filter(Boolean))];
     if (shortageIds.length) {
         const { error: shortagesError } = await supabaseClient.rpc("mark_shortages_requested", { p_shortage_ids: shortageIds, p_transfer_id: data });
         if (shortagesError) console.warn("تعذر تعليم النواقص كتم الطلب:", shortagesError);
@@ -4682,6 +4682,7 @@ const shortagesButton = document.getElementById("shortagesButton");
 const shortagesAdmin = document.getElementById("shortagesAdmin");
 const shortagesList = document.getElementById("shortagesList");
 let adminShortagesData = [];
+let adminShortageGroups = [];
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -4857,21 +4858,49 @@ async function loadAdminShortages() {
             .filter(Boolean).join(" ").toLocaleLowerCase("ar-SA");
         return key(first).localeCompare(key(second), "ar-SA");
     });
-    shortagesList.innerHTML = adminShortagesData.length ? `<div class="edit-invoice-table-wrap shortages-invoice-table-wrap"><table class="edit-invoice-table shortages-invoice-table"><thead><tr>
+
+    // السجلات المتطابقة تعرض كسطر واحد، وتُجمع كمياتها حتى لا تتكرر
+    // نفس القطعة عدة مرات في قائمة النواقص.
+    const grouped = new Map();
+    adminShortagesData.forEach(item => {
+        const key = [item.product_code, item.category, item.product_type, item.type, item.company, item.model, item.color, item.storage_location]
+            .map(value => String(value || "").trim().toLocaleLowerCase("ar-SA")).join("\u001f");
+        const group = grouped.get(key) || {
+            ...item,
+            items: [],
+            shortage_ids: [],
+            quantity: 0,
+            total: 0
+        };
+        const quantity = Math.max(0, Number(item.quantity || 0));
+        group.items.push(item);
+        group.shortage_ids.push(item.id);
+        group.quantity += quantity;
+        group.total += quantity * Number(item.price || 0);
+        grouped.set(key, group);
+    });
+    adminShortageGroups = [...grouped.values()].map(group => ({
+        ...group,
+        price: group.quantity ? group.total / group.quantity : 0,
+        status: group.items.every(item => item.status === "تم الطلب") ? "تم الطلب" : "جديد",
+        transfer_id: group.items.every(item => String(item.transfer_id || "") === String(group.items[0].transfer_id || "")) ? group.items[0].transfer_id : null
+    }));
+
+    shortagesList.innerHTML = adminShortageGroups.length ? `<div class="edit-invoice-table-wrap shortages-invoice-table-wrap"><table class="edit-invoice-table shortages-invoice-table"><thead><tr>
         <th>تحديد</th><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الألوان</th><th>موقع القطعة</th><th>الكمية المطلوبة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الحالة</th><th>التحويل</th>
-    </tr></thead><tbody>${adminShortagesData.map((item, index) => {
+    </tr></thead><tbody>${adminShortageGroups.map((item, index) => {
         const quantity = Number(item.quantity || 0);
         const price = Number(item.price || 0);
         const isRequested = item.status === "تم الطلب";
-        return `<tr><td><label class="shortage-select"><input type="checkbox" data-shortage-id="${item.id}" ${isRequested ? "disabled" : ""}><span>${isRequested ? "تم الطلب" : "تحديد"}</span></label></td>
+        return `<tr><td><label class="shortage-select"><input type="checkbox" data-shortage-group="${index}" ${isRequested ? "disabled" : ""}><span>${isRequested ? "تم الطلب" : "تحديد"}</span></label></td>
             <td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.category || "—")}</td><td>${transferText(item.product_type || "—")}</td><td>${transferText(item.type || "—")}</td>
             <td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>—</td><td>—</td><td>${quantity}</td><td>${price.toFixed(2)} ر.س</td><td>${(quantity * price).toFixed(2)} ر.س</td>
             <td><span class="shortage-status ${isRequested ? "requested" : "new"}">${transferText(item.status || "جديد")}</span></td><td>${item.transfer_id ? `#${transferText(item.transfer_id)}` : "—"}</td></tr>`;
     }).join("")}</tbody></table></div>` : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
     // F4 يعرض تقرير صنف واحد؛ تحديد صنف جديد يلغي السابق تلقائيًا.
-    shortagesList.querySelectorAll("[data-shortage-id]").forEach(input => input.addEventListener("change", event => {
+    shortagesList.querySelectorAll("[data-shortage-group]").forEach(input => input.addEventListener("change", event => {
         if (!event.target.checked) return;
-        shortagesList.querySelectorAll("[data-shortage-id]").forEach(other => {
+        shortagesList.querySelectorAll("[data-shortage-group]").forEach(other => {
             if (other !== event.target) other.checked = false;
         });
     }));
@@ -4897,8 +4926,8 @@ async function openShortageProductStats(selectedProduct = null) {
     const isShortageView = !selectedProduct;
     let shortage = selectedProduct;
     if (!shortage) {
-        const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
-        const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
+        const selectedGroupIndexes = [...document.querySelectorAll("[data-shortage-group]:checked")].map(input => Number(input.dataset.shortageGroup));
+        const selectedItems = adminShortageGroups.filter((item, index) => selectedGroupIndexes.includes(index));
         if (selectedItems.length !== 1) {
             alert("حدد صنفًا واحدًا فقط من صفحة النواقص ثم اضغط F4.");
             return;
@@ -5004,8 +5033,8 @@ document.addEventListener("keydown", event => {
 });
 
 document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {
-    const selectedIds = [...document.querySelectorAll("[data-shortage-id]:checked")].map(input => String(input.dataset.shortageId));
-    const selectedItems = adminShortagesData.filter(item => selectedIds.includes(String(item.id)));
+    const selectedGroupIndexes = [...document.querySelectorAll("[data-shortage-group]:checked")].map(input => Number(input.dataset.shortageGroup));
+    const selectedItems = adminShortageGroups.filter((item, index) => selectedGroupIndexes.includes(index));
     if (!selectedItems.length) { alert("حدد صنفًا واحدًا على الأقل من النواقص."); return; }
     // نختار تلقائياً المخزن الذي يملك أكبر مجموع من كميات الأصناف المحددة.
     const productCodes = [...new Set(selectedItems.map(item => item.product_code).filter(Boolean))];
@@ -5030,7 +5059,7 @@ document.getElementById("requestShortagesTransfer")?.addEventListener("click", a
     selectedItems.forEach(shortage => {
         const product = transferSourceProducts.find(item => String(item.product_code || "") === String(shortage.product_code || "") && String(item.company || "") === String(shortage.company || "") && String(item.model || "") === String(shortage.model || "") && String(item.color || "") === String(shortage.color || ""));
         if (!product) return;
-        transferDraft.push({ product_id: product.id, shortage_id: shortage.id, product_code: product.product_code, company: product.company, model: product.model, color: product.color, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
+        transferDraft.push({ product_id: product.id, shortage_id: shortage.shortage_ids?.[0] || shortage.id, shortage_ids: shortage.shortage_ids || [shortage.id], product_code: product.product_code, company: product.company, model: product.model, color: product.color, name: [product.company, product.type || product.product_type, product.model, product.color].filter(Boolean).join(" · "), quantity: Math.min(Number(shortage.quantity || 1), Number(product.quantity || 0)), source_warehouse: transferSourceWarehouse.value, destination_warehouse: transferDestinationWarehouse.value, source_quantity: Number(product.quantity || 0), destination_quantity: Number(product.destination_quantity || 0) });
     });
     renderTransferDraft();
     setTransferMessage(transferDraft.length ? "تمت إضافة النواقص المتوفرة إلى مسودة التحويل. عدّل الكميات ثم أرسل الطلب." : "لم نجد هذه الأصناف في المخزن المصدر المختار. اختر مخزن مصدر آخر.", !transferDraft.length);
