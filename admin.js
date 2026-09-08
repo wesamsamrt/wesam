@@ -1394,9 +1394,10 @@ async function loadDashboardData() {
     const alerts = document.getElementById("dashboardOperationalAlerts");
 
     try {
-        const [{ data: ordersResult, error: ordersError }, products] = await Promise.all([
+        const [{ data: ordersResult, error: ordersError }, products, returnsResult] = await Promise.all([
             supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
-            loadAllDashboardWarehouseProducts()
+            loadAllDashboardWarehouseProducts(),
+            supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse })
         ]);
 
         if (ordersError) throw ordersError;
@@ -1529,6 +1530,13 @@ async function loadAnalyticsData() {
         const allOrders = (Array.isArray(ordersResult) ? ordersResult : []).filter(order => !isCancelledOrder(order));
         const start = analyticsPeriodStart(period);
         const orders = start ? allOrders.filter(order => new Date(order.created_at) >= start) : allOrders;
+        const sourceOrdersById = new Map((Array.isArray(ordersResult) ? ordersResult : []).map(order => [String(order.id), order]));
+        // لا نحسب إلا المرتجع التابع لتحضير موجود وحالته ليست «ملغي».
+        const validReturns = returnsResult?.error ? [] : (Array.isArray(returnsResult?.data) ? returnsResult.data : []).filter(record => {
+            const sourceOrder = sourceOrdersById.get(String(record.order_id));
+            return sourceOrder && !isCancelledOrder(sourceOrder);
+        });
+        const periodReturns = start ? validReturns.filter(record => new Date(record.created_at) >= start) : validReturns;
         const nonCancelled = orders;
         // الإيرادات لا تُسجل إلا للفواتير التي تم شحنها أو تسليمها فعليًا.
         const salesStatuses = new Set(["تم الشحن", "تم التسليم"]);
@@ -1571,10 +1579,12 @@ async function loadAnalyticsData() {
         const chartOrders = dailyRows.reduce((sum, row) => sum + row.orders, 0);
         const weekElement = document.getElementById("analyticsWeekOrders");
         if (weekElement) weekElement.textContent = `${chartOrders} طلب`;
+        const returnsElement = document.getElementById("analyticsWeekReturns");
+        if (returnsElement) returnsElement.textContent = `${periodReturns.length} مرتجع`;
         const ordersChartTitle = document.getElementById("analyticsOrdersChartTitle");
         const ordersChartHint = document.getElementById("analyticsOrdersChartHint");
         if (ordersChartTitle) ordersChartTitle.textContent = `الطلبات خلال ${chartDays} يوم`;
-        if (ordersChartHint) ordersChartHint.textContent = `طلبات غير ملغاة ضمن ${periodLabel}`;
+        if (ordersChartHint) ordersChartHint.textContent = `طلبات غير ملغاة ضمن ${periodLabel} · المرتجعات لتحضيرات غير ملغاة`;
 
         const monthsToShow = period === "all" ? 6 : Math.max(1, Math.ceil((Number(period) || 30) / 30));
         const monthlyRows = Array.from({ length: monthsToShow }, (_, index) => {
