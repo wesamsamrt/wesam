@@ -1271,6 +1271,7 @@
     <div class="orders-admin-header">
         <button class="back-admin" id="backFromReturns">← رجوع</button>
         <div><h2>المرتجعات</h2><p>سجّل المنتجات المرتجعة من التحضير دون حذفها من التحضير الأصلي.</p></div>
+        <button type="button" class="open-invoice-button" id="createManualReturnButton">+ إضافة مرتجع جديد</button>
     </div>
 
     <section class="return-create-card">
@@ -1287,6 +1288,25 @@
 
     <div class="returns-list-header"><h3>سجل المرتجعات</h3><button type="button" id="refreshReturnsButton">↻ تحديث</button></div>
     <div class="returns-list" id="returnsList"><div class="message">جاري تحميل المرتجعات...</div></div>
+
+    <section class="manual-return-editor" id="manualReturnEditor" style="display:none;">
+        <div class="orders-admin-header"><button class="back-admin" id="backFromManualReturn">← رجوع للمرتجعات</button><div><h2>إضافة مرتجع جديد</h2><p>سجل مرتجعًا مستقلًا وأعد كمياته إلى مخزون الصنف المطابق.</p></div></div>
+        <section class="manual-return-customer">
+            <h3>بيانات العميل</h3>
+            <div class="manual-return-customer-grid">
+                <label>اسم العميل<input id="manualReturnCustomerName" type="text" list="manualReturnCustomers" autocomplete="off" placeholder="اكتب اسم العميل المسجل"><datalist id="manualReturnCustomers"></datalist></label>
+                <label>رقم الجوال<input id="manualReturnCustomerPhone" type="text" readonly placeholder="يظهر عند اختيار العميل"></label>
+            </div>
+            <small id="manualReturnCustomerHint">اكتب جزءًا من اسم العميل لاختياره من العملاء المسجلين.</small>
+        </section>
+        <section class="manual-return-items-section">
+            <div class="manual-return-items-head"><h3>منتجات المرتجع</h3><button type="button" id="addManualReturnItem">+ إضافة منتج</button></div>
+            <div class="edit-invoice-table-wrap"><table class="edit-invoice-table manual-return-table"><thead><tr><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>موقع القطعة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>إجراءات</th></tr></thead><tbody id="manualReturnItems"></tbody></table></div>
+        </section>
+        <label class="manual-return-notes">ملاحظات المرتجع<textarea id="manualReturnNotes" rows="3" placeholder="سبب الإرجاع أو أي ملاحظة (اختياري)"></textarea></label>
+        <div class="manual-return-total"><span>إجمالي المرتجع</span><strong id="manualReturnTotal">0.00 ر.س</strong></div>
+        <div class="manual-return-actions"><button type="button" id="saveManualReturnButton">حفظ كمرتجع</button><button type="button" id="cancelManualReturnButton">إلغاء</button><span id="manualReturnMessage"></span></div>
+    </section>
 </section>
 
 <section class="customers-admin" id="shortagesAdmin" style="display:none;">
@@ -1680,7 +1700,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260908-grouped-shortages"></script>
+    <script src="admin.js?v=20260908-manual-returns"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

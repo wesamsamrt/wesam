@@ -4562,32 +4562,39 @@ function renderReturnsList(records) {
         const sourceOrder = adminOrdersData.find(order => String(order.id) === String(record.order_id));
         const driverName = record.driver_name || sourceOrder?.driver_name || "غير مسجل";
         const driverNumber = record.driver_number || sourceOrder?.driver_number || "";
+        const orderLabel = record.order_id ? `رقم الطلب: #${transferText(record.order_id)}` : "مرتجع مباشر";
         return `<article class="return-record-card">
-            <header><div><strong>مرتجع #${transferText(record.id)}</strong><span>رقم الطلب: #${transferText(record.order_id)}</span></div><time>${transferText(date)}</time></header>
+            <header><div><strong>مرتجع #${transferText(record.id)}</strong><span>${orderLabel}</span></div><time>${transferText(date)}</time></header>
             <div class="return-record-details"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b> · ${transferText(record.customer_phone || "بدون جوال")}</span><span>المندوب: <b>${transferText(driverName)}</b>${driverNumber ? ` · ${transferText(driverNumber)}` : ""}</span></div>
             <div class="return-record-items">${items.map(item => `<span>${transferText(returnItemTitle(item))} — ${Number(item.quantity || 0)} قطعة${item.color ? ` (${transferText(item.color)})` : ""}</span>`).join("")}</div>
             ${record.notes ? `<small>ملاحظة: ${transferText(record.notes)}</small>` : ""}
-            <footer><span>إجمالي المرتجع: ${formatAdminCurrency(record.total || 0)}</span><div><button type="button" data-open-return-record="${Number(record.id)}">فتح</button><button type="button" data-print-return-record="${Number(record.id)}">🖨️ طباعة</button></div></footer>
+            <footer><span>إجمالي المرتجع: ${formatAdminCurrency(record.total || 0)}</span><div><button type="button" data-open-return-record="${transferText(record.return_key || `order-${record.id}`)}">فتح</button><button type="button" data-print-return-record="${transferText(record.return_key || `order-${record.id}`)}">🖨️ طباعة</button></div></footer>
         </article>`;
     }).join("");
-    returnsList.querySelectorAll("[data-open-return-record]").forEach(button => button.addEventListener("click", () => openReturnRecordView(Number(button.dataset.openReturnRecord))));
-    returnsList.querySelectorAll("[data-print-return-record]").forEach(button => button.addEventListener("click", () => printReturnRecord(Number(button.dataset.printReturnRecord))));
+    returnsList.querySelectorAll("[data-open-return-record]").forEach(button => button.addEventListener("click", () => openReturnRecordView(button.dataset.openReturnRecord)));
+    returnsList.querySelectorAll("[data-print-return-record]").forEach(button => button.addEventListener("click", () => printReturnRecord(button.dataset.printReturnRecord)));
 }
 
 async function loadWarehouseReturns() {
     if (!returnsList) return;
     returnsList.innerHTML = `<div class="message">جاري تحميل المرتجعات...</div>`;
-    const { data, error } = await supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse });
+    const [{ data, error }, manualResult] = await Promise.all([
+        supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse }),
+        supabaseClient.rpc("list_warehouse_manual_returns", { p_warehouse: selectedWarehouse })
+    ]);
     if (error) {
         returnsList.innerHTML = `<div class="message error">تعذر تحميل المرتجعات: ${transferText(error.message)}</div>`;
         return;
     }
-    warehouseReturnsData = Array.isArray(data) ? data : [];
+    const manualReturns = manualResult?.error ? [] : (Array.isArray(manualResult?.data) ? manualResult.data : []);
+    warehouseReturnsData = [...(Array.isArray(data) ? data : []), ...manualReturns]
+        .map(record => ({ ...record, return_key: `${record.manual_return ? "manual" : "order"}-${record.id}` }))
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     renderReturnsList(warehouseReturnsData);
 }
 
 function getReturnRecordWithOrder(returnId) {
-    const record = warehouseReturnsData.find(item => String(item.id) === String(returnId));
+    const record = warehouseReturnsData.find(item => String(item.return_key || `order-${item.id}`) === String(returnId));
     if (!record) return null;
     return { record, order: adminOrdersData.find(item => String(item.id) === String(record.order_id)) };
 }
@@ -4605,7 +4612,7 @@ function openReturnRecordView(returnId) {
     const dialog = document.createElement("div");
     dialog.id = "warehouseReturnViewDialog";
     dialog.className = "customer-return-view-dialog";
-    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>رقم الطلب #${transferText(record.order_id)} · ${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>المندوب: <b>${transferText(driverName)}${driverNumber ? ` (${transferText(driverNumber)})` : ""}</b></span><span>الإجمالي: <b>${formatAdminCurrency(record.total || 0)}</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer><button type="button" data-print>🖨️ طباعة المرتجع</button><button type="button" data-close>إغلاق</button></footer></section>`;
+    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>${record.order_id ? `رقم الطلب #${transferText(record.order_id)} · ` : "مرتجع مباشر · "}${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>المندوب: <b>${transferText(driverName)}${driverNumber ? ` (${transferText(driverNumber)})` : ""}</b></span><span>الإجمالي: <b>${formatAdminCurrency(record.total || 0)}</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer><button type="button" data-print>🖨️ طباعة المرتجع</button><button type="button" data-close>إغلاق</button></footer></section>`;
     document.body.appendChild(dialog);
     const close = () => dialog.remove();
     dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
@@ -4625,6 +4632,106 @@ function printReturnRecord(returnId) {
     printWindow.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>مرتجع #${transferText(record.id)}</title><style>body{font-family:Arial,sans-serif;color:#20243a;padding:28px}h1{margin:0 0 8px;color:#3f36af}p{color:#60657a}.meta{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:22px 0}.meta div{padding:10px;border:1px solid #dfe1eb;border-radius:8px}table{width:100%;border-collapse:collapse;margin-top:15px}th,td{border:1px solid #cfd2df;padding:9px;text-align:right}th{background:#f0efff}footer{margin-top:20px;font-weight:bold;color:#2d8757}</style></head><body><h1>مستند مرتجع #${transferText(record.id)}</h1><p>التاريخ: ${transferText(date)}</p><div class="meta"><div>رقم الطلب: <b>#${transferText(record.order_id)}</b></div><div>العميل: <b>${transferText(record.customer_name || "عميل")}</b></div><div>المندوب: <b>${transferText(driverName)}</b></div><div>المخزن: <b>${transferText(record.warehouse || "—")}</b></div></div><table><thead><tr><th>#</th><th>الكود</th><th>الصنف</th><th>الموديل</th><th>اللون</th><th>الكمية المرتجعة</th><th>القيمة</th></tr></thead><tbody>${items.map((item, index) => `<tr><td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(returnItemTitle(item))}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>${Number(item.quantity || 0)}</td><td>${(Number(item.quantity || 0) * Number(item.price || 0)).toFixed(2)} ر.س</td></tr>`).join("")}</tbody></table>${record.notes ? `<p>ملاحظات: ${transferText(record.notes)}</p>` : ""}<footer>إجمالي المرتجع: ${formatAdminCurrency(record.total || 0)}</footer><script>window.onload=()=>window.print()<\/script></body></html>`);
     printWindow.document.close();
 }
+
+/* مرتجع يدوي مستقل عن التحضيرات، مع اختيار عميل مسجل فقط. */
+const manualReturnEditor = document.getElementById("manualReturnEditor");
+const createManualReturnButton = document.getElementById("createManualReturnButton");
+const manualReturnCustomerName = document.getElementById("manualReturnCustomerName");
+const manualReturnCustomerPhone = document.getElementById("manualReturnCustomerPhone");
+const manualReturnCustomers = document.getElementById("manualReturnCustomers");
+const manualReturnCustomerHint = document.getElementById("manualReturnCustomerHint");
+const manualReturnItems = document.getElementById("manualReturnItems");
+const manualReturnTotal = document.getElementById("manualReturnTotal");
+const manualReturnMessage = document.getElementById("manualReturnMessage");
+let manualReturnCustomersData = [];
+let manualReturnItemsData = [];
+
+function manualReturnText(value) { return String(value ?? "").trim().toLocaleLowerCase("ar-SA"); }
+function setManualReturnMessage(message = "", isError = false) {
+    if (!manualReturnMessage) return;
+    manualReturnMessage.textContent = message;
+    manualReturnMessage.classList.toggle("error", isError);
+}
+function newManualReturnItem() {
+    return { product_code: "", category: "", product_type: "", type: "", company: "", model: "", color: "", storage_location: "", quantity: 1, price: 0 };
+}
+function renderManualReturnItems() {
+    if (!manualReturnItems) return;
+    if (!manualReturnItemsData.length) manualReturnItemsData.push(newManualReturnItem());
+    manualReturnItems.innerHTML = manualReturnItemsData.map((item, index) => {
+        const text = field => `<input type="text" value="${transferText(item[field] || "")}" data-manual-return-field="${field}" data-manual-return-index="${index}">`;
+        const number = field => `<input type="number" min="0" step="${field === "price" ? "0.01" : "1"}" value="${Number(item[field] || 0)}" data-manual-return-field="${field}" data-manual-return-index="${index}">`;
+        const total = Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.price || 0));
+        return `<tr><td>${index + 1}</td><td>${text("product_code")}</td><td>${text("category")}</td><td>${text("product_type")}</td><td>${text("type")}</td><td>${text("company")}</td><td>${text("model")}</td><td>${text("color")}</td><td>${text("storage_location")}</td><td>${number("quantity")}</td><td>${number("price")}</td><td>${formatAdminCurrency(total)}</td><td><button type="button" class="manual-return-remove" data-manual-return-remove="${index}">حذف</button></td></tr>`;
+    }).join("");
+    const total = manualReturnItemsData.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.price || 0)), 0);
+    if (manualReturnTotal) manualReturnTotal.textContent = formatAdminCurrency(total);
+    manualReturnItems.querySelectorAll("[data-manual-return-field]").forEach(input => input.addEventListener("input", event => {
+        const index = Number(event.currentTarget.dataset.manualReturnIndex);
+        const field = event.currentTarget.dataset.manualReturnField;
+        manualReturnItemsData[index][field] = ["quantity", "price"].includes(field) ? Math.max(0, Number(event.currentTarget.value || 0)) : event.currentTarget.value;
+        renderManualReturnItems();
+    }));
+    manualReturnItems.querySelectorAll("[data-manual-return-remove]").forEach(button => button.addEventListener("click", () => {
+        manualReturnItemsData.splice(Number(button.dataset.manualReturnRemove), 1);
+        renderManualReturnItems();
+    }));
+}
+async function loadManualReturnCustomers() {
+    const { data, error } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
+    if (error) { setManualReturnMessage(`تعذر تحميل العملاء: ${error.message}`, true); return; }
+    const unique = new Map();
+    (Array.isArray(data) ? data : []).filter(order => !isCancelledOrder(order) && String(order.customer_name || "").trim()).forEach(order => {
+        const key = manualReturnText(order.customer_name);
+        if (!unique.has(key)) unique.set(key, { name: String(order.customer_name).trim(), phone: String(order.customer_phone || "").trim() });
+    });
+    manualReturnCustomersData = [...unique.values()];
+    if (manualReturnCustomers) manualReturnCustomers.innerHTML = manualReturnCustomersData.map(customer => `<option value="${transferText(customer.name)}"></option>`).join("");
+}
+function syncManualReturnCustomer() {
+    const customer = manualReturnCustomersData.find(item => manualReturnText(item.name) === manualReturnText(manualReturnCustomerName?.value));
+    if (manualReturnCustomerPhone) manualReturnCustomerPhone.value = customer?.phone || "";
+    if (manualReturnCustomerHint) manualReturnCustomerHint.textContent = customer ? "تم اختيار عميل مسجل." : "اكتب جزءًا من الاسم ثم اختر العميل المطابق من القائمة.";
+}
+function openManualReturnEditor() {
+    document.querySelector(".return-create-card")?.style.setProperty("display", "none");
+    document.querySelector(".returns-list-header")?.style.setProperty("display", "none");
+    if (returnsList) returnsList.style.display = "none";
+    if (createManualReturnButton) createManualReturnButton.style.display = "none";
+    if (manualReturnEditor) manualReturnEditor.style.display = "block";
+    manualReturnItemsData = [newManualReturnItem()];
+    if (manualReturnCustomerName) manualReturnCustomerName.value = "";
+    if (manualReturnCustomerPhone) manualReturnCustomerPhone.value = "";
+    const notes = document.getElementById("manualReturnNotes"); if (notes) notes.value = "";
+    setManualReturnMessage(""); renderManualReturnItems(); loadManualReturnCustomers();
+}
+function closeManualReturnEditor() {
+    if (manualReturnEditor) manualReturnEditor.style.display = "none";
+    document.querySelector(".return-create-card")?.style.removeProperty("display");
+    document.querySelector(".returns-list-header")?.style.removeProperty("display");
+    if (returnsList) returnsList.style.removeProperty("display");
+    if (createManualReturnButton) createManualReturnButton.style.removeProperty("display");
+}
+async function saveManualReturn() {
+    const customer = manualReturnCustomersData.find(item => manualReturnText(item.name) === manualReturnText(manualReturnCustomerName?.value));
+    if (!customer) { setManualReturnMessage("اختر عميلًا مسجلًا من القائمة أولًا.", true); return; }
+    const items = manualReturnItemsData.map(item => ({ ...item, product_code: String(item.product_code || "").trim(), quantity: Number(item.quantity || 0), price: Number(item.price || 0) })).filter(item => item.product_code && item.quantity > 0);
+    if (!items.length) { setManualReturnMessage("أضف منتجًا واحدًا صحيحًا على الأقل مع الكمية.", true); return; }
+    const saveButton = document.getElementById("saveManualReturnButton");
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = "جاري الحفظ..."; }
+    const { data, error } = await supabaseClient.rpc("create_manual_warehouse_return", { p_return: { warehouse: selectedWarehouse, customer_name: customer.name, customer_phone: customer.phone || null, notes: document.getElementById("manualReturnNotes")?.value || null, items } });
+    if (saveButton) { saveButton.disabled = false; saveButton.textContent = "حفظ كمرتجع"; }
+    if (error) { setManualReturnMessage(`تعذر حفظ المرتجع: ${error.message}`, true); return; }
+    setManualReturnMessage(`تم حفظ المرتجع #${data?.id || ""} وإعادة كمياته للمخزون.`);
+    await loadWarehouseReturns(); closeManualReturnEditor();
+}
+createManualReturnButton?.addEventListener("click", openManualReturnEditor);
+document.getElementById("backFromManualReturn")?.addEventListener("click", closeManualReturnEditor);
+document.getElementById("cancelManualReturnButton")?.addEventListener("click", closeManualReturnEditor);
+document.getElementById("addManualReturnItem")?.addEventListener("click", () => { manualReturnItemsData.push(newManualReturnItem()); renderManualReturnItems(); });
+manualReturnCustomerName?.addEventListener("input", syncManualReturnCustomer);
+manualReturnCustomerName?.addEventListener("change", syncManualReturnCustomer);
+document.getElementById("saveManualReturnButton")?.addEventListener("click", saveManualReturn);
 
 async function saveOrderReturn() {
     if (!selectedReturnOrder || !returnItems) return;
