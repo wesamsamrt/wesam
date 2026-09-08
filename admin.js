@@ -5131,6 +5131,11 @@ function renderAdminOrder(order, items = []) {
 
     let productsHTML = "";
 
+    const totalPieces = (items || []).reduce(
+        (sum, item) => sum + Math.max(0, Number(item.quantity || 0)),
+        0
+    );
+
 
     (items || []).forEach(item => {
 
@@ -5429,9 +5434,10 @@ Object.entries(typeCodes).forEach(
 
         <div class="admin-order-bottom">
 
-            <strong>
-                الإجمالي
-            </strong>
+            <div class="admin-order-total-summary">
+                <strong>الإجمالي</strong>
+                <small>إجمالي كمية القطع: ${totalPieces} قطعة</small>
+            </div>
 
             <strong class="admin-order-total">
                 ${Number(order.total || 0).toFixed(2)} ر.س

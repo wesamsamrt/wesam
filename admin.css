@@ -1209,6 +1209,9 @@ body {
     font-size: 18px;
 }
 
+.admin-order-total-summary { display: grid; gap: 4px; }
+.admin-order-total-summary small { color: #72768a; font-size: 12px; font-weight: 700; }
+
 @media (max-width: 600px) {
 
     .orders-toolbar { align-items: stretch; flex-direction: column; }
