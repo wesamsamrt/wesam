@@ -1394,10 +1394,9 @@ async function loadDashboardData() {
     const alerts = document.getElementById("dashboardOperationalAlerts");
 
     try {
-        const [{ data: ordersResult, error: ordersError }, products, returnsResult] = await Promise.all([
+        const [{ data: ordersResult, error: ordersError }, products] = await Promise.all([
             supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
-            loadAllDashboardWarehouseProducts(),
-            supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse })
+            loadAllDashboardWarehouseProducts()
         ]);
 
         if (ordersError) throw ordersError;
@@ -1521,9 +1520,10 @@ async function loadAnalyticsData() {
     const period = analyticsPeriod?.value || "30";
     if (kpis) kpis.innerHTML = '<div class="message">جاري تحديث الإحصائيات...</div>';
     try {
-        const [{ data: ordersResult, error: ordersError }, products] = await Promise.all([
+        const [{ data: ordersResult, error: ordersError }, products, returnsResult] = await Promise.all([
             supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
-            loadAllDashboardWarehouseProducts()
+            loadAllDashboardWarehouseProducts(),
+            supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse })
         ]);
         if (ordersError) throw ordersError;
 
