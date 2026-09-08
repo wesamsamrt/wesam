@@ -1514,6 +1514,31 @@ function renderAnalyticsBars(containerId, rows, valueKey, labelFormatter) {
     }).join("");
 }
 
+function renderAnalyticsOrdersLines(rows) {
+    const container = document.getElementById("analyticsDailyChart");
+    if (!container) return;
+    const width = 760, height = 220, pad = { top: 32, right: 18, bottom: 34, left: 22 };
+    const max = Math.max(1, ...rows.flatMap(row => [Number(row.orders || 0), Number(row.returns || 0)]));
+    const spanX = Math.max(1, width - pad.left - pad.right);
+    const spanY = height - pad.top - pad.bottom;
+    const point = (row, index, key) => ({
+        x: pad.left + (rows.length <= 1 ? spanX / 2 : (index * spanX) / (rows.length - 1)),
+        y: pad.top + spanY - ((Number(row[key] || 0) / max) * spanY),
+        value: Number(row[key] || 0)
+    });
+    const orderPoints = rows.map((row, index) => point(row, index, "orders"));
+    const returnPoints = rows.map((row, index) => point(row, index, "returns"));
+    const path = points => points.map((item, index) => `${index ? "L" : "M"}${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ");
+    const grid = [0, .25, .5, .75, 1].map(level => {
+        const y = pad.top + spanY - (spanY * level);
+        return `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y}" y2="${y}" class="analytics-line-grid"/><text x="${width - pad.right}" y="${y - 4}" class="analytics-line-axis">${Math.round(max * level)}</text>`;
+    }).join("");
+    const labels = rows.map((row, index) => `<text x="${orderPoints[index].x}" y="${height - 11}" class="analytics-line-label">${transferText(row.key.slice(5).replace("-", "/"))}</text>`).join("");
+    const circles = (points, colorClass) => points.map(item => `<circle cx="${item.x}" cy="${item.y}" r="4" class="${colorClass}"/><text x="${item.x}" y="${item.y - 10}" class="${colorClass}-value">${item.value}</text>`).join("");
+    container.className = "analytics-line-chart";
+    container.innerHTML = `<div class="analytics-line-legend"><span class="orders">الطلبات</span><span class="returns">المرتجعات</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="مخطط الطلبات والمرتجعات"><g>${grid}</g><path d="${path(orderPoints)}" class="analytics-orders-line"/><path d="${path(returnPoints)}" class="analytics-returns-line"/>${circles(orderPoints, "analytics-orders-point")}${circles(returnPoints, "analytics-returns-point")}${labels}</svg>`;
+}
+
 async function loadAnalyticsData() {
     if (!analyticsAdmin) return;
     const kpis = document.getElementById("analyticsKpis");
@@ -1573,9 +1598,13 @@ async function loadAnalyticsData() {
             const date = new Date();
             date.setDate(date.getDate() - (chartDays - 1 - index));
             const key = saudiDateKey(date);
-            return { key, orders: orders.filter(order => saudiDateKey(order.created_at) === key).length };
+            return {
+                key,
+                orders: orders.filter(order => saudiDateKey(order.created_at) === key).length,
+                returns: periodReturns.filter(record => saudiDateKey(record.created_at) === key).length
+            };
         });
-        renderAnalyticsBars("analyticsDailyChart", dailyRows, "orders", row => row.key.slice(5).replace("-", "/"));
+        renderAnalyticsOrdersLines(dailyRows);
         const chartOrders = dailyRows.reduce((sum, row) => sum + row.orders, 0);
         const weekElement = document.getElementById("analyticsWeekOrders");
         if (weekElement) weekElement.textContent = `${chartOrders} طلب`;
