@@ -177,6 +177,7 @@ function applyTeamAccessToInterface() {
     const sectionButtons = {
         dashboardButton: "dashboard",
         productsButton: "products",
+        samplesButton: "products",
         ordersButton: "orders",
         returnsButton: "orders",
         customersButton: "customers",
@@ -328,6 +329,8 @@ function showAdmin() {
     if (customersPage) customersPage.style.display = "none";
     const returnsPage = document.getElementById("returnsAdmin");
     if (returnsPage) returnsPage.style.display = "none";
+    const samplesPage = document.getElementById("samplesAdmin");
+    if (samplesPage) samplesPage.style.display = "none";
 
     if (adminPage) {
         adminPage.style.display = "block";
@@ -2390,6 +2393,107 @@ adminProductModelFilter?.addEventListener("change", () => {
 });
 adminProductColorFilter?.addEventListener("change", applyAdminProductFilters);
 
+/* =========================================================
+   العينات — سجل مستقل لا يخصم من المخزون تلقائيًا
+========================================================= */
+const samplesButton = document.getElementById("samplesButton");
+const samplesAdmin = document.getElementById("samplesAdmin");
+const samplesList = document.getElementById("samplesList");
+const sampleName = document.getElementById("sampleName");
+const sampleProductCode = document.getElementById("sampleProductCode");
+const sampleQuantity = document.getElementById("sampleQuantity");
+const sampleRecipient = document.getElementById("sampleRecipient");
+const sampleNotes = document.getElementById("sampleNotes");
+const sampleFormMessage = document.getElementById("sampleFormMessage");
+let samplesData = [];
+
+function setSampleMessage(message = "", isError = false) {
+    if (!sampleFormMessage) return;
+    sampleFormMessage.textContent = message;
+    sampleFormMessage.style.color = isError ? "#c3425a" : "#2e9d69";
+}
+
+function renderSamples() {
+    if (!samplesList) return;
+    if (!samplesData.length) {
+        samplesList.innerHTML = '<div class="message">لا توجد عينات مسجلة في هذا المخزن.</div>';
+        return;
+    }
+    samplesList.innerHTML = samplesData.map(sample => {
+        const date = sample.created_at ? new Date(sample.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
+        return `<article class="sample-record-card"><div><h4>${transferText(sample.name || "عينة")}</h4><p>${sample.notes ? transferText(sample.notes) : "بدون ملاحظات"}</p><div class="sample-record-meta"><span>الكود: <b>${transferText(sample.product_code || "—")}</b></span><span>المستلم: <b>${transferText(sample.recipient || "غير محدد")}</b></span><span>${transferText(date)}</span></div></div><div class="sample-record-side"><strong>${Number(sample.quantity || 0)} قطعة</strong><button type="button" data-delete-sample="${Number(sample.id)}">حذف</button></div></article>`;
+    }).join("");
+    samplesList.querySelectorAll("[data-delete-sample]").forEach(button => button.addEventListener("click", () => deleteSample(Number(button.dataset.deleteSample))));
+}
+
+async function loadSamples() {
+    if (!samplesList) return;
+    samplesList.innerHTML = '<div class="message">جاري تحميل العينات...</div>';
+    const { data, error } = await supabaseClient.rpc("list_warehouse_samples", { p_warehouse: selectedWarehouse });
+    if (error) {
+        samplesList.innerHTML = `<div class="message error">تعذر تحميل العينات: ${transferText(error.message)}</div>`;
+        return;
+    }
+    samplesData = Array.isArray(data) ? data : [];
+    renderSamples();
+}
+
+async function saveSample() {
+    const name = String(sampleName?.value || "").trim();
+    const quantity = Math.max(0, Number.parseInt(sampleQuantity?.value, 10) || 0);
+    if (!name || quantity < 1) {
+        setSampleMessage("اكتب اسم العينة وكمية صحيحة.", true);
+        return;
+    }
+    const saveButton = document.getElementById("saveSampleButton");
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = "جاري الحفظ..."; }
+    const { error } = await supabaseClient.rpc("save_warehouse_sample", {
+        p_sample: {
+            warehouse: selectedWarehouse,
+            name,
+            product_code: String(sampleProductCode?.value || "").trim() || null,
+            quantity,
+            recipient: String(sampleRecipient?.value || "").trim() || null,
+            notes: String(sampleNotes?.value || "").trim() || null
+        }
+    });
+    if (saveButton) { saveButton.disabled = false; saveButton.textContent = "حفظ العينة"; }
+    if (error) {
+        setSampleMessage(`تعذر حفظ العينة: ${error.message}`, true);
+        return;
+    }
+    if (sampleName) sampleName.value = "";
+    if (sampleProductCode) sampleProductCode.value = "";
+    if (sampleQuantity) sampleQuantity.value = "1";
+    if (sampleRecipient) sampleRecipient.value = "";
+    if (sampleNotes) sampleNotes.value = "";
+    setSampleMessage("تم حفظ العينة.");
+    await loadSamples();
+}
+
+async function deleteSample(sampleId) {
+    if (!sampleId || !confirm("هل تريد حذف هذه العينة من السجل؟")) return;
+    const { error } = await supabaseClient.rpc("delete_warehouse_sample", { p_sample_id: sampleId });
+    if (error) { alert(`تعذر حذف العينة: ${error.message}`); return; }
+    await loadSamples();
+}
+
+samplesButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "returnsAdmin"].forEach(id => {
+        const page = document.getElementById(id);
+        if (page) page.style.display = "none";
+    });
+    if (samplesAdmin) samplesAdmin.style.display = "block";
+    setSampleMessage("");
+    await loadSamples();
+});
+document.getElementById("backFromSamples")?.addEventListener("click", showAdmin);
+document.getElementById("saveSampleButton")?.addEventListener("click", saveSample);
+document.getElementById("refreshSamplesButton")?.addEventListener("click", loadSamples);
+document.querySelectorAll(".admin-nav-item").forEach(button => {
+    if (button.id !== "samplesButton") button.addEventListener("click", () => { if (samplesAdmin) samplesAdmin.style.display = "none"; });
+});
+
 document.getElementById("addProductDashboardButton")?.addEventListener("click", async () => {
     document.getElementById("adminPage").style.display = "none";
     document.getElementById("categoriesAdmin").style.display = "none";
@@ -2724,25 +2828,6 @@ const compatibilityType =
         "productCompatibilityType"
     ).value;
 
-
-
-/* =========================
-   التحقق حسب نوع التوافق
-========================= */
-
-if (
-    compatibilityType === "device" &&
-    (!company || !model)
-) {
-
-    productFormMessage.textContent =
-        "اكتب الشركة والموديل لهذا المنتج";
-
-    productFormMessage.style.color =
-        "#e05265";
-
-    return;
-}
 
 
 let compatibleDevicesArray = [];

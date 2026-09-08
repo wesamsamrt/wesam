@@ -160,6 +160,11 @@
                 <strong>المنتجات</strong>
             </button>
 
+            <button class="admin-nav-item" id="samplesButton">
+                <span>🧪</span>
+                <strong>العينات</strong>
+            </button>
+
 
             <button
                 class="admin-nav-item"
@@ -925,7 +930,7 @@
 >
 
     <label>
-        الشركة
+        الشركة (اختياري)
     </label>
 
     <input
@@ -943,7 +948,7 @@
 >
 
     <label>
-        الموديل
+        الموديل (اختياري)
     </label>
 
     <input
@@ -1054,6 +1059,28 @@
         id="adminProducts"
     ></div>
 
+</section>
+
+<section class="samples-admin" id="samplesAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromSamples">← رجوع</button>
+        <div><h2>العينات</h2><p>سجل العينات المضافة للمخزن الحالي.</p></div>
+    </div>
+
+    <section class="samples-create-card">
+        <h3>إضافة عينة</h3>
+        <div class="samples-form-grid">
+            <label>اسم العينة<input id="sampleName" type="text" placeholder="مثال: عينة كفر آيفون" required></label>
+            <label>كود المنتج (اختياري)<input id="sampleProductCode" type="text" placeholder="مثال: WM-0001"></label>
+            <label>الكمية<input id="sampleQuantity" type="number" min="1" value="1" inputmode="numeric"></label>
+            <label>مستلم العينة (اختياري)<input id="sampleRecipient" type="text" placeholder="اسم العميل أو الجهة"></label>
+        </div>
+        <label class="samples-notes-label">ملاحظات<textarea id="sampleNotes" rows="3" placeholder="أي تفاصيل إضافية عن العينة (اختياري)"></textarea></label>
+        <div class="samples-actions"><button type="button" id="saveSampleButton">حفظ العينة</button><span id="sampleFormMessage"></span></div>
+    </section>
+
+    <div class="samples-list-header"><h3>سجل العينات</h3><button type="button" id="refreshSamplesButton">↻ تحديث</button></div>
+    <div class="samples-list" id="samplesList"><div class="message">جاري تحميل العينات...</div></div>
 </section>
 
 <section
@@ -1653,7 +1680,7 @@
 </div>
 
 
-    <script src="admin.js?v=20260908-admin-product-filters-code"></script>
+    <script src="admin.js?v=20260908-samples-section"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

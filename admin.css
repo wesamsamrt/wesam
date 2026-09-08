@@ -592,6 +592,8 @@ body {
 
 .admin-product-info .admin-product-code { margin-top: 5px; color: #5d4fd1; font-weight: 800; }
 
+.samples-admin{width:min(1180px,calc(100% - 32px));margin:30px auto;color:#252638}.samples-create-card{margin-top:18px;padding:22px;border:1px solid #e6e8f1;border-radius:20px;background:#fff;box-shadow:0 10px 30px rgba(37,38,56,.06)}.samples-create-card h3{margin:0 0 16px;font-size:18px}.samples-form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.samples-form-grid label,.samples-notes-label{display:grid;gap:6px;color:#55576a;font-size:12px;font-weight:800}.samples-form-grid input,.samples-notes-label textarea{box-sizing:border-box;width:100%;border:1px solid #dedfed;border-radius:10px;background:#fcfcff;color:#28293a;padding:0 11px;font-family:inherit}.samples-form-grid input{height:41px}.samples-notes-label{margin-top:14px}.samples-notes-label textarea{min-height:72px;padding:10px;resize:vertical}.samples-actions{display:flex;align-items:center;gap:12px;margin-top:15px}.samples-actions button,.samples-list-header button{height:40px;border:0;border-radius:10px;padding:0 16px;background:#6557ed;color:#fff;font-family:inherit;font-weight:800;cursor:pointer}.samples-actions span{min-height:18px;color:#6e7182;font-size:12px}.samples-list-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 12px}.samples-list-header h3{margin:0;font-size:19px}.samples-list{display:grid;gap:10px}.sample-record-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:15px;align-items:center;padding:16px;border:1px solid #e4e5ee;border-radius:16px;background:#fff}.sample-record-card h4{margin:0;color:#3e36a7;font-size:15px}.sample-record-card p{margin:6px 0 0;color:#727587;font-size:11px}.sample-record-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.sample-record-meta span{padding:6px 8px;border-radius:8px;background:#f4f3ff;color:#58509e;font-size:11px}.sample-record-side{display:grid;justify-items:end;gap:9px}.sample-record-side strong{color:#2e9d69;font-size:15px}.sample-record-side button{height:32px;border:1px solid #f1c8ce;border-radius:8px;padding:0 10px;background:#fff7f8;color:#bd4253;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer}
+
 .admin-product-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .admin-product-filters select { min-width: 0; height: 40px; border: 1px solid #e0ddf5; border-radius: 10px; background: #fbfaff; color: #46415b; padding: 0 10px; font-family: inherit; font-size: 12px; }
 .admin-product-filters select:disabled { color: #a6a4b4; background: #f3f3f7; }
@@ -663,6 +665,7 @@ body {
 @media (max-width: 600px) {
 
     .admin-product-filters { grid-template-columns: 1fr; }
+    .samples-admin{width:calc(100% - 20px);margin:18px auto}.samples-create-card{padding:14px}.samples-form-grid{grid-template-columns:1fr}.sample-record-card{grid-template-columns:1fr}.sample-record-side{justify-items:start}
 
     .products-admin-header {
         flex-wrap: wrap;
