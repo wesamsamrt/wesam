@@ -4967,7 +4967,8 @@ function buildAdminCustomers(orders) {
             const returns = adminCustomerReturnsData.filter(record => {
                 const sameOrder = orderIds.has(String(record.order_id));
                 const sameCustomer = customerKeyFromOrder(record) === customer.key;
-                return sameOrder || sameCustomer;
+                const sameCustomerName = manualReturnText(record.customer_name) === manualReturnText(customer.name);
+                return sameOrder || sameCustomer || sameCustomerName;
             });
             return {
                 ...customer,
@@ -4992,7 +4993,7 @@ function renderCustomerProfile(customer) {
         .join("");
     const returnHistory = [...(customer.returns || [])]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(record => `<button type="button" class="customer-history-row customer-return-row customer-return-view" data-customer-return-view="${Number(record.id)}"><div><strong>مرتجع #${transferText(record.id)} من التحضير #${transferText(record.order_id)}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة · اضغط لعرض المرتجع</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></button>`)
+        .map(record => `<button type="button" class="customer-history-row customer-return-row customer-return-view" data-customer-return-view="${transferText(record.return_key || `order-${record.id}`)}"><div><strong>مرتجع #${transferText(record.id)} ${record.order_id ? `من التحضير #${transferText(record.order_id)}` : "مباشر"}</strong><span>${customerOrderDate(record.created_at)} · ${(record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة · اضغط لعرض المرتجع</span></div><b>${Number(record.total || 0).toFixed(2)} ر.س</b></button>`)
         .join("");
     customerProfilePanel.innerHTML = `
         <div class="customer-profile-head"><h3>${transferText(customer.name)}</h3><p>${transferText(customer.phone || "لم يسجل رقم جوال")}</p></div>
@@ -5013,13 +5014,13 @@ function renderCustomerProfile(customer) {
         openCustomerOrderView(Number(button.dataset.customerOrderView));
     }));
     customerProfilePanel.querySelectorAll("[data-customer-return-view]").forEach(button => button.addEventListener("click", () => {
-        openCustomerReturnView(Number(button.dataset.customerReturnView));
+        openCustomerReturnView(button.dataset.customerReturnView);
     }));
 }
 
 // يعرض تفاصيل المرتجع من سجل العميل، مع رابط مباشر للفواتير الأصلية عند الحاجة.
 window.openCustomerReturnView = function (returnId) {
-    const record = adminCustomerReturnsData.find(item => String(item.id) === String(returnId));
+    const record = adminCustomerReturnsData.find(item => String(item.return_key || `order-${item.id}`) === String(returnId));
     if (!record) return;
     document.getElementById("customerReturnViewDialog")?.remove();
     const date = customerOrderDate(record.created_at);
@@ -5027,7 +5028,7 @@ window.openCustomerReturnView = function (returnId) {
     const dialog = document.createElement("div");
     dialog.id = "customerReturnViewDialog";
     dialog.className = "customer-return-view-dialog";
-    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>من التحضير #${transferText(record.order_id)} · ${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>إجمالي المرتجع: <b>${Number(record.total || 0).toFixed(2)} ر.س</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer><button type="button" data-open-order>فتح التحضير الأصلي</button><button type="button" data-close>إغلاق</button></footer></section>`;
+    dialog.innerHTML = `<section class="customer-return-view-box" role="dialog" aria-modal="true" aria-label="تفاصيل المرتجع"><button type="button" class="customer-return-view-close" data-close aria-label="إغلاق">×</button><h3>مرتجع #${transferText(record.id)}</h3><p>${record.order_id ? `من التحضير #${transferText(record.order_id)} · ` : "مرتجع مباشر · "}${transferText(date)}</p><div class="customer-return-view-meta"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b></span><span>إجمالي المرتجع: <b>${Number(record.total || 0).toFixed(2)} ر.س</b></span></div><div class="customer-return-view-items">${items.map(item => `<article><strong>${transferText(returnItemTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · اللون: ${transferText(item.color || "—")} · الكمية المرتجعة: ${Number(item.quantity || 0)}</span></article>`).join("") || '<p>لا توجد منتجات مسجلة.</p>'}</div>${record.notes ? `<div class="customer-return-view-notes">ملاحظات: ${transferText(record.notes)}</div>` : ""}<footer>${record.order_id ? '<button type="button" data-open-order>فتح التحضير الأصلي</button>' : ""}<button type="button" data-close>إغلاق</button></footer></section>`;
     document.body.appendChild(dialog);
     const close = () => dialog.remove();
     dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
@@ -5066,9 +5067,16 @@ async function loadAdminCustomers() {
         return;
     }
     // سجل المرتجعات مستقل؛ تعذر تحميله لا يمنع ظهور العملاء أو فواتيرهم.
-    const { data: returnsData, error: returnsError } = await supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse });
+    const [{ data: returnsData, error: returnsError }, manualReturnsResult] = await Promise.all([
+        supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse }),
+        supabaseClient.rpc("list_warehouse_manual_returns", { p_warehouse: selectedWarehouse })
+    ]);
     if (returnsError) console.warn("Customers returns load error:", returnsError);
-    adminCustomerReturnsData = returnsError ? [] : (Array.isArray(returnsData) ? returnsData : []);
+    if (manualReturnsResult?.error) console.warn("Customers manual returns load error:", manualReturnsResult.error);
+    adminCustomerReturnsData = [
+        ...(returnsError ? [] : (Array.isArray(returnsData) ? returnsData : [])),
+        ...(manualReturnsResult?.error ? [] : (Array.isArray(manualReturnsResult?.data) ? manualReturnsResult.data : []))
+    ].map(record => ({ ...record, return_key: `${record.manual_return ? "manual" : "order"}-${record.id}` }));
     adminCustomersData = buildAdminCustomers(data || []);
     const totalOrders = adminCustomersData.reduce((sum, customer) => sum + customer.orders.length, 0);
     const totalSales = adminCustomersData.reduce((sum, customer) => sum + customer.total, 0);
