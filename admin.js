@@ -7833,6 +7833,12 @@ function showOrderProductList(products) {
                 "
             >
 
+            <div id="orderProductFilters" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:15px;">
+                <select id="orderProductCompanyFilter" aria-label="تصفية حسب الماركة" style="min-width:0;padding:11px;border:1px solid #ddd;border-radius:10px;background:#fff;font-family:inherit;"></select>
+                <select id="orderProductModelFilter" aria-label="تصفية حسب الموديل" disabled style="min-width:0;padding:11px;border:1px solid #ddd;border-radius:10px;background:#fff;font-family:inherit;"></select>
+                <select id="orderProductColorFilter" aria-label="تصفية حسب اللون" disabled style="min-width:0;padding:11px;border:1px solid #ddd;border-radius:10px;background:#fff;font-family:inherit;"></select>
+            </div>
+
 
             <div
                 id="orderProductList"
@@ -7848,41 +7854,71 @@ function showOrderProductList(products) {
 
     document.body.appendChild(picker);
 
-
-    renderOrderProductList(products);
-
-
-    document
-        .getElementById("orderProductSearch")
-        .addEventListener("input", function () {
-
-            const search =
-                this.value
-                    .trim()
-                    .toLowerCase();
-
-
-            const filtered =
-                products.filter(product => {
-
-                    const text = `
-                        ${product.model || ""}
-                        ${product.company || ""}
-                        ${product.product_code || ""}
-                        ${product.category || ""}
-                        ${product.product_type || ""}
-                        ${product.type || ""}
-                    `.toLowerCase();
-
-
-                    return text.includes(search);
-
-                });
-
-
-            renderOrderProductList(filtered);
-
+    const searchInput = document.getElementById("orderProductSearch");
+    const companyFilter = document.getElementById("orderProductCompanyFilter");
+    const modelFilter = document.getElementById("orderProductModelFilter");
+    const colorFilter = document.getElementById("orderProductColorFilter");
+    const filterValue = (product, field) => String(product[field] || "").trim() || "__EMPTY__";
+    const filterLabel = value => value === "__EMPTY__" ? "بدون تحديد" : value;
+    const fillFilter = (select, values, placeholder, selectedValue = "") => {
+        select.innerHTML = "";
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = placeholder;
+        select.appendChild(defaultOption);
+        [...new Set(values)].sort((a, b) => filterLabel(a).localeCompare(filterLabel(b), "ar-SA")).forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = filterLabel(value);
+            option.selected = value === selectedValue;
+            select.appendChild(option);
         });
+    };
+    const matchesSearch = product => {
+        const search = String(searchInput.value || "").trim().toLowerCase();
+        if (!search) return true;
+        return [product.model, product.company, product.color, product.product_code, product.category, product.product_type, product.type]
+            .filter(Boolean).join(" ").toLowerCase().includes(search);
+    };
+    const applyFilters = () => {
+        const company = companyFilter.value;
+        const model = modelFilter.value;
+        const color = colorFilter.value;
+        renderOrderProductList(products.filter(product =>
+            (!company || filterValue(product, "company") === company) &&
+            (!model || filterValue(product, "model") === model) &&
+            (!color || filterValue(product, "color") === color) &&
+            matchesSearch(product)
+        ));
+    };
+    const refreshDependentFilters = () => {
+        const company = companyFilter.value;
+        const companyProducts = company ? products.filter(product => filterValue(product, "company") === company) : [];
+        fillFilter(modelFilter, companyProducts.map(product => filterValue(product, "model")), company ? "كل الموديلات" : "اختر الماركة أولاً", modelFilter.value);
+        modelFilter.disabled = !company;
+        const model = modelFilter.value;
+        const modelProducts = model ? companyProducts.filter(product => filterValue(product, "model") === model) : [];
+        fillFilter(colorFilter, modelProducts.map(product => filterValue(product, "color")), model ? "كل الألوان" : "اختر الموديل أولاً", colorFilter.value);
+        colorFilter.disabled = !model;
+    };
+
+    fillFilter(companyFilter, products.map(product => filterValue(product, "company")), "كل الماركات");
+    refreshDependentFilters();
+    applyFilters();
+
+    companyFilter.addEventListener("change", () => {
+        modelFilter.value = "";
+        colorFilter.value = "";
+        refreshDependentFilters();
+        applyFilters();
+    });
+    modelFilter.addEventListener("change", () => {
+        colorFilter.value = "";
+        refreshDependentFilters();
+        applyFilters();
+    });
+    colorFilter.addEventListener("change", applyFilters);
+    searchInput.addEventListener("input", applyFilters);
 
 }
 
