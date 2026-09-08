@@ -4645,6 +4645,8 @@ const manualReturnTotal = document.getElementById("manualReturnTotal");
 const manualReturnMessage = document.getElementById("manualReturnMessage");
 let manualReturnCustomersData = [];
 let manualReturnItemsData = [];
+let manualReturnOrdersData = [];
+let selectedManualReturnCustomerKey = "";
 
 function manualReturnText(value) { return String(value ?? "").trim().toLocaleLowerCase("ar-SA"); }
 function setManualReturnMessage(message = "", isError = false) {
@@ -4655,21 +4657,95 @@ function setManualReturnMessage(message = "", isError = false) {
 function newManualReturnItem() {
     return { product_code: "", category: "", product_type: "", type: "", company: "", model: "", color: "", storage_location: "", quantity: 1, price: 0 };
 }
+function getManualReturnCustomer() {
+    return manualReturnCustomersData.find(item => manualReturnText(item.name) === selectedManualReturnCustomerKey) || null;
+}
+function getManualReturnSourceItems() {
+    return getManualReturnCustomer()?.items || [];
+}
+function productNameForManualReturn(item) {
+    return String(item.type || item.product_type || item.category || item.product_code || "").trim();
+}
+function uniqueManualReturnValues(items, field) {
+    return [...new Map(items.map(item => {
+        const value = field === "product_name" ? productNameForManualReturn(item) : String(item[field] || "").trim();
+        return [manualReturnText(value), value];
+    }).filter(([key]) => key)).values()];
+}
+function getManualReturnCandidates(item) {
+    let candidates = getManualReturnSourceItems();
+    const code = manualReturnText(item.product_code);
+    const name = manualReturnText(item.type);
+    const model = manualReturnText(item.model);
+    const color = manualReturnText(item.color);
+    if (code) candidates = candidates.filter(entry => manualReturnText(entry.product_code) === code);
+    else if (name) candidates = candidates.filter(entry => manualReturnText(productNameForManualReturn(entry)) === name);
+    if (model) candidates = candidates.filter(entry => manualReturnText(entry.model) === model);
+    if (color) candidates = candidates.filter(entry => manualReturnText(entry.color) === color);
+    return candidates;
+}
+function copyManualReturnProduct(index, product) {
+    if (!product || !manualReturnItemsData[index]) return;
+    const current = manualReturnItemsData[index];
+    manualReturnItemsData[index] = {
+        ...current,
+        product_code: product.product_code || "",
+        category: product.category || "",
+        product_type: product.product_type || "",
+        type: productNameForManualReturn(product),
+        company: product.company || "",
+        model: product.model || "",
+        color: product.color || "",
+        storage_location: product.storage_location || "",
+        price: Number(product.price || 0)
+    };
+}
+function updateManualReturnTotal() {
+    const total = manualReturnItemsData.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.price || 0)), 0);
+    if (manualReturnTotal) manualReturnTotal.textContent = formatAdminCurrency(total);
+}
 function renderManualReturnItems() {
     if (!manualReturnItems) return;
     if (!manualReturnItemsData.length) manualReturnItemsData.push(newManualReturnItem());
     manualReturnItems.innerHTML = manualReturnItemsData.map((item, index) => {
-        const text = field => `<input type="text" value="${transferText(item[field] || "")}" data-manual-return-field="${field}" data-manual-return-index="${index}">`;
+        const sourceItems = getManualReturnSourceItems();
+        const sourceForCode = sourceItems;
+        const sourceForModel = getManualReturnCandidates({ ...item, model: "", color: "" });
+        const sourceForColor = getManualReturnCandidates({ ...item, color: "" });
+        const choices = (id, values) => `<datalist id="${id}">${values.map(value => `<option value="${transferText(value)}"></option>`).join("")}</datalist>`;
+        const text = (field, list = "", values = []) => `<input type="text" value="${transferText(item[field] || "")}" ${list ? `list="${list}"` : ""} data-manual-return-field="${field}" data-manual-return-index="${index}">${list ? choices(list, values) : ""}`;
         const number = field => `<input type="number" min="0" step="${field === "price" ? "0.01" : "1"}" value="${Number(item[field] || 0)}" data-manual-return-field="${field}" data-manual-return-index="${index}">`;
         const total = Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.price || 0));
-        return `<tr><td>${index + 1}</td><td>${text("product_code")}</td><td>${text("category")}</td><td>${text("product_type")}</td><td>${text("type")}</td><td>${text("company")}</td><td>${text("model")}</td><td>${text("color")}</td><td>${text("storage_location")}</td><td>${number("quantity")}</td><td>${number("price")}</td><td>${formatAdminCurrency(total)}</td><td><button type="button" class="manual-return-remove" data-manual-return-remove="${index}">حذف</button></td></tr>`;
+        return `<tr><td>${index + 1}</td><td>${text("product_code", `manual-return-codes-${index}`, uniqueManualReturnValues(sourceForCode, "product_code"))}</td><td>${text("category")}</td><td>${text("product_type")}</td><td>${text("type", `manual-return-products-${index}`, uniqueManualReturnValues(sourceItems, "product_name"))}</td><td>${text("company")}</td><td>${text("model", `manual-return-models-${index}`, uniqueManualReturnValues(sourceForModel, "model"))}</td><td>${text("color", `manual-return-colors-${index}`, uniqueManualReturnValues(sourceForColor, "color"))}</td><td>${text("storage_location")}</td><td>${number("quantity")}</td><td>${number("price")}</td><td>${formatAdminCurrency(total)}</td><td><button type="button" class="manual-return-remove" data-manual-return-remove="${index}">حذف</button></td></tr>`;
     }).join("");
-    const total = manualReturnItemsData.reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.price || 0)), 0);
-    if (manualReturnTotal) manualReturnTotal.textContent = formatAdminCurrency(total);
+    updateManualReturnTotal();
     manualReturnItems.querySelectorAll("[data-manual-return-field]").forEach(input => input.addEventListener("input", event => {
         const index = Number(event.currentTarget.dataset.manualReturnIndex);
         const field = event.currentTarget.dataset.manualReturnField;
         manualReturnItemsData[index][field] = ["quantity", "price"].includes(field) ? Math.max(0, Number(event.currentTarget.value || 0)) : event.currentTarget.value;
+        updateManualReturnTotal();
+    }));
+    manualReturnItems.querySelectorAll("[data-manual-return-field]").forEach(input => input.addEventListener("change", event => {
+        const index = Number(event.currentTarget.dataset.manualReturnIndex);
+        const field = event.currentTarget.dataset.manualReturnField;
+        const row = manualReturnItemsData[index];
+        if (!["product_code", "type", "model", "color"].includes(field)) return;
+        let candidates = getManualReturnCandidates(row);
+        if (field === "product_code" || field === "type") {
+            candidates = getManualReturnCandidates({ ...row, model: "", color: "" });
+            const models = uniqueManualReturnValues(candidates, "model");
+            if (models.length > 1) { row.model = ""; row.color = ""; renderManualReturnItems(); setTimeout(() => manualReturnItems.querySelector(`[data-manual-return-index="${index}"][data-manual-return-field="model"]`)?.focus(), 0); return; }
+            if (models.length === 1) row.model = models[0];
+            const colors = uniqueManualReturnValues(getManualReturnCandidates({ ...row, color: "" }), "color");
+            if (colors.length > 1) { row.color = ""; renderManualReturnItems(); setTimeout(() => manualReturnItems.querySelector(`[data-manual-return-index="${index}"][data-manual-return-field="color"]`)?.focus(), 0); return; }
+        }
+        if (field === "model") {
+            candidates = getManualReturnCandidates({ ...row, color: "" });
+            const colors = uniqueManualReturnValues(candidates, "color");
+            if (colors.length > 1) { row.color = ""; renderManualReturnItems(); setTimeout(() => manualReturnItems.querySelector(`[data-manual-return-index="${index}"][data-manual-return-field="color"]`)?.focus(), 0); return; }
+        }
+        candidates = getManualReturnCandidates(row);
+        if (candidates.length === 1) copyManualReturnProduct(index, candidates[0]);
         renderManualReturnItems();
     }));
     manualReturnItems.querySelectorAll("[data-manual-return-remove]").forEach(button => button.addEventListener("click", () => {
@@ -4680,10 +4756,14 @@ function renderManualReturnItems() {
 async function loadManualReturnCustomers() {
     const { data, error } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
     if (error) { setManualReturnMessage(`تعذر تحميل العملاء: ${error.message}`, true); return; }
+    manualReturnOrdersData = (Array.isArray(data) ? data : []).filter(order => !isCancelledOrder(order));
     const unique = new Map();
-    (Array.isArray(data) ? data : []).filter(order => !isCancelledOrder(order) && String(order.customer_name || "").trim()).forEach(order => {
+    manualReturnOrdersData.filter(order => String(order.customer_name || "").trim()).forEach(order => {
         const key = manualReturnText(order.customer_name);
-        if (!unique.has(key)) unique.set(key, { name: String(order.customer_name).trim(), phone: String(order.customer_phone || "").trim() });
+        if (!unique.has(key)) unique.set(key, { name: String(order.customer_name).trim(), phone: String(order.customer_phone || "").trim(), items: [] });
+        const customer = unique.get(key);
+        if (!customer.phone && order.customer_phone) customer.phone = String(order.customer_phone).trim();
+        (Array.isArray(order.items) ? order.items : []).forEach(item => customer.items.push({ ...item, order_id: order.id }));
     });
     manualReturnCustomersData = [...unique.values()];
     if (manualReturnCustomers) manualReturnCustomers.innerHTML = manualReturnCustomersData.map(customer => `<option value="${transferText(customer.name)}"></option>`).join("");
@@ -4691,21 +4771,31 @@ async function loadManualReturnCustomers() {
 function syncManualReturnCustomer() {
     const customer = manualReturnCustomersData.find(item => manualReturnText(item.name) === manualReturnText(manualReturnCustomerName?.value));
     if (manualReturnCustomerPhone) manualReturnCustomerPhone.value = customer?.phone || "";
-    if (manualReturnCustomerHint) manualReturnCustomerHint.textContent = customer ? "تم اختيار عميل مسجل." : "اكتب جزءًا من الاسم ثم اختر العميل المطابق من القائمة.";
+    const nextKey = customer ? manualReturnText(customer.name) : "";
+    if (customer && nextKey !== selectedManualReturnCustomerKey) {
+        selectedManualReturnCustomerKey = nextKey;
+        manualReturnItemsData = [newManualReturnItem()];
+        renderManualReturnItems();
+    }
+    if (!customer) selectedManualReturnCustomerKey = "";
+    if (manualReturnCustomerHint) manualReturnCustomerHint.textContent = customer ? `تم اختيار عميل مسجل. تظهر فقط المنتجات الموجودة في تحضيراته (${customer.items.length} سطر).` : "اكتب جزءًا من الاسم ثم اختر العميل المطابق من القائمة.";
 }
 function openManualReturnEditor() {
+    returnsAdmin?.classList.add("manual-return-mode");
     document.querySelector(".return-create-card")?.style.setProperty("display", "none");
     document.querySelector(".returns-list-header")?.style.setProperty("display", "none");
     if (returnsList) returnsList.style.display = "none";
     if (createManualReturnButton) createManualReturnButton.style.display = "none";
     if (manualReturnEditor) manualReturnEditor.style.display = "block";
     manualReturnItemsData = [newManualReturnItem()];
+    selectedManualReturnCustomerKey = "";
     if (manualReturnCustomerName) manualReturnCustomerName.value = "";
     if (manualReturnCustomerPhone) manualReturnCustomerPhone.value = "";
     const notes = document.getElementById("manualReturnNotes"); if (notes) notes.value = "";
     setManualReturnMessage(""); renderManualReturnItems(); loadManualReturnCustomers();
 }
 function closeManualReturnEditor() {
+    returnsAdmin?.classList.remove("manual-return-mode");
     if (manualReturnEditor) manualReturnEditor.style.display = "none";
     document.querySelector(".return-create-card")?.style.removeProperty("display");
     document.querySelector(".returns-list-header")?.style.removeProperty("display");

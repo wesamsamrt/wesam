@@ -86,6 +86,19 @@ begin
         if not found then
             raise exception 'لم نجد الصنف المطابق للكود % والموديل واللون في هذا المخزن', requested_item->>'product_code';
         end if;
+        if not exists (
+            select 1
+            from public.orders order_doc
+            join public.order_items order_item on order_item.order_id = order_doc.id
+            where trim(order_doc.warehouse) = target_warehouse
+              and lower(trim(coalesce(order_doc.customer_name, ''))) = lower(selected_customer)
+              and coalesce(order_doc.status, '') <> 'ملغي'
+              and trim(coalesce(order_item.product_code, '')) = trim(requested_item->>'product_code')
+              and lower(trim(coalesce(order_item.model, ''))) = lower(trim(coalesce(requested_item->>'model', '')))
+              and lower(trim(coalesce(order_item.color, ''))) = lower(trim(coalesce(requested_item->>'color', '')))
+        ) then
+            raise exception 'هذا المنتج غير موجود ضمن تحضيرات العميل المحدد';
+        end if;
     end loop;
 
     insert into public.manual_warehouse_returns (warehouse, customer_name, customer_phone, notes)
