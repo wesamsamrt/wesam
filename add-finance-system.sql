@@ -207,3 +207,33 @@ returns bigint language plpgsql security definer set search_path = public as $$ 
 end; $$;
 
 grant execute on function public.list_finance_dashboard(text),public.list_finance_accounts(text),public.save_finance_account(text,text,text,numeric,text),public.list_finance_expense_categories(text),public.save_finance_expense_category(text,text),public.list_finance_expenses(text),public.save_finance_expense(text,bigint,bigint,numeric,date,text,text),public.list_finance_suppliers(text),public.save_finance_supplier(text,text,text,text,text,text) to authenticated;
+
+create or replace function public.list_finance_price_lists(p_warehouse text)
+returns table(id bigint,name text,price_mode text,adjustment numeric,is_active boolean)
+language sql security definer set search_path = public as $$
+ select id,name,price_mode,adjustment,is_active from public.finance_price_lists where warehouse=p_warehouse and public.finance_access(p_warehouse) order by name;
+$$;
+
+create or replace function public.save_finance_price_list(p_warehouse text,p_name text,p_mode text,p_adjustment numeric)
+returns bigint language plpgsql security definer set search_path = public as $$ declare new_id bigint; begin
+ if not public.finance_access(p_warehouse) then raise exception 'ليس لديك صلاحية'; end if;
+ if trim(coalesce(p_name,''))='' then raise exception 'اسم القائمة مطلوب'; end if;
+ insert into public.finance_price_lists(warehouse,name,price_mode,adjustment) values(p_warehouse,trim(p_name),p_mode,coalesce(p_adjustment,0)) on conflict(warehouse,name) do update set price_mode=excluded.price_mode,adjustment=excluded.adjustment,is_active=true returning id into new_id; return new_id;
+end; $$;
+
+create or replace function public.list_finance_customer_dues(p_warehouse text)
+returns table(customer_name text,order_total numeric,paid_amount numeric,due_amount numeric)
+language sql security definer set search_path = public as $$
+ with sales as (select trim(customer_name) customer_name,coalesce(sum(total),0) total from public.orders where warehouse=p_warehouse and coalesce(status,'') <> 'ملغي' group by trim(customer_name)), payments as (select trim(customer_name) customer_name,coalesce(sum(amount),0) paid from public.finance_customer_payments where warehouse=p_warehouse group by trim(customer_name))
+ select s.customer_name,s.total,coalesce(p.paid,0),greatest(s.total-coalesce(p.paid,0),0) from sales s left join payments p on lower(p.customer_name)=lower(s.customer_name) where public.finance_access(p_warehouse) order by greatest(s.total-coalesce(p.paid,0),0) desc;
+$$;
+
+create or replace function public.save_finance_customer_payment(p_warehouse text,p_customer_name text,p_account_id bigint,p_amount numeric,p_date date,p_notes text default null)
+returns bigint language plpgsql security definer set search_path = public as $$ declare transaction_id bigint; new_id bigint; begin
+ if not public.finance_access(p_warehouse) then raise exception 'ليس لديك صلاحية'; end if;
+ if trim(coalesce(p_customer_name,''))='' or coalesce(p_amount,0)<=0 then raise exception 'اسم العميل والمبلغ الصحيح مطلوبان'; end if;
+ insert into public.finance_transactions(warehouse,account_id,transaction_type,amount,transaction_date,counterparty,notes) values(p_warehouse,p_account_id,'income',p_amount,coalesce(p_date,current_date),trim(p_customer_name),p_notes) returning id into transaction_id;
+ insert into public.finance_customer_payments(warehouse,customer_name,account_id,amount,payment_date,notes,transaction_id) values(p_warehouse,trim(p_customer_name),p_account_id,p_amount,coalesce(p_date,current_date),p_notes,transaction_id) returning id into new_id; return new_id;
+end; $$;
+
+grant execute on function public.list_finance_price_lists(text),public.save_finance_price_list(text,text,text,numeric),public.list_finance_customer_dues(text),public.save_finance_customer_payment(text,text,bigint,numeric,date,text) to authenticated;
