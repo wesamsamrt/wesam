@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260907-shortage-layout"
+        href="admin.css?v=20260909-shortage-multi-select"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1310,7 +1310,7 @@
 </section>
 
 <section class="customers-admin" id="shortagesAdmin" style="display:none;">
-    <div class="orders-admin-header"><button class="back-admin" id="backFromShortages">← رجوع</button><div><h2>النواقص</h2><p>الأصناف التي تم تعليمها «غير متوفر» أثناء تعديل الطلبات.</p></div><button type="button" id="requestShortagesTransfer" class="open-invoice-button">طلب تحويل المحدد</button></div>
+    <div class="orders-admin-header"><button class="back-admin" id="backFromShortages">← رجوع</button><div><h2>النواقص</h2><p>الأصناف التي تم تعليمها «غير متوفر» أثناء تعديل الطلبات.</p></div><div class="shortages-header-actions"><button type="button" id="selectAllShortages" class="open-invoice-button">تحديد الكل</button><button type="button" id="requestShortagesTransfer" class="open-invoice-button">طلب تحويل المحدد</button></div></div>
     <div class="customers-list" id="shortagesList"><div class="message">جاري تحميل النواقص...</div></div>
 </section>
 
@@ -1700,7 +1700,7 @@
 </div>
 
 
-<script src="admin.js?v=20260908-analytics-lines"></script>
+<script src="admin.js?v=20260909-shortage-multi-select"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

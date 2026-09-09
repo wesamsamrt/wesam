@@ -4962,6 +4962,7 @@ const customersButton = document.getElementById("customersButton");
 const shortagesButton = document.getElementById("shortagesButton");
 const shortagesAdmin = document.getElementById("shortagesAdmin");
 const shortagesList = document.getElementById("shortagesList");
+const selectAllShortagesButton = document.getElementById("selectAllShortages");
 let adminShortagesData = [];
 let adminShortageGroups = [];
 const customersAdmin = document.getElementById("customersAdmin");
@@ -5186,13 +5187,19 @@ async function loadAdminShortages() {
             <td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>—</td><td>—</td><td>${quantity}</td><td>${price.toFixed(2)} ر.س</td><td>${(quantity * price).toFixed(2)} ر.س</td>
             <td><span class="shortage-status ${isRequested ? "requested" : "new"}">${transferText(item.status || "جديد")}</span></td><td>${item.transfer_id ? `#${transferText(item.transfer_id)}` : "—"}</td></tr>`;
     }).join("")}</tbody></table></div>` : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
-    // F4 يعرض تقرير صنف واحد؛ تحديد صنف جديد يلغي السابق تلقائيًا.
-    shortagesList.querySelectorAll("[data-shortage-group]").forEach(input => input.addEventListener("change", event => {
-        if (!event.target.checked) return;
-        shortagesList.querySelectorAll("[data-shortage-group]").forEach(other => {
-            if (other !== event.target) other.checked = false;
-        });
-    }));
+    // يسمح التحديد المتعدد بطلب تحويل عدة أصناف معًا. زر F4 يبقى لصنف واحد فقط.
+    shortagesList.querySelectorAll("[data-shortage-group]").forEach(input => input.addEventListener("change", updateShortagesSelectionButton));
+    updateShortagesSelectionButton();
+}
+
+function updateShortagesSelectionButton() {
+    if (!selectAllShortagesButton) return;
+    const selectable = [...document.querySelectorAll("[data-shortage-group]:not(:disabled)")];
+    const selectedCount = selectable.filter(input => input.checked).length;
+    selectAllShortagesButton.disabled = !selectable.length;
+    selectAllShortagesButton.textContent = selectable.length && selectedCount === selectable.length
+        ? "إلغاء تحديد الكل"
+        : selectedCount ? `تحديد الكل (${selectedCount} محدد)` : "تحديد الكل";
 }
 
 function shortageItemName(item) {
@@ -5319,6 +5326,13 @@ document.addEventListener("keydown", event => {
     if (event.key !== "F4" || shortagesAdmin?.style.display === "none") return;
     event.preventDefault();
     openShortageProductStats();
+});
+
+selectAllShortagesButton?.addEventListener("click", () => {
+    const selectable = [...document.querySelectorAll("[data-shortage-group]:not(:disabled)")];
+    const shouldSelectAll = selectable.some(input => !input.checked);
+    selectable.forEach(input => { input.checked = shouldSelectAll; });
+    updateShortagesSelectionButton();
 });
 
 document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {

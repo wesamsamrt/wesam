@@ -2721,6 +2721,9 @@ body {
 .edit-invoice-table th { background: #ebe8ff; color: #332580; white-space: nowrap; }
 .edit-invoice-table input { width: 100%; min-width: 70px; padding: 8px; border: 1px solid #d6d2ed; border-radius: 8px; font: inherit; text-align: center; }
 .shortages-invoice-table { min-width: 1850px; }
+.shortages-header-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+.shortages-header-actions #selectAllShortages { background: #fff; }
+.shortages-header-actions #selectAllShortages:disabled { cursor: not-allowed; opacity: .55; }
 .shortage-select { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; color: #5543ca; font-weight: 700; cursor: pointer; }
 .shortage-select input { width: 16px; min-width: 16px; height: 16px; padding: 0; accent-color: #6557ed; }
 .shortage-select input:disabled + span { color: #9993ac; }
