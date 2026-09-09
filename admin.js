@@ -1264,6 +1264,31 @@ document.getElementById("refreshAccountsButton")?.addEventListener("click", () =
 const financeButton = document.getElementById("financeButton");
 const financeAdmin = document.getElementById("financeAdmin");
 const backFromFinance = document.getElementById("backFromFinance");
+const financeSystemContent = document.getElementById("financeSystemContent");
+const financeModules = {
+    cash: { icon: "💵", title: "الحسابات والصندوق", description: "إدارة النقد والحسابات البنكية وحركة القبض والصرف اليومية.", features: ["صندوق نقدي ورصيد بداية ونهاية اليوم", "حسابات بنكية وتحويل بين الصندوق والبنك", "سند قبض من العميل وسند صرف للمورد أو المصروف", "كشف حساب الصندوق والبنك والإقفال اليومي"] },
+    expenses: { icon: "🧾", title: "المصروفات", description: "تسجيل ومراجعة كل مصروف تشغيلي مع التصنيف والمرفقات.", features: ["إيجار ورواتب وشحن وكهرباء وتسويق ومشتريات", "تصنيفات مخصصة للمصروفات", "إرفاق صورة مستند المصروف", "اعتماد المصروف وتقارير يومية وشهرية"] },
+    suppliers: { icon: "🚚", title: "الموردون والمشتريات", description: "متابعة الموردين وفواتير الشراء والدفعات وطلبات النواقص.", features: ["ملف المورد: بياناته ورصيده وسجل التعاملات", "تحضير شراء وحالات مدفوع أو آجل أو مدفوع جزئيًا", "مرتجع شراء للمورد", "إنشاء طلب شراء من النواقص ومقارنة أسعار الموردين"] },
+    dues: { icon: "📒", title: "الذمم", description: "معرفة المبالغ المستحقة لك أو عليك ومتابعة مواعيد السداد.", features: ["ذمم العملاء ودفعاتهم الجزئية", "ذمم الموردين والمبالغ المستحقة", "تنبيهات للتحضيرات الآجلة والمتأخرة", "كشف حساب قابل للطباعة للعميل أو المورد"] },
+    pricing: { icon: "🏷️", title: "الأسعار والخصومات", description: "ضبط البيع بالجملة والتجزئة والعروض بدون التأثير على سعر التكلفة.", features: ["قوائم سعر: تجزئة وجملة وVIP ومندوب", "خصم ثابت أو نسبة وكوبونات", "حد أدنى لسعر البيع", "سجل تعديل السعر والموافقة على الخصومات"] },
+    reports: { icon: "📊", title: "المحاسبة والتقارير", description: "تقارير مالية دقيقة للربح والضريبة والأداء التشغيلي.", features: ["ملخص الربح بعد احتساب التكلفة والمصروفات", "قائمة دخل مبسطة وقيود يومية تلقائية", "تقرير ضريبة القيمة المضافة", "تقارير حسب المنتج أو التصنيف أو المندوب مع Excel وPDF"] },
+    pos: { icon: "🛒", title: "نقطة البيع", description: "شاشة كاشير مستقلة للبيع المباشر في الفرع.", features: ["بحث بالباركود أو كود المنتج", "تعليق التحضير واسترجاعه", "نقدي وشبكة وتحويل وآجل", "طباعة إيصال وتقييد صلاحية تعديل السعر"] },
+    staff: { icon: "🔐", title: "صلاحيات الموظفين", description: "أدوار منفصلة للمحاسب والكاشير والمحضّر والمندوب مع التتبع.", features: ["مدير ومحاسب وكاشير ومحضّر ومندوب ومراقب مخزون", "عرض الأقسام والمخازن المسموح بها فقط", "سجل النشاط: تعديل وحذف وإلغاء وخصم ومرتجع", "موافقات على الخصم أو الإلغاء أو المصروفات الكبيرة"] }
+};
+
+function renderFinanceSystem(moduleKey = "overview") {
+    if (!financeSystemContent) return;
+    document.querySelectorAll("[data-finance-module]").forEach(button => button.classList.toggle("active", button.dataset.financeModule === moduleKey));
+    if (moduleKey === "overview") {
+        financeSystemContent.innerHTML = `<header class="finance-system-head"><div><h3>الرئيسية المالية</h3><p>نظام مستقل للحسابات داخل لوحة الإدارة، ولا يغيّر أي وظيفة موجودة في الطلبات أو المخزون.</p></div><span class="finance-system-badge">نظام مالي مستقل</span></header><div class="finance-overview-grid">${Object.entries(financeModules).map(([key, module]) => `<button type="button" class="finance-overview-card" data-open-finance-module="${key}"><span>${module.icon}</span><h4>${module.title}</h4><p>${module.description}</p></button>`).join("")}</div><div class="finance-module-notice"><strong>اختر قسمًا</strong> لبدء بنائه كوظائف فعلية بقاعدة بياناته وشاشاته المستقلة.</div>`;
+        financeSystemContent.querySelectorAll("[data-open-finance-module]").forEach(button => button.addEventListener("click", () => renderFinanceSystem(button.dataset.openFinanceModule)));
+        return;
+    }
+    const module = financeModules[moduleKey] || financeModules.cash;
+    financeSystemContent.innerHTML = `<header class="finance-system-head"><div><h3>${module.icon} ${module.title}</h3><p>${module.description}</p></div><span class="finance-system-badge">وحدة مالية مستقلة</span></header><ul class="finance-feature-list">${module.features.map(feature => `<li>${feature}</li>`).join("")}</ul><div class="finance-module-notice">هذه الوحدة مستقلة عن صفحة الإدارة الحالية. عند اعتمادك لها سننشئ شاشاتها وبياناتها بدون تغيير وظائف الطلبات أو المخزون.</div>`;
+}
+
+document.querySelectorAll("[data-finance-module]").forEach(button => button.addEventListener("click", () => renderFinanceSystem(button.dataset.financeModule)));
 
 financeButton?.addEventListener("click", () => {
     ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "returnsAdmin", "samplesAdmin"].forEach(id => {
@@ -1273,6 +1298,7 @@ financeButton?.addEventListener("click", () => {
     const analyticsPage = document.getElementById("analyticsAdmin");
     if (analyticsPage) analyticsPage.style.display = "none";
     if (financeAdmin) financeAdmin.style.display = "block";
+    renderFinanceSystem();
 });
 
 backFromFinance?.addEventListener("click", () => {
