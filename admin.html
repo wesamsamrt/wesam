@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260909-shortage-multi-select"
+        href="admin.css?v=20260909-finance-hub"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -234,6 +234,11 @@
             >
                 <span>👥</span>
                 <strong>الحسابات والصلاحيات</strong>
+            </button>
+
+            <button class="admin-nav-item" id="financeButton">
+                <span>💼</span>
+                <strong>الإدارة المالية</strong>
             </button>
 
 
@@ -1363,6 +1368,7 @@
                 <label><input type="checkbox" value="drivers"> المناديب</label>
                 <label><input type="checkbox" value="transfers"> التحويلات</label>
                 <label><input type="checkbox" value="accounts"> الحسابات</label>
+                <label><input type="checkbox" value="finance"> الإدارة المالية</label>
             </div></div>
         </div>
         <div class="account-create-actions"><button type="button" id="saveAccountPermissionsButton">حفظ الصلاحيات</button><span id="accountPermissionsMessage"></span></div>
@@ -1373,6 +1379,25 @@
 
     <div class="accounts-list-header"><h3>سجل تغييرات الصلاحيات</h3></div>
     <div class="accounts-audit-list" id="accountsAuditList"><div class="message">جاري تحميل السجل...</div></div>
+</section>
+
+<section class="finance-admin" id="financeAdmin" style="display:none;">
+    <div class="orders-admin-header">
+        <button class="back-admin" id="backFromFinance">← رجوع</button>
+        <div><h2>الإدارة المالية</h2><p>مركز موحد للحسابات والصندوق والموردين والتقارير — على نمط أنظمة المحاسبة.</p></div>
+    </div>
+    <div class="finance-intro"><strong>أقسام الإدارة المالية</strong><span>اختر القسم الذي تريد تشغيله أو تطويره لاحقًا.</span></div>
+    <div class="finance-modules-grid">
+        <article class="finance-module"><span>💵</span><h3>الحسابات والصندوق</h3><p>الصندوق النقدي، الحسابات البنكية، سندات القبض والصرف، الإقفال اليومي وكشف الحساب.</p><small>الصندوق · البنوك · السندات · الإقفال</small></article>
+        <article class="finance-module"><span>🧾</span><h3>المصروفات</h3><p>سجل الإيجار والرواتب والشحن والتسويق، مع تصنيفات ومرفقات واعتماد قبل التسجيل.</p><small>تسجيل · تصنيف · مرفقات · تقارير</small></article>
+        <article class="finance-module"><span>🚚</span><h3>الموردون والمشتريات</h3><p>ملفات الموردين، تحضيرات الشراء، دفعات الموردين، مرتجع الشراء وطلبات الشراء من النواقص.</p><small>موردون · مشتريات · دفعات · مقارنة أسعار</small></article>
+        <article class="finance-module"><span>📒</span><h3>الذمم</h3><p>ذمم العملاء والموردين، الدفعات الجزئية، الفواتير الآجلة والتنبيهات وكشوف الحساب.</p><small>عملاء · موردون · آجـل · تسديد</small></article>
+        <article class="finance-module"><span>🏷️</span><h3>الأسعار والخصومات</h3><p>قوائم سعر التجزئة والجملة وVIP والمندوبين، كوبونات وحد أدنى للبيع وسجل التعديلات.</p><small>تجزئة · جملة · كوبونات · موافقات</small></article>
+        <article class="finance-module"><span>📊</span><h3>المحاسبة والتقارير</h3><p>الأرباح، قائمة الدخل، الضريبة، القيود اليومية، وتقارير الأداء حسب المنتج أو المندوب.</p><small>ربح · ضريبة · قيود · Excel وPDF</small></article>
+        <article class="finance-module"><span>🛒</span><h3>نقطة البيع</h3><p>كاشير سريع، باركود، تعليق التحضير، طرق دفع متعددة وطباعة إيصال.</p><small>كاشير · باركود · دفع · إيصال</small></article>
+        <article class="finance-module"><span>🔐</span><h3>صلاحيات الموظفين</h3><p>أدوار المدير والمحاسب والكاشير والمحضّر والمندوب، مع سجل نشاط وموافقات داخلية.</p><small>أدوار · صلاحيات · نشاط · اعتماد</small></article>
+    </div>
+    <p class="finance-note">هذه الصفحة تجمع الوحدات المطلوبة. سنفعّل كل وحدة ببياناتها ووظائفها عند اختيارك لها.</p>
 </section>
 
 <section class="drivers-admin" id="driversAdmin" style="display:none;">
@@ -1700,7 +1725,7 @@
 </div>
 
 
-<script src="admin.js?v=20260909-shortage-multi-select"></script>
+<script src="admin.js?v=20260909-finance-hub"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

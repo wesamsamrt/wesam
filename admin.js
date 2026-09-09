@@ -186,7 +186,8 @@ function applyTeamAccessToInterface() {
         offersButton: "offers",
         driversButton: "drivers",
         transfersButton: "transfers",
-        accountsButton: "accounts"
+        accountsButton: "accounts",
+        financeButton: "finance"
     };
     Object.entries(sectionButtons).forEach(([id, section]) => {
         const button = document.getElementById(id);
@@ -321,6 +322,8 @@ function showAdmin() {
     if (transfersPage) transfersPage.style.display = "none";
     const accountsPage = document.getElementById("accountsAdmin");
     if (accountsPage) accountsPage.style.display = "none";
+    const financePage = document.getElementById("financeAdmin");
+    if (financePage) financePage.style.display = "none";
     const salesPage = document.getElementById("salesAdmin");
     if (salesPage) salesPage.style.display = "none";
     const driversPage = document.getElementById("driversAdmin");
@@ -1202,7 +1205,7 @@ async function loadAccounts() {
     accountsList.innerHTML = accounts.map(account => {
         const permissions = account.permissions || {};
         const warehousesLabel = (permissions.warehouses || []).length ? permissions.warehouses.join("، ") : "جميع المخازن";
-        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", customers: "العملاء", sales: "المبيعات", analytics: "الإحصائيات والتحليلات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات" })[section] || section).join("، ") || "كل الأقسام";
+        const sectionsLabel = (permissions.sections || []).map(section => ({ dashboard: "الرئيسية", products: "المنتجات", orders: "الطلبات", customers: "العملاء", sales: "المبيعات", analytics: "الإحصائيات والتحليلات", offers: "عروض اليوم", drivers: "المناديب", transfers: "التحويلات", accounts: "الحسابات", finance: "الإدارة المالية" })[section] || section).join("، ") || "كل الأقسام";
         return `<article class="account-card"><div class="account-card-top"><div><h4>${transferText(account.email)}</h4><p>تمت الإضافة: ${new Date(account.created_at).toLocaleString("ar-SA")}</p></div><span class="account-role ${account.is_active ? "" : "inactive"}">${account.is_active ? accountRoleLabel(account.role) : "موقوف"}</span></div><div class="account-card-bottom"><span class="account-access">المخازن: ${transferText(warehousesLabel)}<br>الأقسام: ${transferText(sectionsLabel)}</span><div>${account.is_active ? `<button class="account-action disable" onclick="toggleTeamAccount('${account.user_id}', false)">إيقاف الصلاحية</button>` : `<button class="account-action enable" onclick="toggleTeamAccount('${account.user_id}', true)">تفعيل الصلاحية</button>`}</div></div></article>`;
     }).join("");
 }
@@ -1254,6 +1257,34 @@ accountsButton?.addEventListener("click", async () => {
 backFromAccounts?.addEventListener("click", () => { accountsAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
 document.getElementById("saveAccountPermissionsButton")?.addEventListener("click", saveAccountPermissions);
 document.getElementById("refreshAccountsButton")?.addEventListener("click", () => Promise.all([loadAccounts(), loadAccountsAudit()]));
+
+/* =========================================================
+   صفحة الإدارة المالية — مركز الوحدات المحاسبية
+========================================================= */
+const financeButton = document.getElementById("financeButton");
+const financeAdmin = document.getElementById("financeAdmin");
+const backFromFinance = document.getElementById("backFromFinance");
+
+financeButton?.addEventListener("click", () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "returnsAdmin", "samplesAdmin"].forEach(id => {
+        const page = document.getElementById(id);
+        if (page) page.style.display = "none";
+    });
+    const analyticsPage = document.getElementById("analyticsAdmin");
+    if (analyticsPage) analyticsPage.style.display = "none";
+    if (financeAdmin) financeAdmin.style.display = "block";
+});
+
+backFromFinance?.addEventListener("click", () => {
+    if (financeAdmin) financeAdmin.style.display = "none";
+    const adminPage = document.getElementById("adminPage");
+    if (adminPage) adminPage.style.display = "block";
+});
+
+// عند الانتقال إلى قسم آخر لا تبقى صفحة الإدارة المالية مفتوحة في الخلفية.
+document.querySelectorAll(".admin-nav-item").forEach(button => button.addEventListener("click", () => {
+    if (button.id !== "financeButton" && financeAdmin) financeAdmin.style.display = "none";
+}));
 
 /* =========================================================
    ربط حسابات المناديب
