@@ -1349,8 +1349,9 @@ async function renderFinanceSystem(moduleKey = "overview") {
 }
 
 document.querySelectorAll("[data-finance-module]").forEach(button => button.addEventListener("click", () => renderFinanceSystem(button.dataset.financeModule)));
+let financeUnlocked = false;
 
-financeButton?.addEventListener("click", () => {
+function openFinanceAdmin() {
     ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "returnsAdmin", "samplesAdmin"].forEach(id => {
         const page = document.getElementById(id);
         if (page) page.style.display = "none";
@@ -1359,6 +1360,38 @@ financeButton?.addEventListener("click", () => {
     if (analyticsPage) analyticsPage.style.display = "none";
     if (financeAdmin) financeAdmin.style.display = "block";
     renderFinanceSystem();
+}
+
+async function requestFinancePassword() {
+    document.getElementById("financePasswordDialog")?.remove();
+    const modal = document.createElement("div");
+    modal.id = "financePasswordDialog";
+    modal.className = "finance-password-dialog";
+    modal.innerHTML = `<form class="finance-password-box"><button type="button" data-close aria-label="إغلاق">×</button><span>🔐</span><h3>دخول الإدارة المالية</h3><p>اكتب كلمة مرور حساب المدير للمتابعة.</p><input type="password" name="password" required autocomplete="current-password" placeholder="كلمة المرور" autofocus><small data-message></small><button class="submit" type="submit">دخول</button></form>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.querySelector("[data-close]")?.addEventListener("click", close);
+    modal.addEventListener("click", event => { if (event.target === modal) close(); });
+    modal.querySelector("form")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const message = form.querySelector("[data-message]");
+        const submit = form.querySelector(".submit");
+        submit.disabled = true; message.textContent = "جارٍ التحقق...";
+        const { data: userData } = await supabaseClient.auth.getUser();
+        const email = userData?.user?.email;
+        if (!email) { message.textContent = "تعذر معرفة الحساب الحالي. سجل الدخول من جديد."; submit.disabled = false; return; }
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password: new FormData(form).get("password") });
+        if (error) { message.textContent = "كلمة المرور غير صحيحة."; submit.disabled = false; return; }
+        financeUnlocked = true;
+        close();
+        openFinanceAdmin();
+    });
+}
+
+financeButton?.addEventListener("click", () => {
+    if (financeUnlocked) openFinanceAdmin();
+    else requestFinancePassword();
 });
 
 backFromFinance?.addEventListener("click", () => {
