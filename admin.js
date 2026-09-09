@@ -1664,11 +1664,16 @@ function renderAnalyticsBars(containerId, rows, valueKey, labelFormatter) {
     }).join("");
 }
 
-function renderAnalyticsOrdersLines(rows) {
-    const container = document.getElementById("analyticsDailyChart");
+function renderAnalyticsOrdersLines(rows, options = {}) {
+    const container = document.getElementById(options.containerId || "analyticsDailyChart");
     if (!container) return;
+    const primaryKey = options.primaryKey || "orders";
+    const secondaryKey = options.secondaryKey || "returns";
+    const primaryLabel = options.primaryLabel || "الطلبات";
+    const secondaryLabel = options.secondaryLabel || "المرتجعات";
+    const showSecondary = options.showSecondary !== false;
     const width = 760, height = 220, pad = { top: 32, right: 18, bottom: 34, left: 22 };
-    const max = Math.max(1, ...rows.flatMap(row => [Number(row.orders || 0), Number(row.returns || 0)]));
+    const max = Math.max(1, ...rows.flatMap(row => [Number(row[primaryKey] || 0), ...(showSecondary ? [Number(row[secondaryKey] || 0)] : [])]));
     const spanX = Math.max(1, width - pad.left - pad.right);
     const spanY = height - pad.top - pad.bottom;
     const point = (row, index, key) => ({
@@ -1676,8 +1681,8 @@ function renderAnalyticsOrdersLines(rows) {
         y: pad.top + spanY - ((Number(row[key] || 0) / max) * spanY),
         value: Number(row[key] || 0)
     });
-    const orderPoints = rows.map((row, index) => point(row, index, "orders"));
-    const returnPoints = rows.map((row, index) => point(row, index, "returns"));
+    const orderPoints = rows.map((row, index) => point(row, index, primaryKey));
+    const returnPoints = showSecondary ? rows.map((row, index) => point(row, index, secondaryKey)) : [];
     const path = points => points.map((item, index) => `${index ? "L" : "M"}${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ");
     const grid = [0, .25, .5, .75, 1].map(level => {
         const y = pad.top + spanY - (spanY * level);
@@ -1686,7 +1691,7 @@ function renderAnalyticsOrdersLines(rows) {
     const labels = rows.map((row, index) => `<text x="${orderPoints[index].x}" y="${height - 11}" class="analytics-line-label">${transferText(row.key.slice(5).replace("-", "/"))}</text>`).join("");
     const circles = (points, colorClass) => points.map(item => `<circle cx="${item.x}" cy="${item.y}" r="4" class="${colorClass}"/><text x="${item.x}" y="${item.y - 10}" class="${colorClass}-value">${item.value}</text>`).join("");
     container.className = "analytics-line-chart";
-    container.innerHTML = `<div class="analytics-line-legend"><span class="orders">الطلبات</span><span class="returns">المرتجعات</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="مخطط الطلبات والمرتجعات"><g>${grid}</g><path d="${path(orderPoints)}" class="analytics-orders-line"/><path d="${path(returnPoints)}" class="analytics-returns-line"/>${circles(orderPoints, "analytics-orders-point")}${circles(returnPoints, "analytics-returns-point")}${labels}</svg>`;
+    container.innerHTML = `<div class="analytics-line-legend"><span class="orders">${transferText(primaryLabel)}</span>${showSecondary ? `<span class="returns">${transferText(secondaryLabel)}</span>` : ""}</div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="مخطط ${transferText(primaryLabel)}"><g>${grid}</g><path d="${path(orderPoints)}" class="analytics-orders-line"/>${showSecondary ? `<path d="${path(returnPoints)}" class="analytics-returns-line"/>${circles(returnPoints, "analytics-returns-point")}` : ""}${circles(orderPoints, "analytics-orders-point")}${labels}</svg>`;
 }
 
 async function loadAnalyticsData() {
@@ -1765,20 +1770,19 @@ async function loadAnalyticsData() {
         if (ordersChartTitle) ordersChartTitle.textContent = `الطلبات خلال ${chartDays} يوم`;
         if (ordersChartHint) ordersChartHint.textContent = `طلبات غير ملغاة ضمن ${periodLabel} · المرتجعات لتحضيرات غير ملغاة`;
 
-        const monthsToShow = period === "all" ? 6 : Math.max(1, Math.ceil((Number(period) || 30) / 30));
-        const monthlyRows = Array.from({ length: monthsToShow }, (_, index) => {
+        const salesRows = Array.from({ length: chartDays }, (_, index) => {
             const date = new Date();
-            date.setMonth(date.getMonth() - (monthsToShow - 1 - index), 1);
-            const key = saudiDateKey(date).slice(0, 7);
-            return { key, sales: periodSalesOrders.filter(order => saudiDateKey(order.created_at).startsWith(key)).reduce((sum, order) => sum + Number(order.total || 0), 0) };
+            date.setDate(date.getDate() - (chartDays - 1 - index));
+            const key = saudiDateKey(date);
+            return { key, sales: periodSalesOrders.filter(order => saudiDateKey(order.created_at) === key).reduce((sum, order) => sum + Number(order.total || 0), 0) };
         });
-        renderAnalyticsBars("analyticsMonthlyChart", monthlyRows, "sales", row => row.key.slice(5));
-        const selectedPeriodSales = monthlyRows.reduce((sum, row) => sum + row.sales, 0);
+        renderAnalyticsOrdersLines(salesRows, { containerId: "analyticsMonthlyChart", primaryKey: "sales", primaryLabel: "المبيعات", showSecondary: false });
+        const selectedPeriodSales = salesRows.reduce((sum, row) => sum + row.sales, 0);
         const sixMonthElement = document.getElementById("analyticsSixMonthSales");
         if (sixMonthElement) sixMonthElement.textContent = formatAdminCurrency(selectedPeriodSales);
         const salesChartTitle = document.getElementById("analyticsSalesChartTitle");
         const salesChartHint = document.getElementById("analyticsSalesChartHint");
-        if (salesChartTitle) salesChartTitle.textContent = `المبيعات خلال ${period === "all" ? "آخر 6 أشهر" : periodLabel}`;
+        if (salesChartTitle) salesChartTitle.textContent = `المبيعات خلال ${chartDays} يوم`;
         if (salesChartHint) salesChartHint.textContent = "تم الشحن أو تم التسليم فقط";
 
         const statuses = new Map();
