@@ -4809,20 +4809,24 @@ function renderReturnsList(records) {
     returnsList.innerHTML = records.map(record => {
         const date = record.created_at ? new Date(record.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
         const items = Array.isArray(record.items) ? record.items : [];
+        const pieces = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         const sourceOrder = adminOrdersData.find(order => String(order.id) === String(record.order_id));
         const driverName = record.driver_name || sourceOrder?.driver_name || "غير مسجل";
         const driverNumber = record.driver_number || sourceOrder?.driver_number || "";
         const orderLabel = record.order_id ? `رقم الطلب: #${transferText(record.order_id)}` : "مرتجع مباشر";
-        return `<article class="return-record-card">
-            <header><div><strong>مرتجع #${transferText(record.id)}</strong><span>${orderLabel}</span></div><time>${transferText(date)}</time></header>
-            <div class="return-record-details"><span>العميل: <b>${transferText(record.customer_name || "عميل")}</b> · ${transferText(record.customer_phone || "بدون جوال")}</span><span>المندوب: <b>${transferText(driverName)}</b>${driverNumber ? ` · ${transferText(driverNumber)}` : ""}</span></div>
-            <div class="return-record-items">${items.map(item => `<span>${transferText(returnItemTitle(item))} — ${Number(item.quantity || 0)} قطعة${item.color ? ` (${transferText(item.color)})` : ""}</span>`).join("")}</div>
-            ${record.notes ? `<small>ملاحظة: ${transferText(record.notes)}</small>` : ""}
-            <footer><span>إجمالي المرتجع: ${formatAdminCurrency(record.total || 0)}</span><div><button type="button" data-open-return-record="${transferText(record.return_key || `order-${record.id}`)}">فتح</button><button type="button" data-print-return-record="${transferText(record.return_key || `order-${record.id}`)}">🖨️ طباعة</button></div></footer>
+        const returnKey = transferText(record.return_key || `order-${record.id}`);
+        return `<article class="return-history-row" data-return-row="${returnKey}" tabindex="0" role="button" aria-label="فتح مرتجع رقم ${transferText(record.id)}">
+            <div class="return-history-main"><strong>مرتجع #${transferText(record.id)} <small>· ${transferText(record.customer_name || "عميل غير مسجل")}</small></strong><span>${transferText(orderLabel)} · ${pieces} قطعة · ${transferText(date)} · اضغط لعرض المرتجع</span><em>المندوب: ${transferText(driverName)}${driverNumber ? ` · ${transferText(driverNumber)}` : ""}${record.notes ? ` · ${transferText(record.notes)}` : ""}</em></div>
+            <div class="return-history-actions"><b>${formatAdminCurrency(record.total || 0)}</b><button type="button" data-open-return-record="${returnKey}">فتح</button><button type="button" data-print-return-record="${returnKey}" title="طباعة المرتجع">🖨️</button></div>
         </article>`;
     }).join("");
     returnsList.querySelectorAll("[data-open-return-record]").forEach(button => button.addEventListener("click", () => openReturnRecordView(button.dataset.openReturnRecord)));
     returnsList.querySelectorAll("[data-print-return-record]").forEach(button => button.addEventListener("click", () => printReturnRecord(button.dataset.printReturnRecord)));
+    returnsList.querySelectorAll("[data-return-row]").forEach(row => {
+        const open = () => openReturnRecordView(row.dataset.returnRow);
+        row.addEventListener("click", event => { if (!event.target.closest("button")) open(); });
+        row.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
+    });
 }
 
 async function loadWarehouseReturns() {
