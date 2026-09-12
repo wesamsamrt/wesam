@@ -1677,6 +1677,13 @@ function analyticsRankRows(entries, emptyText, valueFormatter) {
     return entries.length ? entries.map((entry, index) => `<div class="analytics-ranking-row"><span class="analytics-rank">${index + 1}</span><strong>${transferText(entry.name)}</strong><b>${valueFormatter(entry)}</b></div>`).join("") : `<div class="analytics-empty">${emptyText}</div>`;
 }
 
+function renderAnalyticsRecommendations(recommendations, periodLabel) {
+    const container = document.getElementById("analyticsRecommendations");
+    if (!container) return;
+    const items = recommendations.slice(0, 6);
+    container.innerHTML = `<div class="analytics-recommendations-head"><div><h3>توصيات ذكية</h3><p>قرارات مقترحة بناءً على أرقام ${transferText(periodLabel)}.</p></div><span>${items.length} توصيات</span></div><div class="analytics-recommendations-list">${items.map(item => `<article class="analytics-recommendation ${item.level || "info"}"><span class="analytics-recommendation-icon">${item.icon}</span><div><strong>${transferText(item.title)}</strong><p>${transferText(item.text)}</p></div></article>`).join("")}</div>`;
+}
+
 function renderAnalyticsBars(containerId, rows, valueKey, labelFormatter) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -1842,6 +1849,32 @@ async function loadAnalyticsData() {
         if (topProducts) topProducts.innerHTML = analyticsRankRows(toRank(productTotals), "لا توجد منتجات مطلوبة في هذه الفترة.", entry => `${entry.value} قطعة`);
         if (topCategories) topCategories.innerHTML = analyticsRankRows(toRank(categoryTotals), "لا توجد تصنيفات مطلوبة في هذه الفترة.", entry => `${entry.value} قطعة`);
         if (topCustomers) topCustomers.innerHTML = analyticsRankRows(toRank(customerTotals), "لا توجد مشتريات مسجلة في هذه الفترة.", entry => formatAdminCurrency(entry.value));
+
+        const rankedProducts = toRank(productTotals);
+        const rankedCustomers = toRank(customerTotals);
+        const followUpCount = nonCancelled.filter(needsOrderFollowUp).length;
+        const deliveryRate = nonCancelled.length ? Math.round((completed / nonCancelled.length) * 100) : 0;
+        const returnRate = periodSalesOrders.length ? Math.round((periodReturns.length / periodSalesOrders.length) * 100) : 0;
+        const todaySales = salesRows[salesRows.length - 1]?.sales || 0;
+        const priorSales = salesRows.slice(0, -1);
+        const priorDailyAverage = priorSales.length ? priorSales.reduce((sum, row) => sum + row.sales, 0) / priorSales.length : 0;
+        const recommendations = [];
+        if (totalRevenue === 0) {
+            recommendations.push({ icon: "📣", level: "warning", title: "لا توجد مبيعات مكتملة", text: `لا توجد تحضيرات تم شحنها أو تسليمها ضمن ${periodLabel}. راجع الطلبات تحت المتابعة أو فعّل عرضًا للمنتجات المطلوبة.` });
+        } else if (todaySales > priorDailyAverage * 1.3 && todaySales > 0) {
+            recommendations.push({ icon: "📈", level: "success", title: "الطلب اليوم أعلى من المعتاد", text: `مبيعات اليوم ${formatAdminCurrency(todaySales)} أعلى من متوسط الأيام السابقة. جهّز المخزون للأصناف الأكثر طلبًا قبل نفادها.` });
+        } else {
+            recommendations.push({ icon: "💰", level: "info", title: "تابع نمو المبيعات", text: `مبيعات ${periodLabel} هي ${formatAdminCurrency(totalRevenue)} من ${periodSalesOrders.length} تحضير مكتمل. قارنها بالفترة التالية قبل تغيير الأسعار أو الشراء.` });
+        }
+        if (followUpCount) recommendations.push({ icon: "⏱️", level: "warning", title: "طلبات تحتاج متابعة", text: `لديك ${followUpCount} طلب جديد أو مقدم. تابعها أولًا لتقليل التأخير وتحويلها إلى شحن أو تسليم.` });
+        if (lowStock.length) recommendations.push({ icon: "📦", level: "danger", title: "مخزون منخفض يحتاج شراء", text: `${lowStock.length} صنف كميته 5 قطع أو أقل. راجع تنبيهات المخزون وأنشئ طلب شراء للأصناف المطلوبة.` });
+        if (returnRate >= 10) recommendations.push({ icon: "↩️", level: "danger", title: "نسبة المرتجعات مرتفعة", text: `${periodReturns.length} مرتجع تعادل تقريبًا ${returnRate}% من تحضيرات المبيعات. راجع سبب الإرجاع ووصف المنتج قبل تكرار الشراء.` });
+        else if (periodReturns.length) recommendations.push({ icon: "↩️", level: "info", title: "راقب المرتجعات", text: `سُجل ${periodReturns.length} مرتجع ضمن ${periodLabel}. راقب الأسباب للتأكد من جودة المنتج ودقة التحضير.` });
+        if (deliveryRate < 70 && nonCancelled.length) recommendations.push({ icon: "🚚", level: "warning", title: "حسّن نسبة التسليم", text: `نسبة التسليم الحالية ${deliveryRate}%. راجع الطلبات المتأخرة وتواصل مع العملاء أو المندوبين قبل أن تتعطل.` });
+        if (rankedProducts[0]) recommendations.push({ icon: "⭐", level: "success", title: "ركّز على المنتج الأكثر طلبًا", text: `${rankedProducts[0].name} بيع منه ${rankedProducts[0].value} قطعة. وفّر كمية احتياطية منه واعرض معه منتجات مكملة.` });
+        if (rankedCustomers[0]) recommendations.push({ icon: "🤝", level: "info", title: "حافظ على أفضل عميل", text: `${rankedCustomers[0].name} هو الأعلى شراءً بقيمة ${formatAdminCurrency(rankedCustomers[0].value)}. قدّم له متابعة أو عرضًا مناسبًا للعودة للشراء.` });
+        if (!recommendations.length) recommendations.push({ icon: "✅", level: "success", title: "البيانات مستقرة", text: "لا توجد تنبيهات كافية لإصدار توصية الآن. استمر بتحديث حالات التحضير لتظهر توصيات أدق." });
+        renderAnalyticsRecommendations(recommendations, periodLabel);
 
         const warehouseName = document.getElementById("analyticsWarehouseName");
         if (warehouseName) warehouseName.textContent = selectedWarehouse || "الحالي";

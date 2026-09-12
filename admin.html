@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260909-finance-password"
+        href="admin.css?v=20260912-analytics-recommendations"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -731,6 +731,11 @@
             </div>
 
             <div class="analytics-kpis" id="analyticsKpis"><div class="message">جاري تجهيز الإحصائيات...</div></div>
+
+            <section class="analytics-recommendations" id="analyticsRecommendations" aria-live="polite">
+                <div class="analytics-recommendations-head"><div><h3>توصيات ذكية</h3><p>قرارات مقترحة بناءً على أرقام الفترة المختارة.</p></div><span>جاري التحليل...</span></div>
+                <div class="analytics-recommendations-list"><div class="analytics-empty">جاري تجهيز التوصيات...</div></div>
+            </section>
 
             <div class="analytics-grid analytics-charts-grid">
                 <section class="analytics-card"><div class="analytics-card-head"><div><h3 id="analyticsOrdersChartTitle">الطلبات خلال آخر 7 أيام</h3><p id="analyticsOrdersChartHint">عدد الطلبات المنشأة يوميًا</p></div><div class="analytics-orders-summary"><strong id="analyticsWeekOrders">0</strong><small id="analyticsWeekReturns">0 مرتجع</small></div></div><div class="analytics-bars" id="analyticsDailyChart"></div></section>
@@ -1698,7 +1703,7 @@
 </div>
 
 
-<script src="admin.js?v=20260912-dashboard-sales-line"></script>
+<script src="admin.js?v=20260912-analytics-recommendations"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
