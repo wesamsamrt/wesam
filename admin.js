@@ -1574,6 +1574,23 @@ async function loadDashboardData() {
         document.getElementById("dashboardProductsCount").textContent = safeProducts.length;
         document.getElementById("dashboardOrdersCount").textContent = nonCancelled.length;
         document.getElementById("dashboardSalesSummary").textContent = formatAdminCurrency(monthSales);
+        const dashboardSalesRows = Array.from({ length: 30 }, (_, index) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (29 - index));
+            const key = saudiDateKey(date);
+            return {
+                key,
+                sales: completedSalesOrders
+                    .filter(order => saudiDateKey(order.created_at) === key)
+                    .reduce((sum, order) => sum + Number(order.total || 0), 0)
+            };
+        });
+        renderAnalyticsOrdersLines(dashboardSalesRows, {
+            containerId: "dashboardSalesChart",
+            primaryKey: "sales",
+            primaryLabel: "المبيعات",
+            showSecondary: false
+        });
 
         const lowStock = safeProducts.filter(product => Number(product.quantity || 0) <= 5);
         const followUpOrders = nonCancelled.filter(needsOrderFollowUp);
