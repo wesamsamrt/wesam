@@ -1559,11 +1559,18 @@ async function loadDashboardData() {
         const monthStart = new Date();
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
-        const monthOrders = nonCancelled.filter(order => new Date(order.created_at) >= monthStart);
+        const completedSalesStatuses = new Set(["تم الشحن", "تم التسليم"]);
+        const completedSalesOrders = nonCancelled.filter(order => completedSalesStatuses.has(String(order.status || "").trim()));
+        const monthOrders = completedSalesOrders.filter(order => new Date(order.created_at) >= monthStart);
         const monthSales = monthOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
 
-        document.getElementById("dashboardCustomersCount").textContent = new Set(nonCancelled.map(order => order.user_id).filter(Boolean)).size;
-        document.getElementById("dashboardSalesTotal").textContent = formatAdminCurrency(nonCancelled.reduce((sum, order) => sum + Number(order.total || 0), 0));
+        // إجمالي العملاء في الرئيسية: أسماء فريدة للطلبات التي خرجت فعليًا فقط.
+        const completedCustomerNames = new Set(nonCancelled
+            .filter(order => completedSalesStatuses.has(String(order.status || "").trim()))
+            .map(order => String(order.customer_name || "").trim().toLocaleLowerCase("ar-SA"))
+            .filter(Boolean));
+        document.getElementById("dashboardCustomersCount").textContent = completedCustomerNames.size;
+        document.getElementById("dashboardSalesTotal").textContent = formatAdminCurrency(completedSalesOrders.reduce((sum, order) => sum + Number(order.total || 0), 0));
         document.getElementById("dashboardProductsCount").textContent = safeProducts.length;
         document.getElementById("dashboardOrdersCount").textContent = nonCancelled.length;
         document.getElementById("dashboardSalesSummary").textContent = formatAdminCurrency(monthSales);
