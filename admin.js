@@ -692,6 +692,9 @@ const transferNotes = document.getElementById("transferNotes");
 const transferDraftItems = document.getElementById("transferDraftItems");
 const transferFormMessage = document.getElementById("transferFormMessage");
 const transfersList = document.getElementById("transfersList");
+const transferEditor = document.getElementById("transferEditor");
+const openTransferEditorButton = document.getElementById("openTransferEditorButton");
+const backFromTransferEditor = document.getElementById("backFromTransferEditor");
 let transferSourceProducts = [];
 let transferDraft = [];
 let transferMode = "request";
@@ -706,6 +709,26 @@ function setTransferMessage(message, error = false) {
     if (!transferFormMessage) return;
     transferFormMessage.textContent = message;
     transferFormMessage.style.color = error ? "#c14359" : "#2e9d69";
+}
+
+function setTransferEditorVisible(visible) {
+    if (!transferEditor) return;
+    transferEditor.style.display = visible ? "block" : "none";
+    document.querySelector(".transfers-list-header")?.style.setProperty("display", visible ? "none" : "flex");
+    if (transfersList) transfersList.style.display = visible ? "none" : "grid";
+    if (openTransferEditorButton) openTransferEditorButton.style.display = visible ? "none" : "";
+}
+
+function openTransferEditor() {
+    transferMode = "request";
+    document.querySelectorAll(".transfer-mode").forEach(item => item.classList.toggle("active", item.dataset.transferMode === "request"));
+    transferDraft = [];
+    if (transferNotes) transferNotes.value = "";
+    if (transferProductSearch) transferProductSearch.value = "";
+    setTransferMessage("");
+    renderTransferDraft();
+    setTransferEditorVisible(true);
+    configureTransferMode();
 }
 
 // يعرض المنتجات والكميات التي أضيفت مؤقتًا إلى طلب التحويل قبل حفظه.
@@ -1118,12 +1141,15 @@ transfersButton?.addEventListener("click", async () => {
     document.getElementById("ordersAdmin").style.display = "none";
     document.getElementById("categoriesAdmin").style.display = "none";
     transfersAdmin.style.display = "block";
+    setTransferEditorVisible(false);
     transferMode = "request";
     document.querySelectorAll(".transfer-mode").forEach(item => item.classList.toggle("active", item.dataset.transferMode === "request"));
     configureTransferMode();
     await loadTransfers();
 });
 backFromTransfers?.addEventListener("click", () => { transfersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+openTransferEditorButton?.addEventListener("click", openTransferEditor);
+backFromTransferEditor?.addEventListener("click", () => { setTransferEditorVisible(false); loadTransfers(); });
 transferProductSearch?.addEventListener("input", renderTransferProductOptions);
 transferProductSearch?.addEventListener("keydown", event => {
     if (event.key === "Enter") {

@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260912-return-history"
+        href="admin.css?v=20260912-transfer-editor"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1460,9 +1460,15 @@
     <div class="orders-admin-header">
         <button class="back-admin" id="backFromTransfers">← رجوع</button>
         <div><h2>تحويلات المخزون</h2><p>حوّل المنتجات بين مخزني الرياض وجدة مع متابعة حالة كل تحويل.</p></div>
+        <button type="button" class="open-invoice-button" id="openTransferEditorButton">+ إضافة تحويل جديد</button>
     </div>
 
-    <div class="transfer-create-card">
+    <section class="transfer-editor" id="transferEditor" style="display:none;">
+    <div class="orders-admin-header transfer-editor-header">
+        <button class="back-admin" type="button" id="backFromTransferEditor">← رجوع لسجل التحويلات</button>
+        <div><h2>إضافة تحويل جديد</h2><p>اختر مخزني المصدر والوجهة، ثم أضف المنتجات والكميات قبل إرسال التحويل.</p></div>
+    </div>
+    <div class="transfer-create-card transfer-editor-card">
         <h3>طلب أو إرسال بضاعة</h3>
         <div class="transfer-mode-switch" role="group" aria-label="نوع التحويل">
             <button type="button" class="transfer-mode active" data-transfer-mode="request">طلب بضاعة إلى مخزني</button>
@@ -1485,6 +1491,7 @@
         <div class="transfer-draft-items" id="transferDraftItems"><span>لم تتم إضافة منتجات بعد.</span></div>
         <div class="transfer-create-actions"><button type="button" id="createTransferButton">إرسال طلب البضاعة</button><span id="transferFormMessage"></span></div>
     </div>
+    </section>
 
     <div class="transfers-list-header"><h3>سجل التحويلات</h3><button type="button" id="refreshTransfersButton">↻ تحديث</button></div>
     <div class="transfers-list" id="transfersList"><div class="message">جاري تحميل التحويلات...</div></div>
@@ -1703,7 +1710,7 @@
 </div>
 
 
-<script src="admin.js?v=20260912-return-history"></script>
+<script src="admin.js?v=20260912-transfer-editor"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

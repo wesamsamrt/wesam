@@ -1029,6 +1029,7 @@ body {
 }
 
 .transfers-admin { width: min(1100px, calc(100% - 32px)); margin: 30px auto; }
+.transfer-editor{width:100%;margin-top:16px}.transfer-editor-header{margin-bottom:16px}.transfer-editor-card{min-height:calc(100vh - 225px);padding:28px}.transfer-editor-card h3{font-size:21px}.transfer-editor-card .transfer-form-row{margin-bottom:16px}.transfer-editor-card .transfer-search-results{max-height:340px}.transfer-editor-card .transfer-draft-items{min-height:95px}.transfer-editor-card .transfer-create-actions{justify-content:space-between;padding-top:15px;border-top:1px solid #ececf4}.transfer-editor-card .transfer-create-actions button{min-width:180px;min-height:46px;font-size:14px}@media(max-width:600px){.transfer-editor-card{min-height:auto;padding:16px}.transfer-editor-header{align-items:flex-start}.transfer-editor-card .transfer-create-actions button{width:100%}}
 .transfer-create-card, .transfer-card { background: #fff; border: 1px solid #eef0f6; border-radius: 20px; padding: 20px; box-shadow: 0 6px 20px rgba(50,50,100,.04); }
 .transfer-create-card h3, .transfers-list-header h3 { font-size: 17px; margin-bottom: 14px; }
 .transfer-mode-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }.transfer-mode { border: 1px solid #dedafc; background: #faf9ff; color: #5144d8; border-radius: 10px; padding: 9px 13px; font-family: inherit; font-weight: 700; cursor: pointer; }.transfer-mode.active { background: #6557ed; color: #fff; border-color: #6557ed; }
