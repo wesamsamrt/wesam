@@ -89,6 +89,11 @@ begin
         if not found then
             raise exception 'لم نجد الصنف المطابق للكود % والموديل واللون في هذا المخزن', requested_item->>'product_code';
         end if;
+        -- الصنف المعلَّم كمرتجع خارج التحضير (مثل مرتجع قديم) يعاد للمخزون
+        -- بعد التحقق من وجوده في المخزن، دون تقييده بتحضيرات العميل الحالية.
+        if coalesce((requested_item->>'outside_preparation')::boolean, false) then
+            continue;
+        end if;
         select coalesce(sum(order_item.quantity), 0)::integer into prepared_quantity
         from public.orders order_doc
         join public.order_items order_item on order_item.order_id = order_doc.id

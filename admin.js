@@ -4934,6 +4934,7 @@ const manualReturnMessage = document.getElementById("manualReturnMessage");
 let manualReturnCustomersData = [];
 let manualReturnItemsData = [];
 let manualReturnOrdersData = [];
+let manualReturnCatalogProducts = [];
 let selectedManualReturnCustomerKey = "";
 
 function manualReturnText(value) { return String(value ?? "").trim().toLocaleLowerCase("ar-SA"); }
@@ -4942,14 +4943,14 @@ function setManualReturnMessage(message = "", isError = false) {
     manualReturnMessage.textContent = message;
     manualReturnMessage.classList.toggle("error", isError);
 }
-function newManualReturnItem() {
-    return { product_code: "", category: "", product_type: "", type: "", company: "", model: "", color: "", storage_location: "", quantity: 1, price: 0, prepared_quantity: 0, max_return_quantity: 0 };
+function newManualReturnItem(isExternal = false) {
+    return { product_code: "", category: "", product_type: "", type: "", company: "", model: "", color: "", storage_location: "", quantity: 1, price: 0, prepared_quantity: 0, max_return_quantity: isExternal ? null : 0, is_external: isExternal };
 }
 function getManualReturnCustomer() {
     return manualReturnCustomersData.find(item => manualReturnText(item.name) === selectedManualReturnCustomerKey) || null;
 }
-function getManualReturnSourceItems() {
-    return getManualReturnCustomer()?.items || [];
+function getManualReturnSourceItems(item = null) {
+    return item?.is_external ? manualReturnCatalogProducts : (getManualReturnCustomer()?.items || []);
 }
 function productNameForManualReturn(item) {
     return String(item.type || item.product_type || item.category || item.product_code || "").trim();
@@ -4961,7 +4962,7 @@ function uniqueManualReturnValues(items, field) {
     }).filter(([key]) => key)).values()];
 }
 function getManualReturnCandidates(item) {
-    let candidates = getManualReturnSourceItems();
+    let candidates = getManualReturnSourceItems(item);
     const code = manualReturnText(item.product_code);
     const name = manualReturnText(item.type);
     const model = manualReturnText(item.model);
@@ -4992,7 +4993,8 @@ function getManualReturnQuantities(product) {
 function copyManualReturnProduct(index, product) {
     if (!product || !manualReturnItemsData[index]) return;
     const current = manualReturnItemsData[index];
-    const quantities = getManualReturnQuantities(product);
+    const isExternal = Boolean(current.is_external);
+    const quantities = isExternal ? { prepared: 0, available: null } : getManualReturnQuantities(product);
     manualReturnItemsData[index] = {
         ...current,
         product_code: product.product_code || "",
@@ -5006,7 +5008,7 @@ function copyManualReturnProduct(index, product) {
         price: Number(product.price || 0),
         prepared_quantity: quantities.prepared,
         max_return_quantity: quantities.available,
-        quantity: quantities.available
+        quantity: isExternal ? Math.max(1, Number(current.quantity || 1)) : quantities.available
     };
 }
 function updateManualReturnTotal() {
@@ -5017,25 +5019,28 @@ function renderManualReturnItems() {
     if (!manualReturnItems) return;
     if (!manualReturnItemsData.length) manualReturnItemsData.push(newManualReturnItem());
     manualReturnItems.innerHTML = manualReturnItemsData.map((item, index) => {
-        const sourceItems = getManualReturnSourceItems();
+        const isExternal = Boolean(item.is_external);
+        const sourceItems = getManualReturnSourceItems(item);
         const sourceForCode = sourceItems;
         const sourceForModel = getManualReturnCandidates({ ...item, model: "", color: "" });
         const sourceForColor = getManualReturnCandidates({ ...item, color: "" });
         const choices = (id, values) => `<datalist id="${id}">${values.map(value => `<option value="${transferText(value)}"></option>`).join("")}</datalist>`;
         const text = (field, list = "", values = []) => `<input type="text" value="${transferText(item[field] || "")}" ${list ? `list="${list}"` : ""} data-manual-return-field="${field}" data-manual-return-index="${index}">${list ? choices(list, values) : ""}`;
         const number = field => `<input type="number" min="0" step="${field === "price" ? "0.01" : "1"}" value="${Number(item[field] || 0)}" data-manual-return-field="${field}" data-manual-return-index="${index}">`;
-        const returnQuantity = `<input type="number" min="0" max="${Math.max(0, Number(item.max_return_quantity || 0))}" step="1" value="${Number(item.quantity || 0)}" ${Number(item.max_return_quantity || 0) > 0 ? "" : "disabled"} data-manual-return-field="quantity" data-manual-return-index="${index}"><small class="manual-return-available">المتاح للرجوع: ${Math.max(0, Number(item.max_return_quantity || 0))}</small>`;
+        const available = Math.max(0, Number(item.max_return_quantity || 0));
+        const returnQuantity = `<input type="number" min="1" ${isExternal ? "" : `max="${available}"`} step="1" value="${Number(item.quantity || 0)}" ${isExternal || available > 0 ? "" : "disabled"} data-manual-return-field="quantity" data-manual-return-index="${index}"><small class="manual-return-available">${isExternal ? "مرتجع لصنف خارج التحضير" : `المتاح للرجوع: ${available}`}</small>`;
         const total = Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.price || 0));
-        return `<tr><td>${index + 1}</td><td>${text("product_code", `manual-return-codes-${index}`, uniqueManualReturnValues(sourceForCode, "product_code"))}</td><td>${text("category")}</td><td>${text("product_type")}</td><td>${text("type", `manual-return-products-${index}`, uniqueManualReturnValues(sourceItems, "product_name"))}</td><td>${text("company")}</td><td>${text("model", `manual-return-models-${index}`, uniqueManualReturnValues(sourceForModel, "model"))}</td><td>${text("color", `manual-return-colors-${index}`, uniqueManualReturnValues(sourceForColor, "color"))}</td><td>${text("storage_location")}</td><td><strong>${Number(item.prepared_quantity || 0)}</strong></td><td>${returnQuantity}</td><td>${number("price")}</td><td>${formatAdminCurrency(total)}</td><td><button type="button" class="manual-return-remove" data-manual-return-remove="${index}">حذف</button></td></tr>`;
+        return `<tr><td>${index + 1}</td><td>${text("product_code", `manual-return-codes-${index}`, uniqueManualReturnValues(sourceForCode, "product_code"))}</td><td>${text("category")}</td><td>${text("product_type")}</td><td>${text("type", `manual-return-products-${index}`, uniqueManualReturnValues(sourceItems, "product_name"))}</td><td>${text("company")}</td><td>${text("model", `manual-return-models-${index}`, uniqueManualReturnValues(sourceForModel, "model"))}</td><td>${text("color", `manual-return-colors-${index}`, uniqueManualReturnValues(sourceForColor, "color"))}</td><td>${text("storage_location")}</td><td><strong>${isExternal ? "—" : Number(item.prepared_quantity || 0)}</strong></td><td>${returnQuantity}</td><td>${number("price")}</td><td>${formatAdminCurrency(total)}</td><td><button type="button" class="manual-return-remove" data-manual-return-remove="${index}">حذف</button></td></tr>`;
     }).join("");
     updateManualReturnTotal();
     manualReturnItems.querySelectorAll("[data-manual-return-field]").forEach(input => input.addEventListener("input", event => {
         const index = Number(event.currentTarget.dataset.manualReturnIndex);
         const field = event.currentTarget.dataset.manualReturnField;
         const numericValue = Math.max(0, Number(event.currentTarget.value || 0));
-        const allowed = field === "quantity" ? Math.max(0, Number(manualReturnItemsData[index].max_return_quantity || 0)) : numericValue;
+        const isExternal = Boolean(manualReturnItemsData[index].is_external);
+        const allowed = field === "quantity" && !isExternal ? Math.max(0, Number(manualReturnItemsData[index].max_return_quantity || 0)) : numericValue;
         manualReturnItemsData[index][field] = ["quantity", "price"].includes(field) ? Math.min(numericValue, allowed) : event.currentTarget.value;
-        if (field === "quantity" && numericValue > allowed) {
+        if (field === "quantity" && !isExternal && numericValue > allowed) {
             event.currentTarget.value = allowed;
             setManualReturnMessage(`لا يمكن إرجاع أكثر من ${allowed} قطعة لهذا المنتج.`, true);
         }
@@ -5084,6 +5089,22 @@ async function loadManualReturnCustomers() {
     manualReturnCustomersData = [...unique.values()];
     if (manualReturnCustomers) manualReturnCustomers.innerHTML = manualReturnCustomersData.map(customer => `<option value="${transferText(customer.name)}"></option>`).join("");
 }
+async function loadManualReturnCatalog() {
+    const products = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabaseClient
+            .from("products")
+            .select("id, product_code, category, product_type, type, company, model, color, storage_location, price")
+            .eq("warehouse", selectedWarehouse)
+            .order("id", { ascending: true })
+            .range(from, from + pageSize - 1);
+        if (error) { setManualReturnMessage(`تعذر تحميل أصناف المخزن: ${error.message}`, true); return; }
+        products.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+    manualReturnCatalogProducts = products;
+}
 function syncManualReturnCustomer() {
     const customer = manualReturnCustomersData.find(item => manualReturnText(item.name) === manualReturnText(manualReturnCustomerName?.value));
     if (manualReturnCustomerPhone) manualReturnCustomerPhone.value = customer?.phone || "";
@@ -5108,7 +5129,9 @@ function openManualReturnEditor() {
     if (manualReturnCustomerName) manualReturnCustomerName.value = "";
     if (manualReturnCustomerPhone) manualReturnCustomerPhone.value = "";
     const notes = document.getElementById("manualReturnNotes"); if (notes) notes.value = "";
-    setManualReturnMessage(""); renderManualReturnItems(); loadManualReturnCustomers();
+    manualReturnCatalogProducts = [];
+    setManualReturnMessage(""); renderManualReturnItems();
+    Promise.all([loadManualReturnCustomers(), loadManualReturnCatalog()]).then(() => renderManualReturnItems());
 }
 function closeManualReturnEditor() {
     returnsAdmin?.classList.remove("manual-return-mode");
@@ -5121,10 +5144,10 @@ function closeManualReturnEditor() {
 async function saveManualReturn() {
     const customer = manualReturnCustomersData.find(item => manualReturnText(item.name) === manualReturnText(manualReturnCustomerName?.value));
     if (!customer) { setManualReturnMessage("اختر عميلًا مسجلًا من القائمة أولًا.", true); return; }
-    const items = manualReturnItemsData.map(item => ({ ...item, product_code: String(item.product_code || "").trim(), quantity: Number(item.quantity || 0), price: Number(item.price || 0) })).filter(item => item.product_code && item.quantity > 0);
+    const items = manualReturnItemsData.map(item => ({ ...item, product_code: String(item.product_code || "").trim(), quantity: Number(item.quantity || 0), price: Number(item.price || 0), outside_preparation: Boolean(item.is_external) })).filter(item => item.product_code && item.quantity > 0);
     if (!items.length) { setManualReturnMessage("أضف منتجًا واحدًا صحيحًا على الأقل مع الكمية.", true); return; }
     const requestedByProduct = new Map();
-    items.forEach(item => {
+    items.filter(item => !item.is_external).forEach(item => {
         const key = [manualReturnText(item.product_code), manualReturnText(item.model), manualReturnText(item.color)].join("|");
         const current = requestedByProduct.get(key) || { quantity: 0, max: Number(item.max_return_quantity || 0) };
         current.quantity += Number(item.quantity || 0);
@@ -5145,6 +5168,11 @@ createManualReturnButton?.addEventListener("click", openManualReturnEditor);
 document.getElementById("backFromManualReturn")?.addEventListener("click", closeManualReturnEditor);
 document.getElementById("cancelManualReturnButton")?.addEventListener("click", closeManualReturnEditor);
 document.getElementById("addManualReturnItem")?.addEventListener("click", () => { manualReturnItemsData.push(newManualReturnItem()); renderManualReturnItems(); });
+document.getElementById("addExternalManualReturnItem")?.addEventListener("click", async () => {
+    if (!manualReturnCatalogProducts.length) await loadManualReturnCatalog();
+    manualReturnItemsData.push(newManualReturnItem(true));
+    renderManualReturnItems();
+});
 manualReturnCustomerName?.addEventListener("input", syncManualReturnCustomer);
 manualReturnCustomerName?.addEventListener("change", syncManualReturnCustomer);
 document.getElementById("saveManualReturnButton")?.addEventListener("click", saveManualReturn);

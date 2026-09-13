@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260913-purchase-order-f4"
+        href="admin.css?v=20260913-manual-external-return"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1285,7 +1285,7 @@
             <small id="manualReturnCustomerHint">اكتب جزءًا من اسم العميل لاختياره من العملاء المسجلين.</small>
         </section>
         <section class="manual-return-items-section">
-            <div class="manual-return-items-head"><h3>منتجات المرتجع</h3><button type="button" id="addManualReturnItem">+ إضافة منتج</button></div>
+            <div class="manual-return-items-head"><h3>منتجات المرتجع</h3><div><button type="button" id="addManualReturnItem">+ من تحضير العميل</button><button type="button" class="manual-return-external-button" id="addExternalManualReturnItem">+ صنف خارج التحضير</button></div></div>
             <div class="edit-invoice-table-wrap"><table class="edit-invoice-table manual-return-table"><thead><tr><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>موقع القطعة</th><th>كمية التحضير</th><th>الكمية المرتجعة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>إجراءات</th></tr></thead><tbody id="manualReturnItems"></tbody></table></div>
         </section>
         <label class="manual-return-notes">ملاحظات المرتجع<textarea id="manualReturnNotes" rows="3" placeholder="سبب الإرجاع أو أي ملاحظة (اختياري)"></textarea></label>
@@ -1722,7 +1722,7 @@
 </div>
 
 
-<script src="admin.js?v=20260913-purchase-order-f4"></script>
+<script src="admin.js?v=20260913-manual-external-return"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
