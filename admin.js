@@ -5210,8 +5210,10 @@ const purchaseOrdersButton = document.getElementById("purchaseOrdersButton");
 const purchaseOrdersAdmin = document.getElementById("purchaseOrdersAdmin");
 const purchaseOrdersList = document.getElementById("purchaseOrdersList");
 const purchaseOrdersSummary = document.getElementById("purchaseOrdersSummary");
+const purchaseOrderEditor = document.getElementById("purchaseOrderEditor");
 let adminShortagesData = [];
 let adminShortageGroups = [];
+let purchaseOrdersCache = [];
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -5578,9 +5580,25 @@ async function openShortageProductStats(selectedProduct = null) {
 }
 
 document.addEventListener("keydown", event => {
-    if (event.key !== "F4" || shortagesAdmin?.style.display === "none") return;
-    event.preventDefault();
-    openShortageProductStats();
+    if (event.key !== "F4") return;
+    if (shortagesAdmin?.style.display !== "none") {
+        event.preventDefault();
+        openShortageProductStats();
+        return;
+    }
+    if (purchaseOrderEditor?.style.display !== "none") {
+        const selected = [...purchaseOrderEditor.querySelectorAll("[data-purchase-product-index]:checked")];
+        if (selected.length !== 1) {
+            alert("حدد صنفًا واحدًا فقط من طلب الشراء ثم اضغط F4.");
+            return;
+        }
+        const order = purchaseOrdersCache.find(item => String(item.id) === String(purchaseOrderEditor.dataset.purchaseOrderId));
+        const product = order?.items?.[Number(selected[0].dataset.purchaseProductIndex)];
+        if (!product) return;
+        event.preventDefault();
+        openShortageProductStats(product);
+        return;
+    }
 });
 
 selectAllShortagesButton?.addEventListener("click", () => {
@@ -5599,6 +5617,7 @@ async function loadPurchaseOrders() {
         return;
     }
     const orders = Array.isArray(data) ? data : [];
+    purchaseOrdersCache = orders;
     const totalItems = orders.reduce((sum, order) => sum + (Array.isArray(order.items) ? order.items : []).reduce((itemsSum, item) => itemsSum + Number(item.quantity || 0), 0), 0);
     if (purchaseOrdersSummary) purchaseOrdersSummary.innerHTML = `<span><strong>${orders.length}</strong> طلبات شراء</span><span><strong>${totalItems}</strong> قطعة مطلوبة</span><span>مخزن ${transferText(selectedWarehouse || "—")}</span>`;
     if (!orders.length) {
@@ -5610,8 +5629,82 @@ async function loadPurchaseOrders() {
         const pieces = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
         const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
         const date = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
-        return `<article class="purchase-order-card"><header><div><h3>طلب شراء #${transferText(order.id)}</h3><p>${transferText(date)} · ${pieces} قطعة · ${items.length} أصناف</p></div><span class="purchase-order-status">${transferText(order.status || "جديد")}</span></header><div class="purchase-order-items">${items.map(item => `<div><strong>${transferText([item.company, item.product_type || item.type, item.model, item.color].filter(Boolean).join(" · ") || item.product_code || "صنف")}</strong><span>الكود: ${transferText(item.product_code || "—")} · الكمية: <b>${Number(item.quantity || 0)}</b></span></div>`).join("")}</div>${order.notes ? `<p class="purchase-order-notes">ملاحظات: ${transferText(order.notes)}</p>` : ""}<footer><span>القيمة المرجعية</span><strong>${formatAdminCurrency(total)}</strong></footer></article>`;
+        return `<article class="purchase-order-card"><header><div><h3>طلب شراء #${transferText(order.id)}</h3><p>${transferText(date)} · ${pieces} قطعة · ${items.length} أصناف</p></div><span class="purchase-order-status">${transferText(order.status || "جديد")}</span></header><div class="purchase-order-items">${items.map(item => `<div><strong>${transferText([item.company, item.product_type || item.type, item.model, item.color].filter(Boolean).join(" · ") || item.product_code || "صنف")}</strong><span>الكود: ${transferText(item.product_code || "—")} · الكمية: <b>${Number(item.quantity || 0)}</b></span></div>`).join("")}</div>${order.notes ? `<p class="purchase-order-notes">ملاحظات: ${transferText(order.notes)}</p>` : ""}<footer><div><span>القيمة المرجعية</span><strong>${formatAdminCurrency(total)}</strong></div><div class="purchase-order-actions"><button type="button" data-open-purchase-order="${order.id}">فتح</button><button type="button" data-print-purchase-order="${order.id}">🖨️ طباعة</button></div></footer></article>`;
     }).join("");
+    purchaseOrdersList.querySelectorAll("[data-open-purchase-order]").forEach(button => button.addEventListener("click", () => openPurchaseOrderEditor(button.dataset.openPurchaseOrder)));
+    purchaseOrdersList.querySelectorAll("[data-print-purchase-order]").forEach(button => button.addEventListener("click", () => printPurchaseOrder(button.dataset.printPurchaseOrder)));
+}
+
+function purchaseOrderItemTitle(item) {
+    return [item.company, item.product_type || item.type, item.model, item.color].filter(Boolean).join(" · ") || item.product_code || "صنف";
+}
+
+function setPurchaseOrderEditorVisible(visible) {
+    if (!purchaseOrderEditor) return;
+    purchaseOrderEditor.style.display = visible ? "block" : "none";
+    if (purchaseOrdersSummary) purchaseOrdersSummary.style.display = visible ? "none" : "flex";
+    if (purchaseOrdersList) purchaseOrdersList.style.display = visible ? "none" : "grid";
+    document.querySelector("#purchaseOrdersAdmin > .orders-admin-header")?.style.setProperty("display", visible ? "none" : "flex");
+}
+
+function openPurchaseOrderEditor(purchaseOrderId) {
+    const order = purchaseOrdersCache.find(item => String(item.id) === String(purchaseOrderId));
+    if (!order || !purchaseOrderEditor) return;
+    const items = Array.isArray(order.items) ? order.items : [];
+    purchaseOrderEditor.dataset.purchaseOrderId = String(order.id);
+    purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-purchase-editor>← رجوع لطلبات الشراء</button><div><h2>فتح طلب شراء #${transferText(order.id)}</h2><p>عدّل الحالة أو الكميات أو الأسعار ثم احفظ التعديلات. حدّد صنفًا واحدًا واضغط F4 لتحليل الصنف.</p></div><button type="button" class="open-invoice-button" data-print-purchase-editor>🖨️ طباعة</button></div><section class="purchase-order-editor-card"><div class="purchase-order-edit-meta"><label>الحالة<select id="purchaseOrderStatus"><option ${order.status === "جديد" ? "selected" : ""}>جديد</option><option ${order.status === "تم الطلب" ? "selected" : ""}>تم الطلب</option><option ${order.status === "تم الاستلام" ? "selected" : ""}>تم الاستلام</option><option ${order.status === "ملغي" ? "selected" : ""}>ملغي</option></select></label><label>ملاحظات<textarea id="purchaseOrderNotes" placeholder="ملاحظات اختيارية للشراء">${transferText(order.notes || "")}</textarea></label></div><div class="edit-invoice-table-wrap purchase-order-table-wrap"><table class="edit-invoice-table purchase-order-table"><thead><tr><th>تحديد</th><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${items.map((item, index) => `<tr data-purchase-editor-row="${index}"><td><label class="shortage-select"><input type="checkbox" data-purchase-product-index="${index}"><span>تحديد</span></label></td><td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.category || "—")}</td><td>${transferText(item.product_type || "—")}</td><td>${transferText(item.type || "—")}</td><td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td><input class="purchase-order-quantity" data-purchase-item-id="${item.id}" type="number" min="1" value="${Math.max(1, Number(item.quantity || 1))}"></td><td><input class="purchase-order-price" data-purchase-item-id="${item.id}" type="number" min="0" step="0.01" value="${Math.max(0, Number(item.price || 0))}"></td><td class="purchase-order-line-total">${formatAdminCurrency(Number(item.quantity || 0) * Number(item.price || 0))}</td></tr>`).join("")}</tbody></table></div><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="purchaseOrderEditorTotal">${formatAdminCurrency(items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0))}</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" data-save-purchase-editor>حفظ التعديلات</button><span id="purchaseOrderEditorMessage"></span></div></section>`;
+    const recalculate = () => {
+        let total = 0;
+        purchaseOrderEditor.querySelectorAll("[data-purchase-editor-row]").forEach(row => {
+            const quantity = Math.max(1, Number(row.querySelector(".purchase-order-quantity")?.value || 0));
+            const price = Math.max(0, Number(row.querySelector(".purchase-order-price")?.value || 0));
+            total += quantity * price;
+            const lineTotal = row.querySelector(".purchase-order-line-total");
+            if (lineTotal) lineTotal.textContent = formatAdminCurrency(quantity * price);
+        });
+        const totalElement = purchaseOrderEditor.querySelector("#purchaseOrderEditorTotal");
+        if (totalElement) totalElement.textContent = formatAdminCurrency(total);
+    };
+    purchaseOrderEditor.querySelectorAll(".purchase-order-quantity,.purchase-order-price").forEach(input => input.addEventListener("input", recalculate));
+    purchaseOrderEditor.querySelector("[data-back-purchase-editor]")?.addEventListener("click", () => setPurchaseOrderEditorVisible(false));
+    purchaseOrderEditor.querySelector("[data-print-purchase-editor]")?.addEventListener("click", () => printPurchaseOrder(order.id));
+    purchaseOrderEditor.querySelector("[data-save-purchase-editor]")?.addEventListener("click", savePurchaseOrderEditor);
+    setPurchaseOrderEditorVisible(true);
+}
+
+async function savePurchaseOrderEditor() {
+    const purchaseOrderId = purchaseOrderEditor?.dataset.purchaseOrderId;
+    const message = purchaseOrderEditor?.querySelector("#purchaseOrderEditorMessage");
+    const saveButton = purchaseOrderEditor?.querySelector("[data-save-purchase-editor]");
+    const status = purchaseOrderEditor?.querySelector("#purchaseOrderStatus")?.value || "جديد";
+    const notes = purchaseOrderEditor?.querySelector("#purchaseOrderNotes")?.value || "";
+    const items = [...(purchaseOrderEditor?.querySelectorAll("[data-purchase-editor-row]") || [])].map(row => ({
+        id: Number(row.querySelector(".purchase-order-quantity")?.dataset.purchaseItemId),
+        quantity: Math.max(1, Math.floor(Number(row.querySelector(".purchase-order-quantity")?.value || 1))),
+        price: Math.max(0, Number(row.querySelector(".purchase-order-price")?.value || 0))
+    }));
+    if (!purchaseOrderId || !items.length) return;
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = "جاري الحفظ..."; }
+    if (message) message.textContent = "";
+    const { error } = await supabaseClient.rpc("update_purchase_order", { p_purchase_order_id: Number(purchaseOrderId), p_status: status, p_notes: notes, p_items: items });
+    if (saveButton) { saveButton.disabled = false; saveButton.textContent = "حفظ التعديلات"; }
+    if (error) { if (message) { message.textContent = error.message; message.className = "error"; } return; }
+    if (message) { message.textContent = "تم حفظ التعديلات بنجاح ✓"; message.className = "success"; }
+    await loadPurchaseOrders();
+    openPurchaseOrderEditor(purchaseOrderId);
+}
+
+function printPurchaseOrder(purchaseOrderId) {
+    const order = purchaseOrdersCache.find(item => String(item.id) === String(purchaseOrderId));
+    if (!order) return;
+    const items = Array.isArray(order.items) ? order.items : [];
+    const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
+    const date = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
+    const rows = items.map((item, index) => `<tr><td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.product_type || "—")}</td><td>${transferText(item.type || "—")}</td><td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>${Number(item.quantity || 0)}</td><td>${formatAdminCurrency(item.price)}</td><td>${formatAdminCurrency(Number(item.quantity || 0) * Number(item.price || 0))}</td></tr>`).join("");
+    const printWindow = window.open("", "_blank", "width=1100,height=760");
+    if (!printWindow) { alert("السماح بالنوافذ المنبثقة مطلوب للطباعة."); return; }
+    printWindow.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>طلب شراء #${transferText(order.id)}</title><style>body{font-family:Arial,sans-serif;color:#24233a;padding:30px}header{display:flex;justify-content:space-between;border-bottom:2px solid #6557ed;padding-bottom:15px;margin-bottom:20px}h1{margin:0;font-size:25px;color:#4337b4}p{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #ddd;padding:9px;text-align:center;font-size:12px}th{background:#f0edff;color:#4438ad}.total{margin-top:18px;padding:14px;background:#f4f2ff;font-size:18px;font-weight:bold}.notes{margin-top:14px;padding:11px;background:#fafafa}</style></head><body><header><div><h1>طلب شراء #${transferText(order.id)}</h1><p>مخزن ${transferText(order.warehouse || selectedWarehouse)} · ${transferText(date)}</p></div><div><b>الحالة: ${transferText(order.status || "جديد")}</b></div></header><table><thead><tr><th>#</th><th>الكود</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table><div class="total">إجمالي القيمة المرجعية: ${formatAdminCurrency(total)}</div>${order.notes ? `<div class="notes"><b>ملاحظات:</b> ${transferText(order.notes)}</div>` : ""}<script>window.onload=function(){window.print();};<\/script></body></html>`);
+    printWindow.document.close();
 }
 
 async function createPurchaseOrderFromSelectedShortages() {

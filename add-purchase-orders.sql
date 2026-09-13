@@ -91,6 +91,41 @@ as $$
     order by purchase.id desc;
 $$;
 
+create or replace function public.update_purchase_order(p_purchase_order_id bigint, p_status text, p_notes text, p_items jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    purchase public.purchase_orders%rowtype;
+    edited_item jsonb;
+begin
+    select * into purchase from public.purchase_orders where id = p_purchase_order_id;
+    if not found then raise exception 'طلب الشراء غير موجود'; end if;
+    if auth.uid() is null or not public.team_can_access_warehouse(purchase.warehouse, 'orders') then
+        raise exception 'ليس لديك صلاحية تعديل طلب الشراء';
+    end if;
+    if trim(coalesce(p_status, '')) not in ('جديد', 'تم الطلب', 'تم الاستلام', 'ملغي') then
+        raise exception 'حالة طلب الشراء غير صالحة';
+    end if;
+
+    update public.purchase_orders
+    set status = trim(p_status), notes = nullif(trim(coalesce(p_notes, '')), '')
+    where id = p_purchase_order_id;
+
+    for edited_item in select value from jsonb_array_elements(coalesce(p_items, '[]'::jsonb))
+    loop
+        update public.purchase_order_items
+        set quantity = greatest(1, coalesce((edited_item->>'quantity')::integer, quantity)),
+            price = greatest(0, coalesce((edited_item->>'price')::numeric, price))
+        where id = coalesce((edited_item->>'id')::bigint, 0)
+          and purchase_order_id = p_purchase_order_id;
+    end loop;
+end;
+$$;
+
 grant execute on function public.create_purchase_order_from_shortages(text, bigint[], text) to authenticated;
 grant execute on function public.list_warehouse_purchase_orders(text) to authenticated;
+grant execute on function public.update_purchase_order(bigint, text, text, jsonb) to authenticated;
 notify pgrst, 'reload schema';
