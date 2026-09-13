@@ -392,6 +392,25 @@
             cursor: pointer;
         }
 
+        .delete-account-button {
+            width: 100%;
+            height: 52px;
+            margin-top: 10px;
+            border: 1px solid #ffcbd3;
+            border-radius: 16px;
+            background: #fff;
+            color: #d83d57;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .delete-account-dialog { border: 1px solid #ffd1d8; }
+        .delete-account-dialog h2 { color: #c93650; }
+        .delete-account-warning { padding: 11px; border-radius: 12px; background: #fff1f3; color: #a63b4d !important; line-height: 1.8; }
+        .delete-account-confirm { background: #d94159 !important; color: #fff; }
+
         .password-modal {
             display: none;
             position: fixed;
@@ -741,6 +760,10 @@ async function loadProfile() {
             🚪 تسجيل الخروج
         </button>
 
+        <button class="delete-account-button" type="button" onclick="openAccountDeletion()">
+            🗑️ حذف الحساب نهائيًا
+        </button>
+
     `;
 
 }
@@ -828,6 +851,45 @@ async function logoutProfile() {
 
     window.location.href = "login.html";
 
+}
+
+// يفتح تأكيدًا منفصلًا؛ لا يمكن حذف الحساب بمجرد ضغط زر بالخطأ.
+function openAccountDeletion() {
+    const modal = document.getElementById("deleteAccountModal");
+    const confirmation = document.getElementById("deleteAccountConfirmation");
+    const message = document.getElementById("deleteAccountMessage");
+    confirmation.value = "";
+    message.textContent = "";
+    modal.style.display = "flex";
+    setTimeout(() => confirmation.focus(), 100);
+}
+
+function closeAccountDeletion() {
+    document.getElementById("deleteAccountModal").style.display = "none";
+}
+
+// يحذف هوية المستخدم الحالية فقط بعد إدخال عبارة التأكيد المطلوبة.
+async function deleteMyAccount() {
+    const confirmation = document.getElementById("deleteAccountConfirmation");
+    const message = document.getElementById("deleteAccountMessage");
+    const button = document.getElementById("confirmDeleteAccountButton");
+    if (confirmation.value.trim() !== "حذف حسابي") {
+        message.textContent = "اكتب العبارة كما هي: حذف حسابي";
+        message.style.color = "#d94159";
+        return;
+    }
+    button.disabled = true;
+    button.textContent = "جاري حذف الحساب...";
+    const { error } = await supabaseClient.rpc("delete_my_account");
+    if (error) {
+        button.disabled = false;
+        button.textContent = "حذف الحساب نهائيًا";
+        message.textContent = error.message || "تعذر حذف الحساب.";
+        message.style.color = "#d94159";
+        return;
+    }
+    await supabaseClient.auth.signOut({ scope: "local" });
+    window.location.replace("login.html?account_deleted=1");
 }
 
 
@@ -1218,6 +1280,20 @@ loadProfile();
         <div class="password-actions">
             <button type="button" class="password-cancel" onclick="closePasswordChange()">إلغاء</button>
             <button id="savePasswordButton" type="button" class="password-save" onclick="saveNewPassword()">حفظ كلمة المرور</button>
+        </div>
+    </div>
+</div>
+
+<div id="deleteAccountModal" class="password-modal" role="dialog" aria-modal="true" aria-labelledby="deleteAccountModalTitle">
+    <div class="password-dialog delete-account-dialog">
+        <h2 id="deleteAccountModalTitle">🗑️ حذف الحساب نهائيًا</h2>
+        <p class="delete-account-warning">سيتم حذف بيانات الدخول لهذا الحساب وتسجيل خروجك فورًا. تبقى الطلبات والسجلات التجارية محفوظة في المتجر، لكن لا يمكن استعادة الحساب.</p>
+        <p>للتأكيد، اكتب: <strong>حذف حسابي</strong></p>
+        <input id="deleteAccountConfirmation" type="text" autocomplete="off" placeholder="اكتب حذف حسابي">
+        <div id="deleteAccountMessage" class="password-message" aria-live="polite"></div>
+        <div class="password-actions">
+            <button type="button" class="password-cancel" onclick="closeAccountDeletion()">إلغاء</button>
+            <button id="confirmDeleteAccountButton" type="button" class="delete-account-confirm" onclick="deleteMyAccount()">حذف الحساب نهائيًا</button>
         </div>
     </div>
 </div>
