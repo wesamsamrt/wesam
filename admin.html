@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260913-manual-external-return"
+        href="admin.css?v=20260913-product-export-menu"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -789,9 +789,15 @@
         </div>
 
         <div class="products-header-actions">
-            <button type="button" class="export-excel-button" id="exportProductsExcelButton">
-                ⇩ تصدير Excel
-            </button>
+            <div class="product-export-menu" id="productExportMenu">
+                <button type="button" class="export-excel-button" id="exportProductsExcelButton" aria-expanded="false">
+                    ⇩ تصدير Excel ▾
+                </button>
+                <div class="product-export-menu-list" id="productExportMenuList" hidden>
+                    <button type="button" id="exportAllProductsExcelButton">تصدير كل المنتجات</button>
+                    <button type="button" id="exportGroupedProductsExcelButton">تصدير حسب الكود والنوع والموديل</button>
+                </div>
+            </div>
             <button
                 class="add-product-button"
                 id="addProductButton"
@@ -1722,7 +1728,7 @@
 </div>
 
 
-<script src="admin.js?v=20260913-manual-external-return"></script>
+<script src="admin.js?v=20260913-product-export-menu"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

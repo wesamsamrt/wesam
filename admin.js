@@ -2305,8 +2305,8 @@ let adminProductsData = [];
 let selectedProductImage = null;
 let selectedAdminProductStatIds = new Set();
 
-// يصدر جميع منتجات المخزن المختار حالياً إلى ملف Excel منظم.
-function exportSelectedWarehouseProducts() {
+// يصدر منتجات المخزن كما هي، أو يجمعها بدون فصل اللون عند اختيار التصدير المجمّع.
+function exportSelectedWarehouseProducts(groupWithoutColor = false) {
     const products = getProductsForSelectedWarehouse();
     if (!products.length) {
         alert("لا توجد منتجات في مخزن " + (selectedWarehouse || "المختار") + " لتصديرها.");
@@ -2327,9 +2327,31 @@ function exportSelectedWarehouseProducts() {
         "تاريخ الإضافة": product.created_at ? new Date(product.created_at).toLocaleString("ar-SA") : ""
     }));
 
+    if (!groupWithoutColor) {
+        downloadExcelWorkbook([
+            { name: "كل المنتجات", rows }
+        ], `منتجات-${selectedWarehouse || "المخزن"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+        return;
+    }
+    const groups = new Map();
+    products.forEach(product => {
+        const key = [product.product_code, product.type || product.product_type, product.model].map(value => String(value || "").trim().toLocaleLowerCase("ar-SA")).join("|");
+        const group = groups.get(key) || { products: [], colors: new Set(), inventoryKeys: new Set() };
+        group.products.push(product);
+        if (String(product.color || "").trim()) group.colors.add(String(product.color).trim());
+        if (String(product.inventory_key || "").trim()) group.inventoryKeys.add(String(product.inventory_key).trim());
+        groups.set(key, group);
+    });
+    const groupedRows = [...groups.values()].map(group => {
+        const first = group.products[0];
+        const quantities = group.products.map(product => Math.max(0, Number(product.quantity || 0)));
+        // لا نكرر الكمية عند كون الألوان مرتبطة بمخزون مشترك.
+        const quantity = group.inventoryKeys.size === 1 || new Set(quantities).size === 1 ? Math.max(0, ...quantities) : quantities.reduce((sum, value) => sum + value, 0);
+        return { "المخزن": first.warehouse || selectedWarehouse || "", "كود المنتج": first.product_code || "", "التصنيف": first.category || "", "النوع": first.type || first.product_type || "", "الشركة": first.company || "", "الموديل": first.model || "", "الكمية المتوفرة": quantity, "عدد الألوان/السجلات": group.products.length, "الألوان": [...group.colors].join("، ") || "بدون لون", "سعر الوحدة (ر.س)": Number(first.price || 0), "موقع القطعة": first.storage_location || "غير محدد" };
+    });
     downloadExcelWorkbook([
-        { name: "المنتجات", rows }
-    ], `منتجات-${selectedWarehouse || "المخزن"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+        { name: "مجمّع بدون اللون", rows: groupedRows }
+    ], `منتجات-مجمعة-${selectedWarehouse || "المخزن"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 // يرجع المنتجات التابعة للمخزن الذي اختاره المدير فقط.
@@ -2428,7 +2450,19 @@ productsButton.addEventListener("click", async function () {
 
 });
 
-document.getElementById("exportProductsExcelButton")?.addEventListener("click", exportSelectedWarehouseProducts);
+const productExportMenu = document.getElementById("productExportMenu");
+const productExportMenuList = document.getElementById("productExportMenuList");
+const exportProductsExcelButton = document.getElementById("exportProductsExcelButton");
+function setProductExportMenu(open) {
+    if (!productExportMenuList || !exportProductsExcelButton) return;
+    productExportMenuList.hidden = !open;
+    exportProductsExcelButton.setAttribute("aria-expanded", String(open));
+}
+exportProductsExcelButton?.addEventListener("click", () => setProductExportMenu(productExportMenuList?.hidden));
+document.getElementById("exportAllProductsExcelButton")?.addEventListener("click", () => { setProductExportMenu(false); exportSelectedWarehouseProducts(false); });
+document.getElementById("exportGroupedProductsExcelButton")?.addEventListener("click", () => { setProductExportMenu(false); exportSelectedWarehouseProducts(true); });
+document.addEventListener("click", event => { if (productExportMenu && !productExportMenu.contains(event.target)) setProductExportMenu(false); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") setProductExportMenu(false); });
 
 
 /* الرجوع */

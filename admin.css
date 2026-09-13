@@ -464,6 +464,7 @@ body {
     font-weight: 700;
     cursor: pointer;
 }
+.product-export-menu{position:relative}.product-export-menu-list{position:absolute;z-index:300;top:calc(100% + 7px);inset-inline-start:0;display:grid;min-width:245px;overflow:hidden;border:1px solid #ddd9ff;border-radius:12px;background:#fff;box-shadow:0 14px 32px rgba(40,35,92,.16)}.product-export-menu-list button{border:0;border-bottom:1px solid #efedff;padding:11px 13px;background:#fff;color:#39335e;font-family:inherit;font-size:12px;font-weight:800;text-align:right;cursor:pointer}.product-export-menu-list button:last-child{border-bottom:0}.product-export-menu-list button:hover{background:#f2f0ff;color:#5848d5}
 
 .warehouse-login-page {
     min-height: 100vh;
