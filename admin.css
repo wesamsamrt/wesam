@@ -2727,6 +2727,8 @@ body {
 .shortages-invoice-table { min-width: 1850px; }
 .shortages-header-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
 .shortages-header-actions #selectAllShortages { background: #fff; }
+.shortages-header-actions #createShortagesPurchaseOrder { background: #2e9d69; }
+.shortages-header-actions #createShortagesPurchaseOrder:disabled { background: #a9d8c0; cursor: not-allowed; }
 .shortages-header-actions #selectAllShortages:disabled { cursor: not-allowed; opacity: .55; }
 .shortage-select { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; color: #5543ca; font-weight: 700; cursor: pointer; }
 .shortage-select input { width: 16px; min-width: 16px; height: 16px; padding: 0; accent-color: #6557ed; }
@@ -2734,6 +2736,10 @@ body {
 .shortage-status { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .shortage-status.new { background: #eeeaff; color: #5845ca; }
 .shortage-status.requested { background: #e3f8ed; color: #25885a; }
+.shortage-status.purchase { background: #e9f1ff; color: #386cc7; }
+
+/* طلبات الشراء المنشأة من النواقص؛ لا تغيّر المخزون حتى يتم الاستلام. */
+.purchase-orders-admin{width:min(1180px,calc(100% - 32px));margin:30px auto}.purchase-orders-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0;padding:13px 15px;border:1px solid #e2dffc;border-radius:14px;background:#f9f8ff;color:#68637d;font-size:12px}.purchase-orders-summary span{padding:6px 10px;border-radius:9px;background:#fff}.purchase-orders-summary strong{color:#5143c8;font-size:16px}.purchase-orders-list{display:grid;gap:12px}.purchase-order-card{overflow:hidden;border:1px solid #e5e4ef;border-radius:17px;background:#fff;box-shadow:0 9px 22px rgba(35,45,90,.045)}.purchase-order-card header,.purchase-order-card footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px}.purchase-order-card header{border-bottom:1px solid #eeedf5}.purchase-order-card h3{margin:0;color:#332b71;font-size:16px}.purchase-order-card header p{margin:4px 0 0;color:#89849b;font-size:11px}.purchase-order-status{padding:6px 10px;border-radius:999px;background:#eeeaff;color:#5647c9;font-size:11px;font-weight:800;white-space:nowrap}.purchase-order-items{display:grid;gap:0;padding:0 17px}.purchase-order-items>div{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;border-bottom:1px solid #f0eff6}.purchase-order-items>div:last-child{border-bottom:0}.purchase-order-items strong{color:#474257;font-size:12px}.purchase-order-items span{color:#858195;font-size:11px}.purchase-order-items b{color:#5143c8}.purchase-order-notes{margin:0 17px 12px;padding:9px 11px;border-radius:9px;background:#faf9ff;color:#746f86;font-size:11px}.purchase-order-card footer{border-top:1px solid #eeedf5;color:#777287;font-size:12px}.purchase-order-card footer strong{color:#5143c8;font-size:16px}@media(max-width:650px){.purchase-orders-admin{width:calc(100% - 20px);margin:18px auto}.purchase-order-card header,.purchase-order-card footer,.purchase-order-items>div{align-items:flex-start;flex-direction:column}.purchase-order-items{padding:0 14px}.purchase-order-items>div{padding:10px 0}.shortages-header-actions{width:100%;justify-content:flex-start;flex-wrap:wrap}}
 .different-colors-invoice-row { background: #f6f4ff; }
 .prepared-colors-preview { display: block; max-width: 180px; margin: 0 auto 7px; color: #554a94; line-height: 1.7; }
 .edit-prepared-colors-button,.invoice-edit-actions button { border: 1px solid #bfb5fb; border-radius: 8px; background: #fff; color: #5543ca; padding: 5px 9px; font: inherit; cursor: pointer; }

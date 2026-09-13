@@ -181,6 +181,7 @@ function applyTeamAccessToInterface() {
         ordersButton: "orders",
         returnsButton: "orders",
         customersButton: "customers",
+        purchaseOrdersButton: "orders",
         salesButton: "sales",
         analyticsButton: "analytics",
         offersButton: "offers",
@@ -5204,6 +5205,11 @@ const shortagesButton = document.getElementById("shortagesButton");
 const shortagesAdmin = document.getElementById("shortagesAdmin");
 const shortagesList = document.getElementById("shortagesList");
 const selectAllShortagesButton = document.getElementById("selectAllShortages");
+const createShortagesPurchaseOrderButton = document.getElementById("createShortagesPurchaseOrder");
+const purchaseOrdersButton = document.getElementById("purchaseOrdersButton");
+const purchaseOrdersAdmin = document.getElementById("purchaseOrdersAdmin");
+const purchaseOrdersList = document.getElementById("purchaseOrdersList");
+const purchaseOrdersSummary = document.getElementById("purchaseOrdersSummary");
 let adminShortagesData = [];
 let adminShortageGroups = [];
 const customersAdmin = document.getElementById("customersAdmin");
@@ -5413,20 +5419,24 @@ async function loadAdminShortages() {
     adminShortageGroups = [...grouped.values()].map(group => ({
         ...group,
         price: group.quantity ? group.total / group.quantity : 0,
-        status: group.items.every(item => item.status === "تم الطلب") ? "تم الطلب" : "جديد",
-        transfer_id: group.items.every(item => String(item.transfer_id || "") === String(group.items[0].transfer_id || "")) ? group.items[0].transfer_id : null
+        status: group.items.every(item => item.status === "تم الطلب") ? "تم الطلب" : group.items.every(item => item.status === "طلب شراء") ? "طلب شراء" : "جديد",
+        transfer_id: group.items.every(item => String(item.transfer_id || "") === String(group.items[0].transfer_id || "")) ? group.items[0].transfer_id : null,
+        purchase_order_id: group.items.every(item => String(item.purchase_order_id || "") === String(group.items[0].purchase_order_id || "")) ? group.items[0].purchase_order_id : null
     }));
 
     shortagesList.innerHTML = adminShortageGroups.length ? `<div class="edit-invoice-table-wrap shortages-invoice-table-wrap"><table class="edit-invoice-table shortages-invoice-table"><thead><tr>
-        <th>تحديد</th><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الألوان</th><th>موقع القطعة</th><th>الكمية المطلوبة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الحالة</th><th>التحويل</th>
+        <th>تحديد</th><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الألوان</th><th>موقع القطعة</th><th>الكمية المطلوبة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الحالة</th><th>المرجع</th>
     </tr></thead><tbody>${adminShortageGroups.map((item, index) => {
         const quantity = Number(item.quantity || 0);
         const price = Number(item.price || 0);
-        const isRequested = item.status === "تم الطلب";
-        return `<tr><td><label class="shortage-select"><input type="checkbox" data-shortage-group="${index}" ${isRequested ? "disabled" : ""}><span>${isRequested ? "تم الطلب" : "تحديد"}</span></label></td>
+        const isRequested = item.status !== "جديد";
+        const reference = item.purchase_order_id ? `طلب شراء #${transferText(item.purchase_order_id)}` : item.transfer_id ? `تحويل #${transferText(item.transfer_id)}` : "—";
+        const selectionLabel = item.status === "طلب شراء" ? "تم طلب الشراء" : isRequested ? "تم الطلب" : "تحديد";
+        const statusClass = item.status === "طلب شراء" ? "purchase" : isRequested ? "requested" : "new";
+        return `<tr><td><label class="shortage-select"><input type="checkbox" data-shortage-group="${index}" ${isRequested ? "disabled" : ""}><span>${selectionLabel}</span></label></td>
             <td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.category || "—")}</td><td>${transferText(item.product_type || "—")}</td><td>${transferText(item.type || "—")}</td>
             <td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td>—</td><td>—</td><td>${quantity}</td><td>${price.toFixed(2)} ر.س</td><td>${(quantity * price).toFixed(2)} ر.س</td>
-            <td><span class="shortage-status ${isRequested ? "requested" : "new"}">${transferText(item.status || "جديد")}</span></td><td>${item.transfer_id ? `#${transferText(item.transfer_id)}` : "—"}</td></tr>`;
+            <td><span class="shortage-status ${statusClass}">${transferText(item.status || "جديد")}</span></td><td>${reference}</td></tr>`;
     }).join("")}</tbody></table></div>` : '<div class="message">لا توجد أصناف مسجلة في النواقص.</div>';
     // يسمح التحديد المتعدد بطلب تحويل عدة أصناف معًا. زر F4 يبقى لصنف واحد فقط.
     shortagesList.querySelectorAll("[data-shortage-group]").forEach(input => input.addEventListener("change", updateShortagesSelectionButton));
@@ -5441,6 +5451,10 @@ function updateShortagesSelectionButton() {
     selectAllShortagesButton.textContent = selectable.length && selectedCount === selectable.length
         ? "إلغاء تحديد الكل"
         : selectedCount ? `تحديد الكل (${selectedCount} محدد)` : "تحديد الكل";
+    if (createShortagesPurchaseOrderButton) {
+        createShortagesPurchaseOrderButton.disabled = !selectedCount;
+        createShortagesPurchaseOrderButton.textContent = selectedCount ? `إضافة طلب شراء (${selectedCount})` : "إضافة طلب شراء للمحدد";
+    }
 }
 
 function shortageItemName(item) {
@@ -5576,6 +5590,60 @@ selectAllShortagesButton?.addEventListener("click", () => {
     updateShortagesSelectionButton();
 });
 
+async function loadPurchaseOrders() {
+    if (!purchaseOrdersList) return;
+    purchaseOrdersList.innerHTML = '<div class="message">جاري تحميل طلبات الشراء...</div>';
+    const { data, error } = await supabaseClient.rpc("list_warehouse_purchase_orders", { p_warehouse: selectedWarehouse });
+    if (error) {
+        purchaseOrdersList.innerHTML = `<div class="message error">تعذر تحميل طلبات الشراء: ${transferText(error.message)}<br><small>شغّل ملف add-purchase-orders.sql في Supabase SQL Editor.</small></div>`;
+        return;
+    }
+    const orders = Array.isArray(data) ? data : [];
+    const totalItems = orders.reduce((sum, order) => sum + (Array.isArray(order.items) ? order.items : []).reduce((itemsSum, item) => itemsSum + Number(item.quantity || 0), 0), 0);
+    if (purchaseOrdersSummary) purchaseOrdersSummary.innerHTML = `<span><strong>${orders.length}</strong> طلبات شراء</span><span><strong>${totalItems}</strong> قطعة مطلوبة</span><span>مخزن ${transferText(selectedWarehouse || "—")}</span>`;
+    if (!orders.length) {
+        purchaseOrdersList.innerHTML = '<div class="message">لا توجد طلبات شراء بعد. حدّد نواقص ثم اضغط «إضافة طلب شراء للمحدد».</div>';
+        return;
+    }
+    purchaseOrdersList.innerHTML = orders.map(order => {
+        const items = Array.isArray(order.items) ? order.items : [];
+        const pieces = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
+        const date = order.created_at ? new Date(order.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "medium", timeStyle: "short" }) : "—";
+        return `<article class="purchase-order-card"><header><div><h3>طلب شراء #${transferText(order.id)}</h3><p>${transferText(date)} · ${pieces} قطعة · ${items.length} أصناف</p></div><span class="purchase-order-status">${transferText(order.status || "جديد")}</span></header><div class="purchase-order-items">${items.map(item => `<div><strong>${transferText([item.company, item.product_type || item.type, item.model, item.color].filter(Boolean).join(" · ") || item.product_code || "صنف")}</strong><span>الكود: ${transferText(item.product_code || "—")} · الكمية: <b>${Number(item.quantity || 0)}</b></span></div>`).join("")}</div>${order.notes ? `<p class="purchase-order-notes">ملاحظات: ${transferText(order.notes)}</p>` : ""}<footer><span>القيمة المرجعية</span><strong>${formatAdminCurrency(total)}</strong></footer></article>`;
+    }).join("");
+}
+
+async function createPurchaseOrderFromSelectedShortages() {
+    const selectedGroupIndexes = [...document.querySelectorAll("[data-shortage-group]:checked")].map(input => Number(input.dataset.shortageGroup));
+    const selectedItems = adminShortageGroups.filter((item, index) => selectedGroupIndexes.includes(index));
+    if (!selectedItems.length) { alert("حدد صنفًا واحدًا على الأقل من النواقص."); return; }
+    const shortageIds = [...new Set(selectedItems.flatMap(item => item.shortage_ids || [item.id]).filter(Boolean))];
+    const notes = window.prompt("ملاحظات لطلب الشراء (اختياري):", "");
+    if (notes === null) return;
+    if (createShortagesPurchaseOrderButton) {
+        createShortagesPurchaseOrderButton.disabled = true;
+        createShortagesPurchaseOrderButton.textContent = "جاري إنشاء طلب الشراء...";
+    }
+    const { data, error } = await supabaseClient.rpc("create_purchase_order_from_shortages", {
+        p_warehouse: selectedWarehouse,
+        p_shortage_ids: shortageIds,
+        p_notes: notes.trim() || null
+    });
+    if (error) {
+        alert(`تعذر إنشاء طلب الشراء: ${error.message}`);
+        updateShortagesSelectionButton();
+        return;
+    }
+    await loadAdminShortages();
+    if (shortagesAdmin) shortagesAdmin.style.display = "none";
+    if (purchaseOrdersAdmin) purchaseOrdersAdmin.style.display = "block";
+    await loadPurchaseOrders();
+    alert(`تم إنشاء طلب الشراء #${data} وإضافة الأصناف المحددة إليه.`);
+}
+
+createShortagesPurchaseOrderButton?.addEventListener("click", createPurchaseOrderFromSelectedShortages);
+
 document.getElementById("requestShortagesTransfer")?.addEventListener("click", async () => {
     const selectedGroupIndexes = [...document.querySelectorAll("[data-shortage-group]:checked")].map(input => Number(input.dataset.shortageGroup));
     const selectedItems = adminShortageGroups.filter((item, index) => selectedGroupIndexes.includes(index));
@@ -5610,11 +5678,24 @@ document.getElementById("requestShortagesTransfer")?.addEventListener("click", a
 });
 
 shortagesButton?.addEventListener("click", async () => {
-    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "purchaseOrdersAdmin"].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = "none"; });
     shortagesAdmin.style.display = "block";
     await loadAdminShortages();
 });
 document.getElementById("backFromShortages")?.addEventListener("click", () => { shortagesAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+["dashboardButton", "productsButton", "samplesButton", "ordersButton", "customersButton", "shortagesButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton", "returnsButton", "analyticsButton", "financeButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
+    if (purchaseOrdersAdmin) purchaseOrdersAdmin.style.display = "none";
+}));
+purchaseOrdersButton?.addEventListener("click", async () => {
+    ["adminPage", "productsAdmin", "ordersAdmin", "customersAdmin", "shortagesAdmin", "categoriesAdmin", "transfersAdmin", "accountsAdmin", "driversAdmin", "salesAdmin", "offersAdmin", "returnsAdmin"].forEach(id => {
+        const page = document.getElementById(id);
+        if (page) page.style.display = "none";
+    });
+    if (purchaseOrdersAdmin) purchaseOrdersAdmin.style.display = "block";
+    await loadPurchaseOrders();
+});
+document.getElementById("backFromPurchaseOrders")?.addEventListener("click", () => { if (purchaseOrdersAdmin) purchaseOrdersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
+document.getElementById("refreshPurchaseOrdersButton")?.addEventListener("click", loadPurchaseOrders);
 ["dashboardButton", "productsButton", "ordersButton", "customersButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
     if (shortagesAdmin) shortagesAdmin.style.display = "none";
 }));

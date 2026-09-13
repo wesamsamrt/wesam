@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260912-transfer-editor"
+        href="admin.css?v=20260913-purchase-orders"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -187,6 +187,11 @@
             <button class="admin-nav-item" id="shortagesButton">
                 <span>⚠️</span>
                 <strong>النواقص</strong>
+            </button>
+
+            <button class="admin-nav-item" id="purchaseOrdersButton">
+                <span>🛒</span>
+                <strong>طلبات الشراء</strong>
             </button>
 
             <button class="admin-nav-item" id="salesButton">
@@ -1290,8 +1295,14 @@
 </section>
 
 <section class="customers-admin" id="shortagesAdmin" style="display:none;">
-    <div class="orders-admin-header"><button class="back-admin" id="backFromShortages">← رجوع</button><div><h2>النواقص</h2><p>الأصناف التي تم تعليمها «غير متوفر» أثناء تعديل الطلبات.</p></div><div class="shortages-header-actions"><button type="button" id="selectAllShortages" class="open-invoice-button">تحديد الكل</button><button type="button" id="requestShortagesTransfer" class="open-invoice-button">طلب تحويل المحدد</button></div></div>
+    <div class="orders-admin-header"><button class="back-admin" id="backFromShortages">← رجوع</button><div><h2>النواقص</h2><p>الأصناف التي تم تعليمها «غير متوفر» أثناء تعديل الطلبات.</p></div><div class="shortages-header-actions"><button type="button" id="selectAllShortages" class="open-invoice-button">تحديد الكل</button><button type="button" id="createShortagesPurchaseOrder" class="open-invoice-button">إضافة طلب شراء للمحدد</button><button type="button" id="requestShortagesTransfer" class="open-invoice-button">طلب تحويل المحدد</button></div></div>
     <div class="customers-list" id="shortagesList"><div class="message">جاري تحميل النواقص...</div></div>
+</section>
+
+<section class="purchase-orders-admin" id="purchaseOrdersAdmin" style="display:none;">
+    <div class="orders-admin-header"><button class="back-admin" id="backFromPurchaseOrders">← رجوع</button><div><h2>طلبات الشراء</h2><p>طلبات الشراء المنشأة من الأصناف المحددة في صفحة النواقص.</p></div><button type="button" id="refreshPurchaseOrdersButton" class="open-invoice-button">↻ تحديث</button></div>
+    <div class="purchase-orders-summary" id="purchaseOrdersSummary">جاري تحميل طلبات الشراء...</div>
+    <div class="purchase-orders-list" id="purchaseOrdersList"><div class="message">جاري تحميل طلبات الشراء...</div></div>
 </section>
 
 <section class="customers-admin" id="customersAdmin" style="display:none;">
@@ -1710,7 +1721,7 @@
 </div>
 
 
-<script src="admin.js?v=20260912-transfer-editor"></script>
+<script src="admin.js?v=20260913-purchase-orders"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
