@@ -128,4 +128,59 @@ $$;
 grant execute on function public.create_purchase_order_from_shortages(text, bigint[], text) to authenticated;
 grant execute on function public.list_warehouse_purchase_orders(text) to authenticated;
 grant execute on function public.update_purchase_order(bigint, text, text, jsonb) to authenticated;
+
+-- إنشاء طلب شراء يدويًا من منتجات المخزن، دون تغيير كميات المخزون.
+create or replace function public.create_manual_purchase_order(p_warehouse text, p_items jsonb, p_notes text default null)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    new_purchase_order_id bigint;
+    item jsonb;
+    item_count integer;
+begin
+    if auth.uid() is null or not public.team_can_access_warehouse(p_warehouse, 'orders') then
+        raise exception 'ليس لديك صلاحية إنشاء طلب شراء لهذا المخزن';
+    end if;
+    if jsonb_typeof(coalesce(p_items, '[]'::jsonb)) <> 'array' then
+        raise exception 'بيانات أصناف طلب الشراء غير صالحة';
+    end if;
+    select count(*) into item_count from jsonb_array_elements(p_items);
+    if item_count = 0 then
+        raise exception 'أضف صنفًا واحدًا على الأقل إلى طلب الشراء';
+    end if;
+
+    insert into public.purchase_orders(warehouse, notes, created_by)
+    values (p_warehouse, nullif(trim(coalesce(p_notes, '')), ''), auth.uid())
+    returning id into new_purchase_order_id;
+
+    for item in select value from jsonb_array_elements(p_items)
+    loop
+        if greatest(0, coalesce((item->>'quantity')::integer, 0)) < 1 then
+            raise exception 'كمية صنف طلب الشراء يجب أن تكون أكبر من صفر';
+        end if;
+        insert into public.purchase_order_items(
+            purchase_order_id, product_code, category, product_type, type, company, model, color, quantity, price, image, shortage_ids
+        ) values (
+            new_purchase_order_id,
+            nullif(trim(coalesce(item->>'product_code', '')), ''),
+            nullif(trim(coalesce(item->>'category', '')), ''),
+            nullif(trim(coalesce(item->>'product_type', '')), ''),
+            nullif(trim(coalesce(item->>'type', '')), ''),
+            nullif(trim(coalesce(item->>'company', '')), ''),
+            nullif(trim(coalesce(item->>'model', '')), ''),
+            nullif(trim(coalesce(item->>'color', '')), ''),
+            greatest(1, coalesce((item->>'quantity')::integer, 1)),
+            greatest(0, coalesce((item->>'price')::numeric, 0)),
+            nullif(trim(coalesce(item->>'image', '')), ''),
+            '[]'::jsonb
+        );
+    end loop;
+    return new_purchase_order_id;
+end;
+$$;
+
+grant execute on function public.create_manual_purchase_order(text, jsonb, text) to authenticated;
 notify pgrst, 'reload schema';

@@ -5523,9 +5523,12 @@ const purchaseOrdersAdmin = document.getElementById("purchaseOrdersAdmin");
 const purchaseOrdersList = document.getElementById("purchaseOrdersList");
 const purchaseOrdersSummary = document.getElementById("purchaseOrdersSummary");
 const purchaseOrderEditor = document.getElementById("purchaseOrderEditor");
+const newPurchaseOrderButton = document.getElementById("newPurchaseOrderButton");
 let adminShortagesData = [];
 let adminShortageGroups = [];
 let purchaseOrdersCache = [];
+let manualPurchaseOrderDraft = [];
+let manualPurchaseProducts = [];
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -5899,6 +5902,18 @@ document.addEventListener("keydown", event => {
         return;
     }
     if (purchaseOrderEditor?.style.display !== "none") {
+        if (purchaseOrderEditor.dataset.purchaseOrderMode === "create") {
+            const selected = [...purchaseOrderEditor.querySelectorAll("[data-manual-purchase-select]:checked")];
+            if (selected.length !== 1) {
+                alert("حدد صنفًا واحدًا فقط من قائمة المنتجات ثم اضغط F4.");
+                return;
+            }
+            const product = manualPurchaseProducts.find(item => String(item.id) === String(selected[0].dataset.manualPurchaseSelect));
+            if (!product) return;
+            event.preventDefault();
+            openShortageProductStats(product);
+            return;
+        }
         const selected = [...purchaseOrderEditor.querySelectorAll("[data-purchase-product-index]:checked")];
         if (selected.length !== 1) {
             alert("حدد صنفًا واحدًا فقط من طلب الشراء ثم اضغط F4.");
@@ -5919,6 +5934,110 @@ selectAllShortagesButton?.addEventListener("click", () => {
     selectable.forEach(input => { input.checked = shouldSelectAll; });
     updateShortagesSelectionButton();
 });
+
+function manualPurchaseProductTitle(product) {
+    return [product.company, product.product_type || product.type, product.model, product.color]
+        .filter(Boolean).join(" · ") || product.product_code || "صنف";
+}
+
+function renderManualPurchaseDraft() {
+    const target = purchaseOrderEditor?.querySelector("#manualPurchaseDraft");
+    const totalElement = purchaseOrderEditor?.querySelector("#manualPurchaseDraftTotal");
+    const saveButton = purchaseOrderEditor?.querySelector("#saveManualPurchaseOrder");
+    if (!target) return;
+    if (!manualPurchaseOrderDraft.length) {
+        target.innerHTML = '<div class="message">لم تضف أصنافًا بعد. اختر من القائمة واضغط «إضافة للطلب».</div>';
+    } else {
+        target.innerHTML = manualPurchaseOrderDraft.map((item, index) => `<div class="manual-purchase-draft-row"><div><strong>${transferText(manualPurchaseProductTitle(item))}</strong><span>الكود: ${transferText(item.product_code || "—")} · المتاح: ${Number(item.available_quantity || 0)}</span></div><label>الكمية المطلوبة<input type="number" min="1" value="${Math.max(1, Number(item.purchase_quantity || 1))}" data-manual-purchase-quantity="${index}"></label><label>سعر الوحدة<input type="number" min="0" step="0.01" value="${Math.max(0, Number(item.purchase_price || 0))}" data-manual-purchase-price="${index}"></label><strong class="manual-purchase-line-total">${formatAdminCurrency(Number(item.purchase_quantity || 0) * Number(item.purchase_price || 0))}</strong><button type="button" data-remove-manual-purchase="${index}">حذف</button></div>`).join("");
+    }
+    const total = manualPurchaseOrderDraft.reduce((sum, item) => sum + Number(item.purchase_quantity || 0) * Number(item.purchase_price || 0), 0);
+    if (totalElement) totalElement.textContent = formatAdminCurrency(total);
+    if (saveButton) saveButton.disabled = !manualPurchaseOrderDraft.length;
+    target.querySelectorAll("[data-manual-purchase-quantity]").forEach(input => input.addEventListener("input", () => {
+        const item = manualPurchaseOrderDraft[Number(input.dataset.manualPurchaseQuantity)];
+        if (item) item.purchase_quantity = Math.max(1, Math.floor(Number(input.value || 1)));
+        renderManualPurchaseDraft();
+    }));
+    target.querySelectorAll("[data-manual-purchase-price]").forEach(input => input.addEventListener("input", () => {
+        const item = manualPurchaseOrderDraft[Number(input.dataset.manualPurchasePrice)];
+        if (item) item.purchase_price = Math.max(0, Number(input.value || 0));
+        renderManualPurchaseDraft();
+    }));
+    target.querySelectorAll("[data-remove-manual-purchase]").forEach(button => button.addEventListener("click", () => {
+        manualPurchaseOrderDraft.splice(Number(button.dataset.removeManualPurchase), 1);
+        renderManualPurchaseDraft();
+        renderManualPurchaseProducts();
+    }));
+}
+
+function renderManualPurchaseProducts() {
+    const target = purchaseOrderEditor?.querySelector("#manualPurchaseProducts");
+    if (!target) return;
+    const search = String(purchaseOrderEditor.querySelector("#manualPurchaseSearch")?.value || "").trim().toLocaleLowerCase("ar-SA");
+    const lessValue = purchaseOrderEditor.querySelector("#manualPurchaseLess")?.value;
+    const greaterValue = purchaseOrderEditor.querySelector("#manualPurchaseGreater")?.value;
+    const equalValue = purchaseOrderEditor.querySelector("#manualPurchaseEqual")?.value;
+    const less = lessValue === "" ? null : Number(lessValue);
+    const greater = greaterValue === "" ? null : Number(greaterValue);
+    const equal = equalValue === "" ? null : Number(equalValue);
+    const filtered = manualPurchaseProducts.filter(product => {
+        const quantity = Number(product.quantity || 0);
+        const searchable = [product.product_code, product.category, product.product_type, product.type, product.company, product.model, product.color].filter(Boolean).join(" ").toLocaleLowerCase("ar-SA");
+        return (!search || searchable.includes(search)) &&
+            (less === null || quantity < less) &&
+            (greater === null || quantity > greater) &&
+            (equal === null || quantity === equal);
+    });
+    target.innerHTML = filtered.length ? `<div class="manual-purchase-product-count">${filtered.length} صنف ظاهر · حدّد صنفًا واحدًا ثم اضغط F4 لعرض تحليله.</div><div class="edit-invoice-table-wrap manual-purchase-products-wrap"><table class="edit-invoice-table manual-purchase-products-table"><thead><tr><th>تحديد F4</th><th>كود المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>المتاح</th><th>السعر</th><th>إجراء</th></tr></thead><tbody>${filtered.map(product => {
+        const added = manualPurchaseOrderDraft.some(item => String(item.id) === String(product.id));
+        return `<tr><td><input type="checkbox" data-manual-purchase-select="${product.id}"></td><td>${transferText(product.product_code || "—")}</td><td>${transferText(product.category || "—")}</td><td>${transferText(product.product_type || "—")}</td><td>${transferText(product.type || "—")}</td><td>${transferText(product.company || "—")}</td><td>${transferText(product.model || "—")}</td><td>${transferText(product.color || "—")}</td><td><b>${Number(product.quantity || 0)}</b></td><td>${formatAdminCurrency(product.price || 0)}</td><td><button type="button" class="manual-purchase-add" data-add-manual-purchase="${product.id}">${added ? "زيادة الكمية" : "إضافة للطلب"}</button></td></tr>`;
+    }).join("")}</tbody></table></div>` : '<div class="message">لا توجد منتجات تطابق التصفية الحالية.</div>';
+    target.querySelectorAll("[data-manual-purchase-select]").forEach(input => input.addEventListener("change", () => {
+        if (input.checked) target.querySelectorAll("[data-manual-purchase-select]").forEach(other => { if (other !== input) other.checked = false; });
+    }));
+    target.querySelectorAll("[data-add-manual-purchase]").forEach(button => button.addEventListener("click", () => {
+        const product = manualPurchaseProducts.find(item => String(item.id) === String(button.dataset.addManualPurchase));
+        if (!product) return;
+        const existing = manualPurchaseOrderDraft.find(item => String(item.id) === String(product.id));
+        if (existing) existing.purchase_quantity += 1;
+        else manualPurchaseOrderDraft.push({ ...product, available_quantity: Number(product.quantity || 0), purchase_quantity: 1, purchase_price: Number(product.price || 0) });
+        renderManualPurchaseDraft();
+        renderManualPurchaseProducts();
+    }));
+}
+
+async function openManualPurchaseOrderEditor() {
+    if (!purchaseOrderEditor) return;
+    if (newPurchaseOrderButton) { newPurchaseOrderButton.disabled = true; newPurchaseOrderButton.textContent = "جاري تجهيز المنتجات..."; }
+    await loadAdminProducts();
+    manualPurchaseProducts = getProductsForSelectedWarehouse();
+    manualPurchaseOrderDraft = [];
+    purchaseOrderEditor.dataset.purchaseOrderMode = "create";
+    delete purchaseOrderEditor.dataset.purchaseOrderId;
+    purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-manual-purchase>← رجوع لطلبات الشراء</button><div><h2>إضافة طلب شراء جديد</h2><p>كل منتجات مخزن ${transferText(selectedWarehouse || "—")} متاحة هنا. حدّد صنفًا واحدًا واضغط F4 لتحليله.</p></div></div><section class="purchase-order-editor-card manual-purchase-editor-card"><div class="manual-purchase-filters"><label>بحث عن صنف أو كود<input type="search" id="manualPurchaseSearch" placeholder="ابحث بالاسم أو الكود"></label><label>الكمية أقل من<input type="number" min="0" id="manualPurchaseLess" placeholder="مثال: 5"></label><label>الكمية أكبر من<input type="number" min="0" id="manualPurchaseGreater" placeholder="مثال: 10"></label><label>الكمية تساوي<input type="number" min="0" id="manualPurchaseEqual" placeholder="مثال: 0"></label></div><div id="manualPurchaseProducts"></div><section class="manual-purchase-draft"><header><h3>أصناف طلب الشراء</h3><span>عدّل الكمية والسعر قبل الحفظ.</span></header><div id="manualPurchaseDraft"></div><label class="manual-purchase-notes">ملاحظات طلب الشراء<textarea id="manualPurchaseNotes" placeholder="ملاحظات اختيارية"></textarea></label><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="manualPurchaseDraftTotal">0.00 ر.س</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" id="saveManualPurchaseOrder" disabled>حفظ طلب الشراء</button><span id="manualPurchaseOrderMessage"></span></div></section></section>`;
+    purchaseOrderEditor.querySelectorAll("#manualPurchaseSearch,#manualPurchaseLess,#manualPurchaseGreater,#manualPurchaseEqual").forEach(input => input.addEventListener("input", renderManualPurchaseProducts));
+    purchaseOrderEditor.querySelector("[data-back-manual-purchase]")?.addEventListener("click", () => setPurchaseOrderEditorVisible(false));
+    purchaseOrderEditor.querySelector("#saveManualPurchaseOrder")?.addEventListener("click", saveManualPurchaseOrder);
+    renderManualPurchaseProducts();
+    renderManualPurchaseDraft();
+    setPurchaseOrderEditorVisible(true);
+    if (newPurchaseOrderButton) { newPurchaseOrderButton.disabled = false; newPurchaseOrderButton.textContent = "+ إضافة طلب شراء جديد"; }
+}
+
+async function saveManualPurchaseOrder() {
+    const button = purchaseOrderEditor?.querySelector("#saveManualPurchaseOrder");
+    const message = purchaseOrderEditor?.querySelector("#manualPurchaseOrderMessage");
+    if (!manualPurchaseOrderDraft.length) return;
+    if (button) { button.disabled = true; button.textContent = "جاري حفظ الطلب..."; }
+    const items = manualPurchaseOrderDraft.map(item => ({ product_code: item.product_code, category: item.category, product_type: item.product_type, type: item.type, company: item.company, model: item.model, color: item.color, image: item.image, quantity: Math.max(1, Math.floor(Number(item.purchase_quantity || 1))), price: Math.max(0, Number(item.purchase_price || 0)) }));
+    const { data, error } = await supabaseClient.rpc("create_manual_purchase_order", { p_warehouse: selectedWarehouse, p_items: items, p_notes: purchaseOrderEditor.querySelector("#manualPurchaseNotes")?.value?.trim() || null });
+    if (button) { button.disabled = false; button.textContent = "حفظ طلب الشراء"; }
+    if (error) { if (message) { message.textContent = error.message; message.className = "error"; } return; }
+    manualPurchaseOrderDraft = [];
+    setPurchaseOrderEditorVisible(false);
+    await loadPurchaseOrders();
+    alert(`تم إنشاء طلب الشراء #${data} بنجاح.`);
+}
 
 async function loadPurchaseOrders() {
     if (!purchaseOrdersList) return;
@@ -5963,6 +6082,7 @@ function openPurchaseOrderEditor(purchaseOrderId) {
     const order = purchaseOrdersCache.find(item => String(item.id) === String(purchaseOrderId));
     if (!order || !purchaseOrderEditor) return;
     const items = Array.isArray(order.items) ? order.items : [];
+    purchaseOrderEditor.dataset.purchaseOrderMode = "edit";
     purchaseOrderEditor.dataset.purchaseOrderId = String(order.id);
     purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-purchase-editor>← رجوع لطلبات الشراء</button><div><h2>فتح طلب شراء #${transferText(order.id)}</h2><p>عدّل الحالة أو الكميات أو الأسعار ثم احفظ التعديلات. حدّد صنفًا واحدًا واضغط F4 لتحليل الصنف.</p></div><button type="button" class="open-invoice-button" data-print-purchase-editor>🖨️ طباعة</button></div><section class="purchase-order-editor-card"><div class="purchase-order-edit-meta"><label>الحالة<select id="purchaseOrderStatus"><option ${order.status === "جديد" ? "selected" : ""}>جديد</option><option ${order.status === "تم الطلب" ? "selected" : ""}>تم الطلب</option><option ${order.status === "تم الاستلام" ? "selected" : ""}>تم الاستلام</option><option ${order.status === "ملغي" ? "selected" : ""}>ملغي</option></select></label><label>ملاحظات<textarea id="purchaseOrderNotes" placeholder="ملاحظات اختيارية للشراء">${transferText(order.notes || "")}</textarea></label></div><div class="edit-invoice-table-wrap purchase-order-table-wrap"><table class="edit-invoice-table purchase-order-table"><thead><tr><th>تحديد</th><th>#</th><th>رقم المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${items.map((item, index) => `<tr data-purchase-editor-row="${index}"><td><label class="shortage-select"><input type="checkbox" data-purchase-product-index="${index}"><span>تحديد</span></label></td><td>${index + 1}</td><td>${transferText(item.product_code || "—")}</td><td>${transferText(item.category || "—")}</td><td>${transferText(item.product_type || "—")}</td><td>${transferText(item.type || "—")}</td><td>${transferText(item.company || "—")}</td><td>${transferText(item.model || "—")}</td><td>${transferText(item.color || "—")}</td><td><input class="purchase-order-quantity" data-purchase-item-id="${item.id}" type="number" min="1" value="${Math.max(1, Number(item.quantity || 1))}"></td><td><input class="purchase-order-price" data-purchase-item-id="${item.id}" type="number" min="0" step="0.01" value="${Math.max(0, Number(item.price || 0))}"></td><td class="purchase-order-line-total">${formatAdminCurrency(Number(item.quantity || 0) * Number(item.price || 0))}</td></tr>`).join("")}</tbody></table></div><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="purchaseOrderEditorTotal">${formatAdminCurrency(items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0))}</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" data-save-purchase-editor>حفظ التعديلات</button><span id="purchaseOrderEditorMessage"></span></div></section>`;
     const recalculate = () => {
@@ -6101,6 +6221,7 @@ purchaseOrdersButton?.addEventListener("click", async () => {
 });
 document.getElementById("backFromPurchaseOrders")?.addEventListener("click", () => { if (purchaseOrdersAdmin) purchaseOrdersAdmin.style.display = "none"; document.getElementById("adminPage").style.display = "block"; });
 document.getElementById("refreshPurchaseOrdersButton")?.addEventListener("click", loadPurchaseOrders);
+newPurchaseOrderButton?.addEventListener("click", openManualPurchaseOrderEditor);
 ["dashboardButton", "productsButton", "ordersButton", "customersButton", "categoriesButton", "transfersButton", "accountsButton", "driversButton", "salesButton", "offersButton"].forEach(id => document.getElementById(id)?.addEventListener("click", () => {
     if (shortagesAdmin) shortagesAdmin.style.display = "none";
 }));
