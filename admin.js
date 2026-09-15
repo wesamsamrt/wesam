@@ -5781,7 +5781,13 @@ function shortageItemName(item) {
 }
 
 function shortageItemMatches(first, second) {
-    if (first.product_id && second.product_id) return String(first.product_id) === String(second.product_id);
+    // كود المنتج هو المرجع الثابت للتحليلات؛ بيانات الموديل أو اللون قد تتغير بعد بيع الصنف.
+    const firstProductId = first.product_id || first.id;
+    const secondProductId = second.product_id || second.id;
+    if (firstProductId && secondProductId && String(firstProductId) === String(secondProductId)) return true;
+    const firstCode = String(first.product_code || "").trim();
+    const secondCode = String(second.product_code || "").trim();
+    if (firstCode && secondCode) return firstCode.toLocaleLowerCase("ar-SA") === secondCode.toLocaleLowerCase("ar-SA");
     const fields = ["product_code", "category", "product_type", "type", "company", "model", "color"];
     return fields.every(field => !first[field] || !second[field] || String(first[field]).trim() === String(second[field]).trim());
 }
