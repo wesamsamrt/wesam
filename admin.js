@@ -5861,8 +5861,8 @@ async function openShortageProductStats(selectedProduct = null) {
             return Date.UTC(parts.year, parts.month - 1, parts.day);
         };
         const todaySaudi = saudiDayNumber(now);
-        const saudiWeekday = new Date(todaySaudi).getUTCDay();
-        const startOfWeek = todaySaudi - (((saudiWeekday + 6) % 7) * 86400000); // يبدأ الأسبوع يوم الإثنين
+        // الأسبوع هنا آخر 7 أيام فعلية، وليس من بداية الأسبوع التقويمي.
+        const startOfLast7Days = todaySaudi - (6 * 86400000);
         // «مبيعات الشهر» هنا تعني آخر 30 يومًا، وليست من أول يوم في الشهر الميلادي.
         // بذلك لا تختفي مبيعات نهاية الشهر السابق عندما يكون الموقع حديثًا.
         const startOfLast30Days = todaySaudi - (29 * 86400000);
@@ -5871,7 +5871,7 @@ async function openShortageProductStats(selectedProduct = null) {
         const todaySales = salesOrderItems
             .filter(entry => saudiDayNumber(entry.order.created_at) === todaySaudi)
             .reduce((sum, entry) => sum + Number(entry.item.quantity || 0), 0);
-        const weekSales = quantitySince(startOfWeek);
+        const weekSales = quantitySince(startOfLast7Days);
         const monthSales = quantitySince(startOfLast30Days);
         // نتنبأ من اليوم والأسبوع والشهر معًا، ونأخذ أعلى معدل طلب
         // حتى تتجاوب التوصية مع الارتفاع السريع في المبيعات.
@@ -5897,7 +5897,7 @@ async function openShortageProductStats(selectedProduct = null) {
                 ${shortageStatsMetric("عدد التحضيرات", `${invoiceCount}`, "تم الشحن أو تم التسليم")}
                 ${shortageStatsMetric("إجمالي المبيعات", `${totalUnits} قطعة`, "من التحضيرات المشحونة أو المسلّمة")}
                 ${shortageStatsMetric("مبيعات اليوم", `${todaySales} قطعة`)}
-                ${shortageStatsMetric("مبيعات الأسبوع", `${weekSales} قطعة`)}
+                ${shortageStatsMetric("مبيعات آخر 7 أيام", `${weekSales} قطعة`)}
                 ${shortageStatsMetric("مبيعات آخر 30 يوم", `${monthSales} قطعة`)}
                 ${shortageStatsMetric("الطلبات المهدرة", `${wastedRequests.length} مرة`, "عدد مرات الضغط على غير متوفر")}
             </div>
