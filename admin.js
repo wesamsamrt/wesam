@@ -1758,10 +1758,11 @@ async function loadAnalyticsData() {
     const period = analyticsPeriod?.value || "30";
     if (kpis) kpis.innerHTML = '<div class="message">جاري تحديث الإحصائيات...</div>';
     try {
-        const [{ data: ordersResult, error: ordersError }, products, returnsResult] = await Promise.all([
+        const [{ data: ordersResult, error: ordersError }, products, returnsResult, manualReturnsResult] = await Promise.all([
             supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse }),
             loadAllDashboardWarehouseProducts(),
-            supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse })
+            supabaseClient.rpc("list_warehouse_returns", { p_warehouse: selectedWarehouse }),
+            supabaseClient.rpc("list_warehouse_manual_returns", { p_warehouse: selectedWarehouse })
         ]);
         if (ordersError) throw ordersError;
 
@@ -1769,11 +1770,15 @@ async function loadAnalyticsData() {
         const start = analyticsPeriodStart(period);
         const orders = start ? allOrders.filter(order => new Date(order.created_at) >= start) : allOrders;
         const sourceOrdersById = new Map((Array.isArray(ordersResult) ? ordersResult : []).map(order => [String(order.id), order]));
-        // لا نحسب إلا المرتجع التابع لتحضير موجود وحالته ليست «ملغي».
-        const validReturns = returnsResult?.error ? [] : (Array.isArray(returnsResult?.data) ? returnsResult.data : []).filter(record => {
+        // مرتجعات التحضير لا تُحسب إلا إذا كان التحضير الأصلي غير ملغي.
+        const preparedReturns = returnsResult?.error ? [] : (Array.isArray(returnsResult?.data) ? returnsResult.data : []).filter(record => {
             const sourceOrder = sourceOrdersById.get(String(record.order_id));
             return sourceOrder && !isCancelledOrder(sourceOrder);
         });
+        // المرتجع المستقل (خارج التحضير) يدخل في الإحصائيات أيضًا، ما لم يكن ملغيًا.
+        const manualReturns = manualReturnsResult?.error ? [] : (Array.isArray(manualReturnsResult?.data) ? manualReturnsResult.data : [])
+            .filter(record => String(record.status || "").trim() !== "ملغي");
+        const validReturns = [...preparedReturns, ...manualReturns];
         const periodReturns = start ? validReturns.filter(record => new Date(record.created_at) >= start) : validReturns;
         const nonCancelled = orders;
         // الإيرادات لا تُسجل إلا للفواتير التي تم شحنها أو تسليمها فعليًا.
@@ -1826,7 +1831,7 @@ async function loadAnalyticsData() {
         const ordersChartTitle = document.getElementById("analyticsOrdersChartTitle");
         const ordersChartHint = document.getElementById("analyticsOrdersChartHint");
         if (ordersChartTitle) ordersChartTitle.textContent = `الطلبات خلال ${chartDays} يوم`;
-        if (ordersChartHint) ordersChartHint.textContent = `طلبات غير ملغاة ضمن ${periodLabel} · المرتجعات لتحضيرات غير ملغاة`;
+        if (ordersChartHint) ordersChartHint.textContent = `طلبات غير ملغاة ضمن ${periodLabel} · تشمل المرتجعات من التحضير وخارجه`;
 
         const salesRows = Array.from({ length: chartDays }, (_, index) => {
             const date = new Date();
