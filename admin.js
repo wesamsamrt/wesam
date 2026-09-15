@@ -5993,6 +5993,76 @@ function manualPurchaseSales(product) {
     return manualPurchaseSalesByIdentity.get(manualPurchaseSalesDetailsIdentity(product)) || 0;
 }
 
+function normalizeOcrText(value) {
+    return String(value || "")
+        .toLocaleLowerCase("ar-SA")
+        .replace(/[\s\-–—_]/g, "")
+        .replace(/[٠-٩]/g, digit => "٠١٢٣٤٥٦٧٨٩".indexOf(digit));
+}
+
+function addOcrMatchedProducts(ocrText) {
+    const normalizedText = normalizeOcrText(ocrText);
+    const matched = manualPurchaseProducts.filter(product => {
+        const code = normalizeOcrText(product.product_code);
+        return code.length >= 3 && normalizedText.includes(code);
+    });
+    if (!matched.length) return 0;
+    matched.forEach(product => {
+        const existing = manualPurchaseOrderDraft.find(item => String(item.id) === String(product.id));
+        if (!existing) {
+            manualPurchaseOrderDraft.push({ ...product, available_quantity: Number(product.quantity || 0), purchase_quantity: 1, purchase_price: Number(product.price || 0) });
+        }
+    });
+    renderManualPurchaseDraft();
+    renderManualPurchaseProducts();
+    return matched.length;
+}
+
+async function importManualPurchaseInvoiceImage(file) {
+    if (!file || !purchaseOrderEditor) return;
+    if (!window.Tesseract) {
+        alert("تعذر تحميل قارئ الصورة المجاني. تأكد من اتصال الإنترنت ثم أعد المحاولة.");
+        return;
+    }
+    const trigger = purchaseOrderEditor.querySelector("[data-import-purchase-image]");
+    if (trigger) { trigger.disabled = true; trigger.textContent = "جاري قراءة الصورة..."; }
+    const dialog = document.createElement("div");
+    dialog.className = "ocr-invoice-dialog";
+    dialog.innerHTML = `<section class="ocr-invoice-box" role="dialog" aria-modal="true"><button type="button" data-close aria-label="إغلاق">×</button><h3>قراءة صورة الفاتورة مجانًا</h3><p id="ocrInvoiceProgress">جاري قراءة النص من الصورة داخل المتصفح… قد يستغرق الأمر قليلًا في أول استخدام.</p><textarea id="ocrInvoiceText" placeholder="سيظهر النص المستخرج هنا للمراجعة" disabled></textarea><div class="ocr-invoice-actions"><button type="button" data-add-ocr disabled>إضافة الأصناف المطابقة للطلب</button><button type="button" data-close>إلغاء</button></div></section>`;
+    document.body.appendChild(dialog);
+    const close = () => dialog.remove();
+    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
+    try {
+        const result = await window.Tesseract.recognize(file, "ara+eng", {
+            logger: message => {
+                const progress = dialog.querySelector("#ocrInvoiceProgress");
+                if (progress && message.status) progress.textContent = `${message.status} ${message.progress ? `${Math.round(message.progress * 100)}%` : ""}`;
+            }
+        });
+        const text = String(result?.data?.text || "").trim();
+        const textArea = dialog.querySelector("#ocrInvoiceText");
+        const progress = dialog.querySelector("#ocrInvoiceProgress");
+        if (textArea) { textArea.disabled = false; textArea.value = text; }
+        if (progress) progress.textContent = text ? "راجع النص ثم أضف الأصناف التي طابقها النظام بكود المنتج. الكمية تبدأ بـ 1 لتراجعها قبل الحفظ." : "لم نتمكن من قراءة نص واضح من الصورة. جرّب صورة أوضح.";
+        const addButton = dialog.querySelector("[data-add-ocr]");
+        if (addButton && text) {
+            addButton.disabled = false;
+            addButton.addEventListener("click", () => {
+                const count = addOcrMatchedProducts(textArea?.value || "");
+                if (!count) { if (progress) progress.textContent = "لم نجد كود منتج مطابقًا في مخزونك. راجع النص أو أضف الصنف يدويًا."; return; }
+                close();
+                alert(`تمت إضافة ${count} أصناف مطابقة كمسودة. راجع الكميات والسعر قبل الحفظ.`);
+            });
+        }
+    } catch (error) {
+        console.error("OCR error:", error);
+        const progress = dialog.querySelector("#ocrInvoiceProgress");
+        if (progress) progress.textContent = "تعذرت قراءة الصورة. جرّب صورة أوضح وبإضاءة جيدة.";
+    } finally {
+        if (trigger) { trigger.disabled = false; trigger.textContent = "📷 استيراد من صورة فاتورة"; }
+    }
+}
+
 function renderManualPurchaseDraft() {
     const target = purchaseOrderEditor?.querySelector("#manualPurchaseDraft");
     const totalElement = purchaseOrderEditor?.querySelector("#manualPurchaseDraftTotal");
@@ -6073,9 +6143,15 @@ async function openManualPurchaseOrderEditor() {
     manualPurchaseOrderDraft = [];
     purchaseOrderEditor.dataset.purchaseOrderMode = "create";
     delete purchaseOrderEditor.dataset.purchaseOrderId;
-    purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-manual-purchase>← رجوع لطلبات الشراء</button><div><h2>إضافة طلب شراء جديد</h2><p>كل منتجات مخزن ${transferText(selectedWarehouse || "—")} متاحة هنا. حدّد صنفًا واحدًا واضغط F4 لتحليله.</p></div></div><section class="purchase-order-editor-card manual-purchase-editor-card"><div class="manual-purchase-filters"><label>بحث عن صنف أو كود<input type="search" id="manualPurchaseSearch" placeholder="ابحث بالاسم أو الكود"></label><label>الكمية أقل من<input type="number" min="0" id="manualPurchaseLess" placeholder="مثال: 5"></label><label>الكمية أكبر من<input type="number" min="0" id="manualPurchaseGreater" placeholder="مثال: 10"></label><label>الكمية تساوي<input type="number" min="0" id="manualPurchaseEqual" placeholder="مثال: 0"></label><label>ترتيب المبيعات<select id="manualPurchaseSort"><option value="default">بدون ترتيب</option><option value="sales-desc">الأكثر مبيعًا أولًا</option><option value="sales-asc">الأقل مبيعًا أولًا</option></select></label></div><div id="manualPurchaseProducts"></div><section class="manual-purchase-draft"><header><h3>أصناف طلب الشراء</h3><span>عدّل الكمية والسعر قبل الحفظ.</span></header><div id="manualPurchaseDraft"></div><label class="manual-purchase-notes">ملاحظات طلب الشراء<textarea id="manualPurchaseNotes" placeholder="ملاحظات اختيارية"></textarea></label><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="manualPurchaseDraftTotal">0.00 ر.س</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" id="saveManualPurchaseOrder" disabled>حفظ طلب الشراء</button><span id="manualPurchaseOrderMessage"></span></div></section></section>`;
+    purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-manual-purchase>← رجوع لطلبات الشراء</button><div><h2>إضافة طلب شراء جديد</h2><p>كل منتجات مخزن ${transferText(selectedWarehouse || "—")} متاحة هنا. حدّد صنفًا واحدًا واضغط F4 لتحليله.</p></div><div><button type="button" class="open-invoice-button" data-import-purchase-image>📷 استيراد من صورة فاتورة</button><input type="file" data-import-purchase-file accept="image/*" hidden></div></div><section class="purchase-order-editor-card manual-purchase-editor-card"><div class="manual-purchase-filters"><label>بحث عن صنف أو كود<input type="search" id="manualPurchaseSearch" placeholder="ابحث بالاسم أو الكود"></label><label>الكمية أقل من<input type="number" min="0" id="manualPurchaseLess" placeholder="مثال: 5"></label><label>الكمية أكبر من<input type="number" min="0" id="manualPurchaseGreater" placeholder="مثال: 10"></label><label>الكمية تساوي<input type="number" min="0" id="manualPurchaseEqual" placeholder="مثال: 0"></label><label>ترتيب المبيعات<select id="manualPurchaseSort"><option value="default">بدون ترتيب</option><option value="sales-desc">الأكثر مبيعًا أولًا</option><option value="sales-asc">الأقل مبيعًا أولًا</option></select></label></div><div id="manualPurchaseProducts"></div><section class="manual-purchase-draft"><header><h3>أصناف طلب الشراء</h3><span>عدّل الكمية والسعر قبل الحفظ.</span></header><div id="manualPurchaseDraft"></div><label class="manual-purchase-notes">ملاحظات طلب الشراء<textarea id="manualPurchaseNotes" placeholder="ملاحظات اختيارية"></textarea></label><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="manualPurchaseDraftTotal">0.00 ر.س</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" id="saveManualPurchaseOrder" disabled>حفظ طلب الشراء</button><span id="manualPurchaseOrderMessage"></span></div></section></section>`;
     purchaseOrderEditor.querySelectorAll("#manualPurchaseSearch,#manualPurchaseLess,#manualPurchaseGreater,#manualPurchaseEqual,#manualPurchaseSort").forEach(input => input.addEventListener("input", renderManualPurchaseProducts));
     purchaseOrderEditor.querySelector("#manualPurchaseSort")?.addEventListener("change", renderManualPurchaseProducts);
+    purchaseOrderEditor.querySelector("[data-import-purchase-image]")?.addEventListener("click", () => purchaseOrderEditor.querySelector("[data-import-purchase-file]")?.click());
+    purchaseOrderEditor.querySelector("[data-import-purchase-file]")?.addEventListener("change", event => {
+        const file = event.target.files?.[0];
+        if (file) importManualPurchaseInvoiceImage(file);
+        event.target.value = "";
+    });
     purchaseOrderEditor.querySelector("[data-back-manual-purchase]")?.addEventListener("click", () => setPurchaseOrderEditorVisible(false));
     purchaseOrderEditor.querySelector("#saveManualPurchaseOrder")?.addEventListener("click", saveManualPurchaseOrder);
     renderManualPurchaseProducts();
