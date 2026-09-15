@@ -2887,6 +2887,8 @@ const productFormMessage =
 const deleteProductFormButton = document.getElementById("deleteProductFormButton");
 const deleteTypedProductButton = document.getElementById("deleteTypedProductButton");
 const addProductRowButton = document.getElementById("addProductRowButton");
+const importProductsExcelButton = document.getElementById("importProductsExcelButton");
+const productExcelImportInput = document.getElementById("productExcelImportInput");
 
 function getProductEntryRows() {
     const firstRow = productFormCard?.querySelector(".product-form-grid");
@@ -2953,6 +2955,70 @@ function addProductEntryRow() {
     getProductRowControl(row, "productCode")?.focus();
 }
 
+function normalizeExcelHeader(value) {
+    return String(value || "").trim().toLocaleLowerCase("ar-SA").replace(/[\s_\-()]/g, "");
+}
+
+function importProductsFromExcel(file) {
+    if (!file || !window.XLSX) {
+        alert("تعذر قراءة ملف Excel. تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = event => {
+        try {
+            const workbook = XLSX.read(event.target.result, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const sourceRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+            if (!sourceRows.length) return alert("ملف Excel لا يحتوي على صفوف.");
+            const aliases = {
+                productCode: ["كودالمنتج", "الكود", "productcode", "product_code", "code"],
+                category: ["التصنيف", "الصنف", "category"],
+                productStorageLocation: ["الموقع", "موقعالمنتج", "موقعالقطعة", "storagelocation", "location"],
+                productProductType: ["نوعالمنتج", "producttype", "product_type"],
+                type: ["النوع", "type"],
+                company: ["الشركة", "الماركة", "العلامة", "company", "brand"],
+                model: ["الموديل", "model"],
+                color: ["اللون", "color"],
+                quantity: ["الكمية", "quantity", "qty"],
+                price: ["السعر", "سعرالوحدة", "price", "unitprice"]
+            };
+            const resolveColumns = row => {
+                const columns = Object.keys(row);
+                const result = {};
+                Object.entries(aliases).forEach(([field, names]) => {
+                    const normalizedNames = names.map(normalizeExcelHeader);
+                    result[field] = columns.find(column => normalizedNames.includes(normalizeExcelHeader(column)));
+                });
+                return result;
+            };
+            const columns = resolveColumns(sourceRows[0]);
+            const hasRequired = columns.category && columns.productType && columns.type;
+            if (!hasRequired) {
+                return alert("تأكد من وجود أعمدة: التصنيف، نوع المنتج، والنوع في أول صف من ملف Excel.");
+            }
+            clearProductForm();
+            sourceRows.forEach((source, index) => {
+                if (index > 0) addProductEntryRow();
+                const row = getProductEntryRows()[index];
+                const set = (field, value) => {
+                    const control = getProductRowControl(row, field);
+                    if (control) control.value = value == null ? "" : String(value);
+                };
+                Object.entries(columns).forEach(([field, column]) => { if (column) set(field, source[column]); });
+                set("productWarehouse", selectedWarehouse);
+                set("productCompatibilityType", "device");
+            });
+            productFormMessage.textContent = `تم استيراد ${sourceRows.length} صفًا من Excel كمسودة. راجع البيانات ثم احفظ.`;
+            productFormMessage.style.color = "#2e9d69";
+        } catch (error) {
+            console.error("Excel import error:", error);
+            alert("تعذر قراءة ملف Excel. تأكد من أن الملف سليم وأن الصف الأول يحتوي أسماء الأعمدة.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 
 addProductButton.addEventListener("click", function () {
 
@@ -2960,6 +3026,7 @@ addProductButton.addEventListener("click", function () {
     clearProductForm();
     if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
     if (addProductRowButton) addProductRowButton.style.display = "inline-flex";
+    if (importProductsExcelButton) importProductsExcelButton.style.display = "inline-flex";
     document.getElementById("productsAdmin")?.classList.add("product-entry-mode");
     productFormCard.style.display = "block";
     document.getElementById("productWarehouse").value = selectedWarehouse;
@@ -3007,6 +3074,11 @@ deleteProductFormButton?.addEventListener("click", () => {
 });
 
 addProductRowButton?.addEventListener("click", addProductEntryRow);
+importProductsExcelButton?.addEventListener("click", () => productExcelImportInput?.click());
+productExcelImportInput?.addEventListener("change", event => {
+    importProductsFromExcel(event.target.files?.[0]);
+    event.target.value = "";
+});
 
 deleteTypedProductButton?.addEventListener("click", () => {
     const values = {
@@ -3683,6 +3755,7 @@ async function editProduct(id) {
     populateProductFormSuggestions();
     if (deleteProductFormButton) deleteProductFormButton.style.display = "inline-flex";
     if (addProductRowButton) addProductRowButton.style.display = "none";
+    if (importProductsExcelButton) importProductsExcelButton.style.display = "none";
 
 
     productFormCard.scrollIntoView({
