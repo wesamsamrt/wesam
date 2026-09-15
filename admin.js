@@ -5529,7 +5529,7 @@ let adminShortageGroups = [];
 let purchaseOrdersCache = [];
 let manualPurchaseOrderDraft = [];
 let manualPurchaseProducts = [];
-let manualPurchaseSalesByCode = new Map();
+let manualPurchaseSalesByIdentity = new Map();
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -5781,13 +5781,19 @@ function shortageItemName(item) {
 }
 
 function shortageItemMatches(first, second) {
-    // كود المنتج هو المرجع الثابت للتحليلات؛ بيانات الموديل أو اللون قد تتغير بعد بيع الصنف.
+    // عند توفر product_id نربط التحليل بالصف نفسه، وهذا ضروري مع المخزون المشترك.
     const firstProductId = first.product_id || first.id;
-    const secondProductId = second.product_id || second.id;
-    if (firstProductId && secondProductId && String(firstProductId) === String(secondProductId)) return true;
+    const secondProductId = second.product_id;
+    if (firstProductId && secondProductId) return String(firstProductId) === String(secondProductId);
     const firstCode = String(first.product_code || "").trim();
     const secondCode = String(second.product_code || "").trim();
-    if (firstCode && secondCode) return firstCode.toLocaleLowerCase("ar-SA") === secondCode.toLocaleLowerCase("ar-SA");
+    // للطلبات القديمة التي لا تحتوي product_id: نطابق الكود والموديل واللون حتى لا تتجمع الصفوف المتشابهة.
+    if (firstCode && secondCode) {
+        const normalize = value => String(value || "").trim().toLocaleLowerCase("ar-SA");
+        return normalize(firstCode) === normalize(secondCode) &&
+            normalize(first.model) === normalize(second.model) &&
+            normalize(first.color) === normalize(second.color);
+    }
     const fields = ["product_code", "category", "product_type", "type", "company", "model", "color"];
     return fields.every(field => !first[field] || !second[field] || String(first[field]).trim() === String(second[field]).trim());
 }
@@ -5799,7 +5805,9 @@ function shortageStatsMetric(label, value, hint = "") {
 // F4 يفتح تقريرًا سريعًا للصنف المحدد في صفحة النواقص.
 async function openShortageProductStats(selectedProduct = null) {
     const isShortageView = !selectedProduct;
-    let shortage = selectedProduct;
+    let shortage = selectedProduct
+        ? { ...selectedProduct, product_id: selectedProduct.product_id || selectedProduct.id }
+        : null;
     if (!shortage) {
         const selectedGroupIndexes = [...document.querySelectorAll("[data-shortage-group]:checked")].map(input => Number(input.dataset.shortageGroup));
         const selectedItems = adminShortageGroups.filter((item, index) => selectedGroupIndexes.includes(index));
@@ -5826,7 +5834,9 @@ async function openShortageProductStats(selectedProduct = null) {
             .eq("warehouse", selectedWarehouse)
             .eq("product_code", shortage.product_code || "");
         if (productsError) throw productsError;
-        const matchedProducts = (products || []).filter(product => shortageItemMatches(shortage, product));
+        const matchedProducts = (products || [])
+            .map(product => ({ ...product, product_id: product.id }))
+            .filter(product => shortageItemMatches(shortage, product));
         const stockQuantity = matchedProducts.reduce((sum, product) => sum + Number(product.quantity || 0), 0);
 
         const { data: ordersData, error: ordersError } = await supabaseClient.rpc("list_warehouse_orders", { p_warehouse: selectedWarehouse });
@@ -5954,15 +5964,33 @@ function refreshManualPurchaseSales() {
     adminOrdersData
         .filter(order => completedStatuses.has(String(order.status || "").trim()))
         .forEach(order => (order.items || []).forEach(item => {
-            const code = String(item.product_code || "").trim().toLocaleLowerCase("ar-SA");
-            if (!code) return;
-            sales.set(code, (sales.get(code) || 0) + Math.max(0, Number(item.quantity || 0)));
+            const key = manualPurchaseSalesIdentity(item, true);
+            if (!key) return;
+            sales.set(key, (sales.get(key) || 0) + Math.max(0, Number(item.quantity || 0)));
         }));
-    manualPurchaseSalesByCode = sales;
+    manualPurchaseSalesByIdentity = sales;
+}
+
+function manualPurchaseSalesIdentity(product, isOrderItem = false) {
+    const productId = isOrderItem ? product.product_id : (product.product_id || product.id);
+    if (productId) return `id:${String(productId)}`;
+    return manualPurchaseSalesDetailsIdentity(product);
+}
+
+function manualPurchaseSalesDetailsIdentity(product) {
+    const code = String(product.product_code || "").trim().toLocaleLowerCase("ar-SA");
+    if (!code) return "";
+    const model = String(product.model || "").trim().toLocaleLowerCase("ar-SA");
+    const color = String(product.color || "").trim().toLocaleLowerCase("ar-SA");
+    return `details:${code}|${model}|${color}`;
 }
 
 function manualPurchaseSales(product) {
-    return manualPurchaseSalesByCode.get(String(product.product_code || "").trim().toLocaleLowerCase("ar-SA")) || 0;
+    const directKey = manualPurchaseSalesIdentity(product);
+    const directSales = manualPurchaseSalesByIdentity.get(directKey);
+    if (directSales !== undefined) return directSales;
+    // بعض الطلبات القديمة لا تحفظ product_id؛ نرجع عندها للمطابقة التفصيلية.
+    return manualPurchaseSalesByIdentity.get(manualPurchaseSalesDetailsIdentity(product)) || 0;
 }
 
 function renderManualPurchaseDraft() {
