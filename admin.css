@@ -776,6 +776,8 @@ body {
     color: var(--text);
 }
 
+.delete-product-form{border:1px solid #efb9c1;padding:12px 20px;border-radius:13px;background:#fff0f2;color:#bd3d51;font-family:inherit;font-weight:800;cursor:pointer}.product-delete-confirm-dialog{position:fixed;z-index:15000;inset:0;display:grid;place-items:center;padding:20px;background:rgba(20,22,38,.54);direction:rtl}.product-delete-confirm-box{position:relative;width:min(700px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px;border-radius:20px;background:#fff;box-shadow:0 25px 65px rgba(0,0,0,.3)}.product-delete-confirm-box h3{margin:0;color:#b83248;font-size:22px}.product-delete-confirm-box>p{margin:8px 0 20px;color:#727586;font-size:13px;line-height:1.8}.product-delete-dialog-close{position:absolute;top:13px;left:13px;width:34px;height:34px;border:0;border-radius:9px;background:#f0f1f5;color:#333545;font-size:23px;cursor:pointer}.product-delete-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.product-delete-fields label{display:grid;gap:5px;color:#383a4b;font-size:12px;font-weight:800}.product-delete-fields small{overflow:hidden;color:#8b5260;font-size:11px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}.product-delete-fields input{height:42px;padding:0 11px;border:1px solid #dfe1ec;border-radius:10px;background:#fcfcff;color:#292b3c;font:inherit}.product-delete-fields input:focus{outline:0;border-color:#be4154}.product-delete-confirm-actions{display:flex;justify-content:flex-start;gap:9px;margin-top:20px}.product-delete-confirm-actions button{height:40px;border:0;border-radius:10px;padding:0 15px;background:#f0f1f5;color:#454757;font-family:inherit;font-weight:800;cursor:pointer}.product-delete-confirm-actions .confirm-delete{background:#c63d52;color:#fff}.product-delete-confirm-actions .confirm-delete:disabled{opacity:.48;cursor:not-allowed}
+
 .product-form-message {
     min-height: 22px;
     margin-top: 10px;
@@ -888,6 +890,8 @@ body {
 
     font-size: 25px;
 }
+
+@media(max-width:580px){.product-delete-fields{grid-template-columns:1fr}.product-delete-confirm-actions{align-items:stretch;flex-direction:column}}
 
 @media (max-width:650px){.product-entry-header{align-items:stretch;flex-direction:column}.products-admin.product-entry-mode .product-form-card{width:calc(100% - 20px);padding:16px}}
 

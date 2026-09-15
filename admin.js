@@ -2857,12 +2857,14 @@ const saveProductButton =
 
 const productFormMessage =
     document.getElementById("productFormMessage");
+const deleteProductFormButton = document.getElementById("deleteProductFormButton");
 
 
 addProductButton.addEventListener("click", function () {
 
     editingProductId = null;
     clearProductForm();
+    if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
     document.getElementById("productsAdmin")?.classList.add("product-entry-mode");
     productFormCard.style.display = "block";
     document.getElementById("productWarehouse").value = selectedWarehouse;
@@ -2889,6 +2891,7 @@ cancelProductButton.addEventListener("click", function () {
     productFormCard.style.display = "none";
     document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
     editingProductId = null;
+    if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
 
     clearProductForm();
 
@@ -2898,7 +2901,14 @@ document.getElementById("backFromProductForm")?.addEventListener("click", () => 
     productFormCard.style.display = "none";
     document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
     editingProductId = null;
+    if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
     clearProductForm();
+});
+
+deleteProductFormButton?.addEventListener("click", () => {
+    const product = adminProductsData.find(item => Number(item.id) === Number(editingProductId));
+    if (!product) return alert("افتح منتجًا مسجلاً أولًا قبل الحذف.");
+    deleteProduct(product.id);
 });
 
 
@@ -3454,6 +3464,7 @@ async function editProduct(id) {
     document.getElementById("productsAdmin")?.classList.add("product-entry-mode");
     document.getElementById("productFormTitle").textContent = "تعديل المنتج";
     populateProductFormSuggestions();
+    if (deleteProductFormButton) deleteProductFormButton.style.display = "inline-flex";
 
 
     productFormCard.scrollIntoView({
@@ -3477,57 +3488,43 @@ async function editProduct(id) {
 /* حذف المنتج */
 
 async function deleteProduct(id) {
+    const product = adminProductsData.find(item => Number(item.id) === Number(id));
+    if (!product) return alert("لم يتم العثور على المنتج");
 
-    const product =
-        adminProductsData.find(
-            item => item.id === id
-        );
-
-
-    if (!product) {
-
-        alert("لم يتم العثور على المنتج");
-
-        return;
-    }
-
-
-    const confirmed =
-        confirm(
-            `هل أنت متأكد من حذف المنتج؟\n\n${product.model || "هذا المنتج"}`
-        );
-
-
-    if (!confirmed) {
-
-        return;
-    }
-
-
-    const { error } =
-        await supabaseClient
-            .from("products")
-            .delete()
-            .eq("id", id);
-
-
-    if (error) {
-
-        console.error(error);
-
-        alert(
-            "حدث خطأ أثناء حذف المنتج:\n" +
-            error.message
-        );
-
-        return;
-    }
-
-
-    await loadAdminProducts();
-
-    alert("تم حذف المنتج بنجاح ✅");
-
+    document.getElementById("productDeleteConfirmDialog")?.remove();
+    const fields = [
+        ["كود المنتج", product.product_code], ["التصنيف", product.category],
+        ["صنف المنتج", product.product_type], ["النوع", product.type],
+        ["الماركة", product.company], ["الموديل", product.model]
+    ].map(([label, value]) => ({ label, value: String(value || "لا يوجد").trim() }));
+    const dialog = document.createElement("div");
+    dialog.id = "productDeleteConfirmDialog";
+    dialog.className = "product-delete-confirm-dialog";
+    dialog.innerHTML = `<section class="product-delete-confirm-box" role="dialog" aria-modal="true" aria-label="تأكيد حذف المنتج"><button type="button" class="product-delete-dialog-close" data-close aria-label="إغلاق">×</button><h3>تأكيد حذف المنتج</h3><p>للحذف النهائي، اكتب البيانات التالية مطابقة تمامًا للمنتج. لا يمكن التراجع عن الحذف.</p><div class="product-delete-fields">${fields.map((field, index) => `<label>${transferText(field.label)}<small>${transferText(field.value)}</small><input type="text" autocomplete="off" data-delete-field="${index}"></label>`).join("")}</div><div class="product-delete-confirm-actions"><button type="button" data-close>إلغاء</button><button type="button" class="confirm-delete" data-confirm disabled>حذف المنتج نهائيًا</button></div></section>`;
+    document.body.appendChild(dialog);
+    const close = () => dialog.remove();
+    const confirmButton = dialog.querySelector("[data-confirm]");
+    const matches = () => fields.every((field, index) => String(dialog.querySelector(`[data-delete-field="${index}"]`)?.value || "").trim().toLocaleLowerCase("ar-SA") === field.value.toLocaleLowerCase("ar-SA"));
+    dialog.querySelectorAll("[data-delete-field]").forEach(input => input.addEventListener("input", () => { confirmButton.disabled = !matches(); }));
+    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
+    dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
+    confirmButton.addEventListener("click", async () => {
+        if (!matches()) return;
+        confirmButton.disabled = true;
+        confirmButton.textContent = "جاري الحذف...";
+        const { error } = await supabaseClient.from("products").delete().eq("id", id);
+        if (error) { confirmButton.disabled = false; confirmButton.textContent = "حذف المنتج نهائيًا"; alert(`تعذر حذف المنتج: ${error.message}`); return; }
+        close();
+        if (Number(editingProductId) === Number(id)) {
+            productFormCard.style.display = "none";
+            document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
+            if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
+            editingProductId = null;
+            clearProductForm();
+        }
+        await loadAdminProducts();
+        alert("تم حذف المنتج بنجاح ✅");
+    });
 }
 
 
