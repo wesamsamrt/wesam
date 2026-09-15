@@ -2305,6 +2305,23 @@ let adminProductsData = [];
 let selectedProductImage = null;
 let selectedAdminProductStatIds = new Set();
 
+function populateProductFormSuggestions() {
+    const products = getProductsForSelectedWarehouse();
+    const fields = [
+        ["productCategorySuggestions", "category"], ["productProductTypeSuggestions", "product_type"],
+        ["productTypeSuggestions", "type"], ["productCompanySuggestions", "company"],
+        ["productModelSuggestions", "model"], ["productColorSuggestions", "color"],
+        ["productStorageLocationSuggestions", "storage_location"]
+    ];
+    fields.forEach(([listId, field]) => {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        const values = [...new Set(products.map(product => String(product[field] || "").trim()).filter(Boolean))]
+            .sort((first, second) => first.localeCompare(second, "ar-SA"));
+        list.innerHTML = values.map(value => `<option value="${transferText(value)}"></option>`).join("");
+    });
+}
+
 // يصدر منتجات المخزن كما هي، أو يجمعها بدون فصل اللون عند اختيار التصدير المجمّع.
 function exportSelectedWarehouseProducts(groupWithoutColor = false) {
     const products = getProductsForSelectedWarehouse();
@@ -2539,6 +2556,7 @@ async function loadAdminProducts() {
         );
 
         renderSelectedWarehouseProducts();
+        populateProductFormSuggestions();
 
     }
 
@@ -2843,6 +2861,9 @@ const productFormMessage =
 
 addProductButton.addEventListener("click", function () {
 
+    editingProductId = null;
+    clearProductForm();
+    document.getElementById("productsAdmin")?.classList.add("product-entry-mode");
     productFormCard.style.display = "block";
     document.getElementById("productWarehouse").value = selectedWarehouse;
     document.getElementById("productStorageLocation").value = "";
@@ -2853,6 +2874,8 @@ addProductButton.addEventListener("click", function () {
 updateProductCompatibilityFields();
 
     productFormMessage.textContent = "";
+    document.getElementById("productFormTitle").textContent = "إضافة منتج جديد";
+    populateProductFormSuggestions();
 
     productFormCard.scrollIntoView({
         behavior: "smooth"
@@ -2864,9 +2887,18 @@ updateProductCompatibilityFields();
 cancelProductButton.addEventListener("click", function () {
 
     productFormCard.style.display = "none";
+    document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
+    editingProductId = null;
 
     clearProductForm();
 
+});
+
+document.getElementById("backFromProductForm")?.addEventListener("click", () => {
+    productFormCard.style.display = "none";
+    document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
+    editingProductId = null;
+    clearProductForm();
 });
 
 
@@ -3419,6 +3451,9 @@ async function editProduct(id) {
 
 
     productFormCard.style.display = "block";
+    document.getElementById("productsAdmin")?.classList.add("product-entry-mode");
+    document.getElementById("productFormTitle").textContent = "تعديل المنتج";
+    populateProductFormSuggestions();
 
 
     productFormCard.scrollIntoView({

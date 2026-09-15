@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260913-product-export-menu"
+        href="admin.css?v=20260915-product-entry-suggestions"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -818,9 +818,10 @@
     style="display:none;"
 >
 
-    <h2>إضافة منتج جديد</h2>
-
-    <p>أدخل بيانات المنتج ثم اضغط حفظ</p>
+    <div class="product-entry-header">
+        <button type="button" class="back-admin" id="backFromProductForm">← رجوع للمنتجات</button>
+        <div><h2 id="productFormTitle">إضافة منتج جديد</h2><p>اكتب بيانات جديدة أو اختر اقتراحًا من المنتجات المسجلة لتعبئة الحقل تلقائيًا.</p></div>
+    </div>
 
 
     <div class="product-form-grid">
@@ -857,6 +858,7 @@
             <input
                 id="productCategory"
                 type="text"
+                list="productCategorySuggestions"
                 placeholder="مثال: حمايات"
             >
         </div>
@@ -868,7 +870,7 @@
 
         <div class="form-group">
             <label>موقع المنتج داخل المخزن</label>
-            <input id="productStorageLocation" type="text" maxlength="120" placeholder="مثال: رف A - صف 2 - خانة 5">
+            <input id="productStorageLocation" type="text" list="productStorageLocationSuggestions" maxlength="120" placeholder="مثال: رف A - صف 2 - خانة 5">
             <small>اختياري، ويختلف حسب مخزن المنتج.</small>
         </div>
 
@@ -879,6 +881,7 @@
             <input
                 id="productProductType"
                 type="text"
+                list="productProductTypeSuggestions"
                 placeholder="مثال: حماية شاشة"
             >
         </div>
@@ -910,6 +913,7 @@
             <input
                 id="productType"
                 type="text"
+                list="productTypeSuggestions"
                 placeholder="مثال: قزاز عادي"
             >
         </div>
@@ -927,6 +931,7 @@
     <input
         id="productCompany"
         type="text"
+        list="productCompanySuggestions"
         placeholder="مثال: Apple"
     >
 
@@ -945,6 +950,7 @@
     <input
         id="productModel"
         type="text"
+        list="productModelSuggestions"
         placeholder="مثال: iPhone 15"
     >
 
@@ -957,6 +963,7 @@
             <input
                 id="productColor"
                 type="text"
+                list="productColorSuggestions"
                 placeholder="مثال: شفاف"
             >
         </div>
@@ -999,6 +1006,13 @@
 
     </div>
 
+    <datalist id="productCategorySuggestions"></datalist>
+    <datalist id="productProductTypeSuggestions"></datalist>
+    <datalist id="productTypeSuggestions"></datalist>
+    <datalist id="productCompanySuggestions"></datalist>
+    <datalist id="productModelSuggestions"></datalist>
+    <datalist id="productColorSuggestions"></datalist>
+    <datalist id="productStorageLocationSuggestions"></datalist>
 
     <div class="product-form-actions">
 
@@ -1728,7 +1742,7 @@
 </div>
 
 
-<script src="admin.js?v=20260913-product-export-menu"></script>
+<script src="admin.js?v=20260915-product-entry-suggestions"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
