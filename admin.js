@@ -2864,6 +2864,72 @@ const productFormMessage =
     document.getElementById("productFormMessage");
 const deleteProductFormButton = document.getElementById("deleteProductFormButton");
 const deleteTypedProductButton = document.getElementById("deleteTypedProductButton");
+const addProductRowButton = document.getElementById("addProductRowButton");
+
+function getProductEntryRows() {
+    const firstRow = productFormCard?.querySelector(".product-form-grid");
+    return firstRow ? [firstRow, ...productFormCard.querySelectorAll(".product-extra-row")] : [];
+}
+
+function getProductRowControl(row, field) {
+    return row?.querySelector(`[data-product-field="${field}"]`) || row?.querySelector(`#${field}`);
+}
+
+function clearAdditionalProductRows() {
+    productFormCard?.querySelectorAll(".product-extra-row").forEach(row => row.remove());
+}
+
+function setExtraRowCompatibility(row) {
+    const compatibility = getProductRowControl(row, "productCompatibilityType")?.value || "device";
+    const companyGroup = row.querySelector('[data-product-group="productCompanyGroup"]');
+    const modelGroup = row.querySelector('[data-product-group="productModelGroup"]');
+    const devicesGroup = row.querySelector('[data-product-group="compatibleDevicesGroup"]');
+    if (companyGroup) companyGroup.style.display = compatibility === "device" ? "grid" : "none";
+    if (modelGroup) modelGroup.style.display = compatibility === "device" ? "grid" : "none";
+    if (devicesGroup) devicesGroup.style.display = compatibility === "multi" ? "grid" : "none";
+}
+
+function addProductEntryRow() {
+    const firstRow = productFormCard?.querySelector(".product-form-grid");
+    if (!firstRow) return;
+    const row = firstRow.cloneNode(true);
+    row.classList.add("product-extra-row");
+
+    row.querySelectorAll("[id]").forEach(element => {
+        const originalId = element.id;
+        if (["productCompanyGroup", "productModelGroup", "compatibleDevicesGroup"].includes(originalId)) {
+            element.dataset.productGroup = originalId;
+        } else {
+            element.dataset.productField = originalId;
+        }
+        element.removeAttribute("id");
+    });
+
+    row.querySelectorAll("input, textarea").forEach(input => {
+        if (input.type !== "file") input.value = "";
+    });
+    row.querySelectorAll("select").forEach(select => {
+        const field = select.dataset.productField;
+        if (field === "productWarehouse") select.value = selectedWarehouse;
+        if (field === "productCompatibilityType") select.value = "device";
+    });
+    row.querySelectorAll("[data-product-group]").forEach(group => {
+        group.style.display = group.dataset.productGroup === "compatibleDevicesGroup" ? "none" : "grid";
+    });
+    row.querySelectorAll("#productImagePreview, [data-product-field='productImagePreview']").forEach(preview => preview.innerHTML = "");
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "product-row-remove";
+    removeButton.textContent = "حذف الصف";
+    removeButton.addEventListener("click", () => row.remove());
+    row.append(removeButton);
+
+    getProductRowControl(row, "productCompatibilityType")?.addEventListener("change", () => setExtraRowCompatibility(row));
+    firstRow.parentNode.insertBefore(row, document.getElementById("productCodeSuggestions"));
+    setExtraRowCompatibility(row);
+    getProductRowControl(row, "productCode")?.focus();
+}
 
 
 addProductButton.addEventListener("click", function () {
@@ -2871,6 +2937,7 @@ addProductButton.addEventListener("click", function () {
     editingProductId = null;
     clearProductForm();
     if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
+    if (addProductRowButton) addProductRowButton.style.display = "inline-flex";
     document.getElementById("productsAdmin")?.classList.add("product-entry-mode");
     productFormCard.style.display = "block";
     document.getElementById("productWarehouse").value = selectedWarehouse;
@@ -2917,6 +2984,8 @@ deleteProductFormButton?.addEventListener("click", () => {
     deleteProduct(product.id);
 });
 
+addProductRowButton?.addEventListener("click", addProductEntryRow);
+
 deleteTypedProductButton?.addEventListener("click", () => {
     const values = {
         product_code: String(document.getElementById("productCode")?.value || "").trim(),
@@ -2949,6 +3018,8 @@ deleteTypedProductButton?.addEventListener("click", () => {
 
 
 function clearProductForm() {
+
+    clearAdditionalProductRows();
 
     document.getElementById("productCode").value = "";
     document.getElementById("productCategory").value = "";
@@ -3161,6 +3232,10 @@ saveProductButton.addEventListener(
 
 
 async function saveNewProduct() {
+
+    if (!editingProductId && getProductEntryRows().length > 1) {
+        return saveMultipleNewProducts();
+    }
 
     const productCode = document.getElementById("productCode").value.trim();
 
@@ -3448,6 +3523,81 @@ if (selectedProductImage) {
 }
 
 
+async function saveMultipleNewProducts() {
+    const rows = getProductEntryRows();
+    const preparedRows = [];
+
+    for (const [index, row] of rows.entries()) {
+        const read = field => String(getProductRowControl(row, field)?.value || "").trim();
+        const category = read("productCategory");
+        const productType = read("productProductType");
+        const type = read("productType");
+        const compatibilityType = read("productCompatibilityType") || "device";
+        const compatibleDevicesArray = compatibilityType === "multi"
+            ? read("compatibleDevices").split("\n").map(value => value.trim()).filter(Boolean)
+            : [];
+
+        if (!category || !productType || !type) {
+            productFormMessage.textContent = `أكمل التصنيف ونوع المنتج والنوع في الصف رقم ${index + 1}.`;
+            productFormMessage.style.color = "#e05265";
+            return;
+        }
+        if (compatibilityType === "multi" && !compatibleDevicesArray.length) {
+            productFormMessage.textContent = `أدخل جهازًا واحدًا على الأقل في الصف رقم ${index + 1}.`;
+            productFormMessage.style.color = "#e05265";
+            return;
+        }
+
+        preparedRows.push({
+            payload: {
+                product_code: read("productCode") || null,
+                category,
+                product_type: productType,
+                type,
+                company: compatibilityType === "device" ? read("productCompany") || null : null,
+                model: compatibilityType === "device" ? read("productModel") || null : null,
+                color: read("productColor") || null,
+                quantity: Number(getProductRowControl(row, "productQuantity")?.value || 0),
+                warehouse: read("productWarehouse") || selectedWarehouse,
+                storage_location: read("productStorageLocation") || null,
+                price: Number(getProductRowControl(row, "productPrice")?.value || 0),
+                compatibility_type: compatibilityType,
+                compatible_devices: compatibleDevicesArray
+            },
+            imageFile: getProductRowControl(row, "productImage")?.files?.[0] || null
+        });
+    }
+
+    saveProductButton.disabled = true;
+    saveProductButton.textContent = "جاري حفظ الأصناف...";
+
+    const result = await supabaseClient
+        .from("products")
+        .insert(preparedRows.map(entry => entry.payload))
+        .select();
+
+    if (result.error) {
+        console.error(result.error);
+        productFormMessage.textContent = result.error.message || "تعذر حفظ الأصناف.";
+        productFormMessage.style.color = "#e05265";
+        saveProductButton.disabled = false;
+        saveProductButton.textContent = "حفظ المنتجات";
+        return;
+    }
+
+    await Promise.all((result.data || []).map((product, index) => {
+        const file = preparedRows[index]?.imageFile;
+        return file ? uploadProductImage(product.id, file) : Promise.resolve();
+    }));
+
+    productFormMessage.textContent = `تمت إضافة ${result.data?.length || preparedRows.length} أصناف بنجاح ✅`;
+    productFormMessage.style.color = "#2e9d69";
+    clearProductForm();
+    await loadAdminProducts();
+    saveProductButton.disabled = false;
+    saveProductButton.textContent = "حفظ المنتجات";
+}
+
 let editingProductId = null;
 
 
@@ -3510,6 +3660,7 @@ async function editProduct(id) {
     document.getElementById("productFormTitle").textContent = "تعديل المنتج";
     populateProductFormSuggestions();
     if (deleteProductFormButton) deleteProductFormButton.style.display = "inline-flex";
+    if (addProductRowButton) addProductRowButton.style.display = "none";
 
 
     productFormCard.scrollIntoView({
