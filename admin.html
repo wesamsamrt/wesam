@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260915-product-delete-confirm"
+        href="admin.css?v=20260915-product-code-input"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -825,7 +825,10 @@
 
 
     <div class="product-form-grid">
-    
+        <div class="form-group">
+            <label>كود المنتج</label>
+            <input id="productCode" type="text" list="productCodeSuggestions" maxlength="120" placeholder="مثال: WM-0510">
+        </div>
 
     <div class="form-group">
 
@@ -1000,6 +1003,7 @@
 
     </div>
 
+    <datalist id="productCodeSuggestions"></datalist>
     <datalist id="productCategorySuggestions"></datalist>
     <datalist id="productProductTypeSuggestions"></datalist>
     <datalist id="productTypeSuggestions"></datalist>
@@ -1740,7 +1744,7 @@
 </div>
 
 
-<script src="admin.js?v=20260915-analytics-manual-returns"></script>
+<script src="admin.js?v=20260915-product-code-input"></script>
 <script src="./no-zoom.js"></script>
 
 </body>

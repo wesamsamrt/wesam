@@ -2313,7 +2313,7 @@ let selectedAdminProductStatIds = new Set();
 function populateProductFormSuggestions() {
     const products = getProductsForSelectedWarehouse();
     const fields = [
-        ["productCategorySuggestions", "category"], ["productProductTypeSuggestions", "product_type"],
+        ["productCodeSuggestions", "product_code"], ["productCategorySuggestions", "category"], ["productProductTypeSuggestions", "product_type"],
         ["productTypeSuggestions", "type"], ["productCompanySuggestions", "company"],
         ["productModelSuggestions", "model"], ["productColorSuggestions", "color"],
         ["productStorageLocationSuggestions", "storage_location"]
@@ -2919,6 +2919,7 @@ deleteProductFormButton?.addEventListener("click", () => {
 
 function clearProductForm() {
 
+    document.getElementById("productCode").value = "";
     document.getElementById("productCategory").value = "";
     document.getElementById("productProductType").value = "";
     document.getElementById("productType").value = "";
@@ -3130,6 +3131,8 @@ saveProductButton.addEventListener(
 
 async function saveNewProduct() {
 
+    const productCode = document.getElementById("productCode").value.trim();
+
     const category =
         document.getElementById("productCategory").value.trim();
 
@@ -3267,6 +3270,8 @@ catch (error) {
                 .from("products")
                 .update({
 
+    product_code: productCode || null,
+
     category: category,
 
     product_type: productType,
@@ -3312,6 +3317,8 @@ catch (error) {
             await supabaseClient
                 .from("products")
                .insert({
+
+    product_code: productCode || null,
 
     category: category,
 
@@ -3433,6 +3440,8 @@ async function editProduct(id) {
 
     editingProductId = id;
 
+    document.getElementById("productCode").value =
+        product.product_code || "";
 
     document.getElementById("productCategory").value =
         product.category || "";
