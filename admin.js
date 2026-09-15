@@ -2863,6 +2863,7 @@ const saveProductButton =
 const productFormMessage =
     document.getElementById("productFormMessage");
 const deleteProductFormButton = document.getElementById("deleteProductFormButton");
+const deleteTypedProductButton = document.getElementById("deleteTypedProductButton");
 
 
 addProductButton.addEventListener("click", function () {
@@ -2914,6 +2915,36 @@ deleteProductFormButton?.addEventListener("click", () => {
     const product = adminProductsData.find(item => Number(item.id) === Number(editingProductId));
     if (!product) return alert("افتح منتجًا مسجلاً أولًا قبل الحذف.");
     deleteProduct(product.id);
+});
+
+deleteTypedProductButton?.addEventListener("click", () => {
+    const values = {
+        product_code: String(document.getElementById("productCode")?.value || "").trim(),
+        category: String(document.getElementById("productCategory")?.value || "").trim(),
+        product_type: String(document.getElementById("productProductType")?.value || "").trim(),
+        type: String(document.getElementById("productType")?.value || "").trim(),
+        company: String(document.getElementById("productCompany")?.value || "").trim(),
+        model: String(document.getElementById("productModel")?.value || "").trim(),
+        color: String(document.getElementById("productColor")?.value || "").trim()
+    };
+
+    if (!values.product_code) {
+        return alert("اكتب كود المنتج أولًا لتحديد الصنف المراد حذفه.");
+    }
+
+    const normalize = value => String(value || "").trim().toLocaleLowerCase("ar-SA");
+    const matches = adminProductsData.filter(product =>
+        Object.entries(values).every(([field, value]) => !value || normalize(product[field]) === normalize(value))
+    );
+
+    if (!matches.length) {
+        return alert("لا يوجد منتج مسجل يطابق البيانات المكتوبة.");
+    }
+    if (matches.length > 1) {
+        return alert("وجدنا أكثر من صنف مطابق. أضف الموديل أو اللون أو بقية البيانات لتحديد صنف واحد فقط.");
+    }
+
+    deleteProduct(matches[0].id);
 });
 
 
