@@ -5529,6 +5529,7 @@ let adminShortageGroups = [];
 let purchaseOrdersCache = [];
 let manualPurchaseOrderDraft = [];
 let manualPurchaseProducts = [];
+let manualPurchaseSalesByCode = new Map();
 const customersAdmin = document.getElementById("customersAdmin");
 const customersList = document.getElementById("customersList");
 const customersSummary = document.getElementById("customersSummary");
@@ -5940,6 +5941,23 @@ function manualPurchaseProductTitle(product) {
         .filter(Boolean).join(" · ") || product.product_code || "صنف";
 }
 
+function refreshManualPurchaseSales() {
+    const completedStatuses = new Set(["تم الشحن", "تم التسليم"]);
+    const sales = new Map();
+    adminOrdersData
+        .filter(order => completedStatuses.has(String(order.status || "").trim()))
+        .forEach(order => (order.items || []).forEach(item => {
+            const code = String(item.product_code || "").trim().toLocaleLowerCase("ar-SA");
+            if (!code) return;
+            sales.set(code, (sales.get(code) || 0) + Math.max(0, Number(item.quantity || 0)));
+        }));
+    manualPurchaseSalesByCode = sales;
+}
+
+function manualPurchaseSales(product) {
+    return manualPurchaseSalesByCode.get(String(product.product_code || "").trim().toLocaleLowerCase("ar-SA")) || 0;
+}
+
 function renderManualPurchaseDraft() {
     const target = purchaseOrderEditor?.querySelector("#manualPurchaseDraft");
     const totalElement = purchaseOrderEditor?.querySelector("#manualPurchaseDraftTotal");
@@ -5980,6 +5998,7 @@ function renderManualPurchaseProducts() {
     const less = lessValue === "" ? null : Number(lessValue);
     const greater = greaterValue === "" ? null : Number(greaterValue);
     const equal = equalValue === "" ? null : Number(equalValue);
+    const sort = purchaseOrderEditor.querySelector("#manualPurchaseSort")?.value || "default";
     const filtered = manualPurchaseProducts.filter(product => {
         const quantity = Number(product.quantity || 0);
         const searchable = [product.product_code, product.category, product.product_type, product.type, product.company, product.model, product.color].filter(Boolean).join(" ").toLocaleLowerCase("ar-SA");
@@ -5987,10 +6006,14 @@ function renderManualPurchaseProducts() {
             (less === null || quantity < less) &&
             (greater === null || quantity > greater) &&
             (equal === null || quantity === equal);
+    }).sort((first, second) => {
+        if (sort === "sales-desc") return manualPurchaseSales(second) - manualPurchaseSales(first);
+        if (sort === "sales-asc") return manualPurchaseSales(first) - manualPurchaseSales(second);
+        return 0;
     });
-    target.innerHTML = filtered.length ? `<div class="manual-purchase-product-count">${filtered.length} صنف ظاهر · حدّد صنفًا واحدًا ثم اضغط F4 لعرض تحليله.</div><div class="edit-invoice-table-wrap manual-purchase-products-wrap"><table class="edit-invoice-table manual-purchase-products-table"><thead><tr><th>تحديد F4</th><th>كود المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>المتاح</th><th>السعر</th><th>إجراء</th></tr></thead><tbody>${filtered.map(product => {
+    target.innerHTML = filtered.length ? `<div class="manual-purchase-product-count">${filtered.length} صنف ظاهر · حدّد صنفًا واحدًا ثم اضغط F4 لعرض تحليله.</div><div class="edit-invoice-table-wrap manual-purchase-products-wrap"><table class="edit-invoice-table manual-purchase-products-table"><thead><tr><th>تحديد F4</th><th>كود المنتج</th><th>التصنيف</th><th>نوع المنتج</th><th>النوع</th><th>الشركة</th><th>الموديل</th><th>اللون</th><th>المتاح</th><th>المبيعات</th><th>السعر</th><th>إجراء</th></tr></thead><tbody>${filtered.map(product => {
         const added = manualPurchaseOrderDraft.some(item => String(item.id) === String(product.id));
-        return `<tr><td><input type="checkbox" data-manual-purchase-select="${product.id}"></td><td>${transferText(product.product_code || "—")}</td><td>${transferText(product.category || "—")}</td><td>${transferText(product.product_type || "—")}</td><td>${transferText(product.type || "—")}</td><td>${transferText(product.company || "—")}</td><td>${transferText(product.model || "—")}</td><td>${transferText(product.color || "—")}</td><td><b>${Number(product.quantity || 0)}</b></td><td>${formatAdminCurrency(product.price || 0)}</td><td><button type="button" class="manual-purchase-add" data-add-manual-purchase="${product.id}">${added ? "زيادة الكمية" : "إضافة للطلب"}</button></td></tr>`;
+        return `<tr><td><input type="checkbox" data-manual-purchase-select="${product.id}"></td><td>${transferText(product.product_code || "—")}</td><td>${transferText(product.category || "—")}</td><td>${transferText(product.product_type || "—")}</td><td>${transferText(product.type || "—")}</td><td>${transferText(product.company || "—")}</td><td>${transferText(product.model || "—")}</td><td>${transferText(product.color || "—")}</td><td><b>${Number(product.quantity || 0)}</b></td><td><b class="manual-purchase-sales">${manualPurchaseSales(product)}</b></td><td>${formatAdminCurrency(product.price || 0)}</td><td><button type="button" class="manual-purchase-add" data-add-manual-purchase="${product.id}">${added ? "زيادة الكمية" : "إضافة للطلب"}</button></td></tr>`;
     }).join("")}</tbody></table></div>` : '<div class="message">لا توجد منتجات تطابق التصفية الحالية.</div>';
     target.querySelectorAll("[data-manual-purchase-select]").forEach(input => input.addEventListener("change", () => {
         if (input.checked) target.querySelectorAll("[data-manual-purchase-select]").forEach(other => { if (other !== input) other.checked = false; });
@@ -6009,13 +6032,15 @@ function renderManualPurchaseProducts() {
 async function openManualPurchaseOrderEditor() {
     if (!purchaseOrderEditor) return;
     if (newPurchaseOrderButton) { newPurchaseOrderButton.disabled = true; newPurchaseOrderButton.textContent = "جاري تجهيز المنتجات..."; }
-    await loadAdminProducts();
+    await Promise.all([loadAdminProducts(), loadAdminOrders()]);
     manualPurchaseProducts = getProductsForSelectedWarehouse();
+    refreshManualPurchaseSales();
     manualPurchaseOrderDraft = [];
     purchaseOrderEditor.dataset.purchaseOrderMode = "create";
     delete purchaseOrderEditor.dataset.purchaseOrderId;
-    purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-manual-purchase>← رجوع لطلبات الشراء</button><div><h2>إضافة طلب شراء جديد</h2><p>كل منتجات مخزن ${transferText(selectedWarehouse || "—")} متاحة هنا. حدّد صنفًا واحدًا واضغط F4 لتحليله.</p></div></div><section class="purchase-order-editor-card manual-purchase-editor-card"><div class="manual-purchase-filters"><label>بحث عن صنف أو كود<input type="search" id="manualPurchaseSearch" placeholder="ابحث بالاسم أو الكود"></label><label>الكمية أقل من<input type="number" min="0" id="manualPurchaseLess" placeholder="مثال: 5"></label><label>الكمية أكبر من<input type="number" min="0" id="manualPurchaseGreater" placeholder="مثال: 10"></label><label>الكمية تساوي<input type="number" min="0" id="manualPurchaseEqual" placeholder="مثال: 0"></label></div><div id="manualPurchaseProducts"></div><section class="manual-purchase-draft"><header><h3>أصناف طلب الشراء</h3><span>عدّل الكمية والسعر قبل الحفظ.</span></header><div id="manualPurchaseDraft"></div><label class="manual-purchase-notes">ملاحظات طلب الشراء<textarea id="manualPurchaseNotes" placeholder="ملاحظات اختيارية"></textarea></label><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="manualPurchaseDraftTotal">0.00 ر.س</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" id="saveManualPurchaseOrder" disabled>حفظ طلب الشراء</button><span id="manualPurchaseOrderMessage"></span></div></section></section>`;
-    purchaseOrderEditor.querySelectorAll("#manualPurchaseSearch,#manualPurchaseLess,#manualPurchaseGreater,#manualPurchaseEqual").forEach(input => input.addEventListener("input", renderManualPurchaseProducts));
+    purchaseOrderEditor.innerHTML = `<div class="orders-admin-header purchase-order-editor-header"><button class="back-admin" type="button" data-back-manual-purchase>← رجوع لطلبات الشراء</button><div><h2>إضافة طلب شراء جديد</h2><p>كل منتجات مخزن ${transferText(selectedWarehouse || "—")} متاحة هنا. حدّد صنفًا واحدًا واضغط F4 لتحليله.</p></div></div><section class="purchase-order-editor-card manual-purchase-editor-card"><div class="manual-purchase-filters"><label>بحث عن صنف أو كود<input type="search" id="manualPurchaseSearch" placeholder="ابحث بالاسم أو الكود"></label><label>الكمية أقل من<input type="number" min="0" id="manualPurchaseLess" placeholder="مثال: 5"></label><label>الكمية أكبر من<input type="number" min="0" id="manualPurchaseGreater" placeholder="مثال: 10"></label><label>الكمية تساوي<input type="number" min="0" id="manualPurchaseEqual" placeholder="مثال: 0"></label><label>ترتيب المبيعات<select id="manualPurchaseSort"><option value="default">بدون ترتيب</option><option value="sales-desc">الأكثر مبيعًا أولًا</option><option value="sales-asc">الأقل مبيعًا أولًا</option></select></label></div><div id="manualPurchaseProducts"></div><section class="manual-purchase-draft"><header><h3>أصناف طلب الشراء</h3><span>عدّل الكمية والسعر قبل الحفظ.</span></header><div id="manualPurchaseDraft"></div><label class="manual-purchase-notes">ملاحظات طلب الشراء<textarea id="manualPurchaseNotes" placeholder="ملاحظات اختيارية"></textarea></label><div class="purchase-order-editor-total"><span>إجمالي القيمة المرجعية</span><strong id="manualPurchaseDraftTotal">0.00 ر.س</strong></div><div class="purchase-order-editor-actions"><button type="button" class="save" id="saveManualPurchaseOrder" disabled>حفظ طلب الشراء</button><span id="manualPurchaseOrderMessage"></span></div></section></section>`;
+    purchaseOrderEditor.querySelectorAll("#manualPurchaseSearch,#manualPurchaseLess,#manualPurchaseGreater,#manualPurchaseEqual,#manualPurchaseSort").forEach(input => input.addEventListener("input", renderManualPurchaseProducts));
+    purchaseOrderEditor.querySelector("#manualPurchaseSort")?.addEventListener("change", renderManualPurchaseProducts);
     purchaseOrderEditor.querySelector("[data-back-manual-purchase]")?.addEventListener("click", () => setPurchaseOrderEditorVisible(false));
     purchaseOrderEditor.querySelector("#saveManualPurchaseOrder")?.addEventListener("click", saveManualPurchaseOrder);
     renderManualPurchaseProducts();
