@@ -30,7 +30,7 @@
 
     <link
         rel="stylesheet"
-        href="admin.css?v=20260915-product-entry-suggestions"
+        href="admin.css?v=20260915-product-entry-table"
     >
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -992,17 +992,11 @@
                 placeholder="0.00"
             >
       </div>
-           <label>
-         صورة المنتج
-        </label>
-
-        <input
-         type="file"
-         id="productImage"
-         accept="image/*"
-        >
-
-        <div id="productImagePreview"></div>
+        <div class="form-group product-image-group">
+            <label>صورة المنتج</label>
+            <input type="file" id="productImage" accept="image/*">
+            <div id="productImagePreview"></div>
+        </div>
 
     </div>
 
@@ -1742,7 +1736,7 @@
 </div>
 
 
-<script src="admin.js?v=20260915-product-entry-suggestions"></script>
+<script src="admin.js?v=20260915-product-entry-table"></script>
 <script src="./no-zoom.js"></script>
 
 </body>
