@@ -6,12 +6,29 @@
         const matches = digits(value).replace(/٬/g, '').replace(/٫/g, '.').match(/\d+(?:[.,]\d+)?/g);
         return matches?.length === 1 ? Number(matches[0].replace(',', '.')) : NaN;
     };
+    function extractWords(data) {
+        if(data?.words?.length)return data.words;
+        return (data?.blocks||[]).flatMap(b=>(b.paragraphs||[]).flatMap(p=>(p.lines||[]).flatMap(l=>l.words||[])));
+    }
     function parse(words, width, left = 3, right = 95) {
         const start = width * left / 100, span = width * (right - left) / 100;
         // Fractions measured from the supplied example: total, qty, color, model, company, type, product type, code, row number.
         const edges = [0, .115, .22, .33, .435, .54, .645, .755, .875, 1];
         const column = w => edges.findIndex((edge, i) => i < edges.length - 1 && (w.bbox.x0 + w.bbox.x1) / 2 >= start + edge * span && (w.bbox.x0 + w.bbox.x1) / 2 < start + edges[i + 1] * span);
-        const anchors = words.filter(w => column(w) === 7 && /^WM[-–—]?\d{3,}[A-Z]*$/i.test(digits(w.text).replace(/\s/g, ''))).sort((a,b) => a.bbox.y0-b.bbox.y0);
+        // OCR may split WM, hyphen and digits into separate words. Join by position,
+        // not OCR reading order (which can be reversed in Arabic documents).
+        const groups=[];
+        words.filter(w=>column(w)===7).sort((a,b)=>a.bbox.y0-b.bbox.y0).forEach(w=>{
+            const cy=(w.bbox.y0+w.bbox.y1)/2;
+            const group=groups.find(g=>Math.abs(g.y-cy)<Math.max(5,(w.bbox.y1-w.bbox.y0)*.6));
+            if(group)group.words.push(w);else groups.push({y:cy,words:[w]});
+        });
+        const anchors=groups.flatMap(g=>{
+            const parts=g.words.sort((a,b)=>a.bbox.x0-b.bbox.x0);
+            const text=digits(parts.map(w=>w.text).join('')).toUpperCase().replace(/[–—_]/g,'-').replace(/^[^A-Z0-9]+|[^A-Z0-9]+$/g,'');
+            if(!/^(?:[A-Z]{1,5}-?)?\d{3,}[A-Z0-9-]*$/.test(text))return [];
+            return [{text,bbox:{x0:Math.min(...parts.map(w=>w.bbox.x0)),x1:Math.max(...parts.map(w=>w.bbox.x1)),y0:Math.min(...parts.map(w=>w.bbox.y0)),y1:Math.max(...parts.map(w=>w.bbox.y1))}}];
+        });
         return anchors.map((anchor, i) => {
             const center = (anchor.bbox.y0 + anchor.bbox.y1) / 2;
             const prev = anchors[i-1], next = anchors[i+1];
@@ -31,6 +48,8 @@
         dialog.className='purchase-ocr-review';
         dialog.innerHTML='<h2>مراجعة صورة طلب الشراء</h2><p>القالب مخصص لجدول التحويل المرفق: الإجمالي يسارًا والكود يمينًا. القراءة قد تخطئ أو تفوّت صفوفًا؛ راجع الصورة والعدد والكميات. لا يتم حفظ الطلب تلقائيًا.</p><button type="button" data-close>إلغاء وإغلاق</button><p data-status>جاري قراءة الصورة…</p><details><summary>الصورة وإعدادات حدود الجدول</summary><img alt="صورة الفاتورة للمراجعة"><label>بداية الجدول من يسار الصورة % <input data-left type="number" value="3" min="0" max="99"></label><label>نهاية الجدول % <input data-right type="number" value="95" min="1" max="100"></label><button type="button" data-parse disabled>إعادة توزيع الأعمدة</button></details><div class="purchase-ocr-table"></div><button type="button" data-new>إضافة صف يدوي</button><p data-count></p><label><input type="checkbox" data-reviewed>راجعت جميع الصفوف والكميات والأسعار مقابل الصورة</label><button type="button" data-add disabled>إضافة المسودة لطلب الشراء</button>';
         document.body.appendChild(dialog); dialog.showModal();
+        const rawDetails=document.createElement('details'),rawSummary=document.createElement('summary'),rawText=document.createElement('textarea');
+        rawSummary.textContent='النص الخام للتشخيص والمراجعة';rawText.readOnly=true;rawText.style.cssText='width:100%;min-height:140px';rawDetails.append(rawSummary,rawText);dialog.appendChild(rawDetails);
         const url=URL.createObjectURL(file), img=dialog.querySelector('img'); img.src=url;
         dialog.addEventListener('close',()=>{URL.revokeObjectURL(url);dialog.remove();},{once:true});
         dialog.querySelector('[data-close]').onclick=()=>dialog.close();
@@ -63,15 +82,28 @@
         const distribute=()=>{
             const left=Number(dialog.querySelector('[data-left]').value),right=Number(dialog.querySelector('[data-right]').value);
             if(left<0||right>100||left>=right)return alert('حدود الجدول غير صحيحة.');
-            rows=parse(words,width,left,right);render();status.textContent=rows.length?'تم استخراج صفوف مبدئية. راجع جميع القيم؛ سعر الوحدة = إجمالي السطر ÷ الكمية.':'لم تُقرأ أكواد WM بوضوح. جرّب صورة مستقيمة أقرب للجدول، أو أضف الصفوف يدويًا.';
+            rows=parse(words,width,left,right);render();status.textContent=rows.length?`تم استخراج ${rows.length} صف مبدئي. راجع العدد وجميع القيم؛ سعر الوحدة = إجمالي السطر ÷ الكمية.`:`لم تُستخرج صفوف من ${words.length} كلمة. راجع النص الخام واضبط حدود الجدول حسب الصورة ثم اضغط إعادة توزيع الأعمدة؛ أو أضف الصفوف يدويًا.`;
         };
         dialog.querySelector('[data-parse]').onclick=distribute;
         try {
             await img.decode(); width=img.naturalWidth;
             const result=await window.Tesseract.recognize(file,'ara+eng',{logger:m=>{if(dialog.isConnected)status.textContent=`جاري القراءة: ${Math.round((m.progress||0)*100)}%`;}});
             if(!dialog.isConnected)return;
-            words=result.data.words||[];distribute();dialog.querySelector('[data-parse]').disabled=false;
+            words=extractWords(result.data);rawText.value=result.data.text||'';
+            if(!parse(words,width).length){
+                status.textContent='محاولة ثانية لقراءة الأكواد والأرقام باللغة الإنجليزية…';
+                const english=await window.Tesseract.recognize(file,'eng');
+                if(!dialog.isConnected)return;
+                const englishWords=extractWords(english.data);
+                rawText.value+='\n\n--- English ---\n'+(english.data.text||'');
+                // Preserve Arabic descriptive cells while retrying Latin/numeric columns.
+                const latinColumn=w=>{const x=((w.bbox.x0+w.bbox.x1)/2-width*.03)/(width*.92);return x<.22||(x>=.33&&x<.54)||(x>=.755&&x<.875);};
+                const combined=[...words.filter(w=>!latinColumn(w)),...englishWords.filter(latinColumn)];
+                if(parse(combined,width).length)words=combined;
+                else if(!words.length)words=englishWords;
+            }
+            distribute();dialog.querySelector('[data-parse]').disabled=false;
         } catch(error) {if(dialog.isConnected)status.textContent='تعذرت القراءة. يمكنك إضافة الصفوف يدويًا أو المحاولة بصورة أوضح.';}
     }
-    window.PurchaseInvoiceOCR = {parse, identity, number, review};
+    window.PurchaseInvoiceOCR = {parse, identity, number, extractWords, review};
 })();

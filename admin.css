@@ -2855,3 +2855,4 @@ body {
 .purchase-ocr-table input{width:130px}
 .purchase-ocr-review button{padding:10px 16px;margin:8px;border:0;border-radius:8px;background:#6453eb;color:white;font-family:inherit;cursor:pointer}
 .purchase-ocr-review button:disabled{opacity:.45;cursor:default}
+.purchase-ocr-review[open]{position:fixed;inset:2vh 2vw;margin:auto;box-sizing:border-box;width:96vw;max-width:1700px;height:96vh;max-height:96vh;overflow:auto}
