@@ -88,25 +88,22 @@
             rows=parse(words,width,left,right);render();status.textContent=rows.length?`تم استخراج ${rows.length} صف مبدئي. راجع العدد وجميع القيم؛ سعر الوحدة = إجمالي السطر ÷ الكمية.`:`لم تُستخرج صفوف من ${words.length} كلمة. راجع النص الخام واضبط حدود الجدول حسب الصورة ثم اضغط إعادة توزيع الأعمدة؛ أو أضف الصفوف يدويًا.`;
         };
         dialog.querySelector('[data-parse]').onclick=distribute;
+        // Cell OCR replaces full-page recognition; no code anchor is required.
+        dialog.querySelector('[data-left]').closest('label').hidden=true;
+        dialog.querySelector('[data-right]').closest('label').hidden=true;
+        dialog.querySelector('[data-parse]').hidden=true;
+        dialog.querySelector('[data-new]').disabled=true;
         try {
-            await img.decode(); width=img.naturalWidth;
-            const result=await window.Tesseract.recognize(file,'ara+eng',{logger:m=>{if(dialog.isConnected)status.textContent=`جاري القراءة: ${Math.round((m.progress||0)*100)}%`;}});
-            if(!dialog.isConnected)return;
-            words=extractWords(result.data);rawText.value=result.data.text||'';
-            if(!parse(words,width).length){
-                status.textContent='محاولة ثانية لقراءة الأكواد والأرقام باللغة الإنجليزية…';
-                const english=await window.Tesseract.recognize(file,'eng');
-                if(!dialog.isConnected)return;
-                const englishWords=extractWords(english.data);
-                rawText.value+='\n\n--- English ---\n'+(english.data.text||'');
-                // Preserve Arabic descriptive cells while retrying Latin/numeric columns.
-                const latinColumn=w=>{const x=(w.bbox.x0+w.bbox.x1)/2/width;return x<.215||(x>=.328&&x<.554)||(x>=.777&&x<.889);};
-                const combined=[...words.filter(w=>!latinColumn(w)),...englishWords.filter(latinColumn)];
-                if(parse(combined,width).length)words=combined;
-                else if(!words.length)words=englishWords;
-            }
-            distribute();dialog.querySelector('[data-parse]').disabled=false;
-        } catch(error) {if(dialog.isConnected)status.textContent='تعذرت القراءة. يمكنك إضافة الصفوف يدويًا أو المحاولة بصورة أوضح.';}
+            await img.decode();
+            const result=await window.PurchaseCellOCR.read(img, text=>{if(dialog.isConnected)status.textContent=text;}, ()=>!dialog.isConnected);
+            if(!dialog.isConnected||!result)return;
+            rows=result.rows;rawText.value=result.raw;render();
+            status.textContent=`تمت قراءة ${rows.length} صف خليةً خلية. الخانات غير الواضحة تُركت فارغة؛ راجع كل البيانات قبل الإضافة.`;
+        } catch(error) {
+            if(dialog.isConnected)status.textContent=error.message||'تعذرت قراءة الخلايا. جرّب صورة أوضح.';
+        } finally {
+            if(dialog.isConnected)dialog.querySelector('[data-new]').disabled=false;
+        }
     }
     window.PurchaseInvoiceOCR = {parse, identity, number, extractWords, review};
 })();
