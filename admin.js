@@ -2969,19 +2969,19 @@ function importProductsFromExcel(file) {
         try {
             const workbook = XLSX.read(event.target.result, { type: "array" });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const sourceRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+            const sourceRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: false });
             if (!sourceRows.length) return alert("ملف Excel لا يحتوي على صفوف.");
             const aliases = {
                 productCode: ["كودالمنتج", "الكود", "productcode", "product_code", "code"],
-                category: ["التصنيف", "الصنف", "category"],
+                productCategory: ["التصنيف", "الصنف", "category"],
                 productStorageLocation: ["الموقع", "موقعالمنتج", "موقعالقطعة", "storagelocation", "location"],
                 productProductType: ["نوعالمنتج", "producttype", "product_type"],
-                type: ["النوع", "type"],
-                company: ["الشركة", "الماركة", "العلامة", "company", "brand"],
-                model: ["الموديل", "model"],
-                color: ["اللون", "color"],
-                quantity: ["الكمية", "quantity", "qty"],
-                price: ["السعر", "سعرالوحدة", "price", "unitprice"]
+                productType: ["النوع", "type"],
+                productCompany: ["الشركة", "الماركة", "العلامة", "company", "brand"],
+                productModel: ["الموديل", "model"],
+                productColor: ["اللون", "color"],
+                productQuantity: ["الكمية", "الكميةالمتوفرة", "quantity", "qty"],
+                productPrice: ["السعر", "سعرالوحدة", "السعرر.س", "سعرالوحدةر.س", "price", "unitprice"]
             };
             const resolveColumns = row => {
                 const columns = Object.keys(row);
@@ -2993,7 +2993,7 @@ function importProductsFromExcel(file) {
                 return result;
             };
             const columns = resolveColumns(sourceRows[0]);
-            const hasRequired = columns.category && columns.productType && columns.type;
+            const hasRequired = columns.productCategory && columns.productProductType && columns.productType;
             if (!hasRequired) {
                 return alert("تأكد من وجود أعمدة: التصنيف، نوع المنتج، والنوع في أول صف من ملف Excel.");
             }
@@ -3003,7 +3003,13 @@ function importProductsFromExcel(file) {
                 const row = getProductEntryRows()[index];
                 const set = (field, value) => {
                     const control = getProductRowControl(row, field);
-                    if (control) control.value = value == null ? "" : String(value);
+                    if (!control) return;
+                    let text = value == null ? "" : String(value);
+                    if (control.type === "number") {
+                        text = text.replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+                            .replace(/[٬,\s]/g, "").replace(/٫/g, ".");
+                    }
+                    control.value = text;
                 };
                 Object.entries(columns).forEach(([field, column]) => { if (column) set(field, source[column]); });
                 set("productWarehouse", selectedWarehouse);
