@@ -2721,12 +2721,7 @@ function renderAdminProducts(products) {
         item.querySelector("[data-product-stats-id]")?.addEventListener("change", event => {
             const productId = String(event.target.dataset.productStatsId);
             if (event.target.checked) {
-                // تقرير F4 يعالج صنفًا واحدًا؛ اختيار الجديد يلغي السابق مباشرة.
-                selectedAdminProductStatIds.clear();
                 selectedAdminProductStatIds.add(productId);
-                adminProducts.querySelectorAll("[data-product-stats-id]").forEach(input => {
-                    if (input !== event.target) input.checked = false;
-                });
             } else {
                 selectedAdminProductStatIds.delete(productId);
             }
@@ -3188,34 +3183,24 @@ productExcelImportInput?.addEventListener("change", event => {
     event.target.value = "";
 });
 
-deleteTypedProductButton?.addEventListener("click", () => {
-    const values = {
-        product_code: String(document.getElementById("productCode")?.value || "").trim(),
-        category: String(document.getElementById("productCategory")?.value || "").trim(),
-        product_type: String(document.getElementById("productProductType")?.value || "").trim(),
-        type: String(document.getElementById("productType")?.value || "").trim(),
-        company: String(document.getElementById("productCompany")?.value || "").trim(),
-        model: String(document.getElementById("productModel")?.value || "").trim(),
-        color: String(document.getElementById("productColor")?.value || "").trim()
-    };
-
-    if (!values.product_code) {
-        return alert("اكتب كود المنتج أولًا لتحديد الصنف المراد أرشفته.");
-    }
-
+deleteTypedProductButton?.addEventListener("click", async () => {
+    const fields = { product_code: "productCode", category: "productCategory", product_type: "productProductType", type: "productType", company: "productCompany", model: "productModel", color: "productColor" };
     const normalize = value => String(value || "").trim().toLocaleLowerCase("ar-SA");
-    const matches = adminProductsData.filter(product =>
-        Object.entries(values).every(([field, value]) => !value || normalize(product[field]) === normalize(value))
-    );
-
-    if (!matches.length) {
-        return alert("لا يوجد منتج مسجل يطابق البيانات المكتوبة.");
+    const ids = [];
+    for (const [index, row] of getProductEntryRows().entries()) {
+        const values = Object.fromEntries(Object.entries(fields).map(([field, control]) => [field, normalize(getProductRowControl(row, control)?.value)]));
+        if (!values.product_code) return alert(`الصف ${index + 1}: اكتب كود المنتج قبل الأرشفة.`);
+        const warehouse = getProductRowControl(row, "productWarehouse")?.value || selectedWarehouse;
+        const matches = adminProductsData.filter(product => product.warehouse === warehouse && Object.entries(values).every(([field, value]) => !value || normalize(product[field]) === value));
+        if (matches.length !== 1) return alert(`الصف ${index + 1}: ${matches.length ? "يوجد أكثر من صنف مطابق؛ حدد الموديل واللون وباقي البيانات." : "لا يوجد صنف مطابق."} لم تتم أرشفة أي صنف.`);
+        ids.push(matches[0].id);
     }
-    if (matches.length > 1) {
-        return alert("وجدنا أكثر من صنف مطابق. أضف الموديل أو اللون أو بقية البيانات لتحديد صنف واحد فقط.");
-    }
+    await archiveProducts(ids);
+});
 
-    deleteProduct(matches[0].id);
+document.getElementById("archiveSelectedProductsButton")?.addEventListener("click", () => {
+    const ids = getProductsForSelectedWarehouse().filter(product => selectedAdminProductStatIds.has(String(product.id))).map(product => product.id);
+    archiveProducts(ids);
 });
 
 
@@ -3886,44 +3871,47 @@ async function editProduct(id) {
 
 /* حذف المنتج */
 
-async function deleteProduct(id) {
-    const product = adminProductsData.find(item => Number(item.id) === Number(id));
-    if (!product) return alert("لم يتم العثور على المنتج");
+let productArchiveBusy = false;
 
-    document.getElementById("productDeleteConfirmDialog")?.remove();
-    const fields = [
-        ["كود المنتج", product.product_code], ["التصنيف", product.category],
-        ["صنف المنتج", product.product_type], ["النوع", product.type],
-        ["الماركة", product.company], ["الموديل", product.model]
-    ].map(([label, value]) => ({ label, value: String(value || "لا يوجد").trim() }));
-    const dialog = document.createElement("div");
-    dialog.id = "productDeleteConfirmDialog";
-    dialog.className = "product-delete-confirm-dialog";
-    dialog.innerHTML = `<section class="product-delete-confirm-box" role="dialog" aria-modal="true" aria-label="تأكيد أرشفة المنتج"><button type="button" class="product-delete-dialog-close" data-close aria-label="إغلاق">×</button><h3>تأكيد أرشفة المنتج</h3><p>للأرشفة، اكتب بيانات المنتج للتأكيد. سيختفي من المنتجات المتاحة وتبقى طلباته وتحليلاته محفوظة.</p><div class="product-delete-fields">${fields.map((field, index) => `<label>${transferText(field.label)}<small>${transferText(field.value)}</small><input type="text" autocomplete="off" data-delete-field="${index}"></label>`).join("")}</div><div class="product-delete-confirm-actions"><button type="button" data-close>إلغاء</button><button type="button" class="confirm-delete" data-confirm disabled>أرشفة المنتج</button></div></section>`;
-    document.body.appendChild(dialog);
-    const close = () => dialog.remove();
-    const confirmButton = dialog.querySelector("[data-confirm]");
-    const matches = () => fields.every((field, index) => String(dialog.querySelector(`[data-delete-field="${index}"]`)?.value || "").trim().toLocaleLowerCase("ar-SA") === field.value.toLocaleLowerCase("ar-SA"));
-    dialog.querySelectorAll("[data-delete-field]").forEach(input => input.addEventListener("input", () => { confirmButton.disabled = !matches(); }));
-    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
-    dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
-    confirmButton.addEventListener("click", async () => {
-        if (!matches()) return;
-        confirmButton.disabled = true;
-        confirmButton.textContent = "جاري الأرشفة...";
-        const { error } = await supabaseClient.rpc("archive_product", { p_product_id: id });
-        if (error) { confirmButton.disabled = false; confirmButton.textContent = "أرشفة المنتج"; alert(`تعذر أرشفة المنتج: ${error.message}`); return; }
-        close();
-        if (Number(editingProductId) === Number(id)) {
-            productFormCard.style.display = "none";
-            document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
-            if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
-            editingProductId = null;
-            clearProductForm();
+async function archiveProducts(ids) {
+    if (productArchiveBusy) return;
+    const uniqueIds = [...new Set(ids.map(Number))].filter(id => adminProductsData.some(product => Number(product.id) === id));
+    if (!uniqueIds.length) return alert("حدد المنتجات المطلوب أرشفتها أولًا.");
+    productArchiveBusy = true;
+    const buttons = [deleteTypedProductButton, deleteProductFormButton, document.getElementById("archiveSelectedProductsButton")].filter(Boolean);
+    buttons.forEach(button => button.disabled = true);
+    const completed = [];
+    let failure = null;
+    try {
+        for (const id of uniqueIds) {
+            const { error } = await supabaseClient.rpc("archive_product", { p_product_id: id });
+            if (error) throw error;
+            completed.push(id);
+            selectedAdminProductStatIds.delete(String(id));
         }
-        await loadAdminProducts();
-        alert("تمت أرشفة المنتج؛ طلباته وتحليلاته السابقة محفوظة ✅");
-    });
+    } catch (error) {
+        failure = error;
+    } finally {
+        if (completed.length) {
+            if (completed.includes(Number(editingProductId))) {
+                productFormCard.style.display = "none";
+                document.getElementById("productsAdmin")?.classList.remove("product-entry-mode");
+                if (deleteProductFormButton) deleteProductFormButton.style.display = "none";
+                editingProductId = null;
+                clearProductForm();
+            }
+            try { await loadAdminProducts(); } catch (error) { failure = failure || error; }
+        }
+        productArchiveBusy = false;
+        buttons.forEach(button => button.disabled = false);
+    }
+    alert(failure
+        ? `تمت أرشفة ${completed.length} من ${uniqueIds.length} صنف. تعذر إكمال العملية: ${failure.message || failure}`
+        : `تمت أرشفة ${completed.length} صنف؛ الطلبات والتحليلات السابقة محفوظة ✅`);
+}
+
+async function deleteProduct(id) {
+    await archiveProducts([id]);
 }
 
 
