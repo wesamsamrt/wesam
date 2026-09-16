@@ -10,10 +10,10 @@
         if(data?.words?.length)return data.words;
         return (data?.blocks||[]).flatMap(b=>(b.paragraphs||[]).flatMap(p=>(p.lines||[]).flatMap(l=>l.words||[])));
     }
-    function parse(words, width, left = 3, right = 95) {
+    function parse(words, width, left = 0, right = 100) {
         const start = width * left / 100, span = width * (right - left) / 100;
         // Fractions measured from the supplied example: total, qty, color, model, company, type, product type, code, row number.
-        const edges = [0, .115, .22, .33, .435, .54, .645, .755, .875, 1];
+        const edges = [0, .103, .215, .328, .441, .554, .664, .777, .889, 1];
         const column = w => edges.findIndex((edge, i) => i < edges.length - 1 && (w.bbox.x0 + w.bbox.x1) / 2 >= start + edge * span && (w.bbox.x0 + w.bbox.x1) / 2 < start + edges[i + 1] * span);
         // OCR may split WM, hyphen and digits into separate words. Join by position,
         // not OCR reading order (which can be reversed in Arabic documents).
@@ -48,6 +48,9 @@
         dialog.className='purchase-ocr-review';
         dialog.innerHTML='<h2>مراجعة صورة طلب الشراء</h2><p>القالب مخصص لجدول التحويل المرفق: الإجمالي يسارًا والكود يمينًا. القراءة قد تخطئ أو تفوّت صفوفًا؛ راجع الصورة والعدد والكميات. لا يتم حفظ الطلب تلقائيًا.</p><button type="button" data-close>إلغاء وإغلاق</button><p data-status>جاري قراءة الصورة…</p><details><summary>الصورة وإعدادات حدود الجدول</summary><img alt="صورة الفاتورة للمراجعة"><label>بداية الجدول من يسار الصورة % <input data-left type="number" value="3" min="0" max="99"></label><label>نهاية الجدول % <input data-right type="number" value="95" min="1" max="100"></label><button type="button" data-parse disabled>إعادة توزيع الأعمدة</button></details><div class="purchase-ocr-table"></div><button type="button" data-new>إضافة صف يدوي</button><p data-count></p><label><input type="checkbox" data-reviewed>راجعت جميع الصفوف والكميات والأسعار مقابل الصورة</label><button type="button" data-add disabled>إضافة المسودة لطلب الشراء</button>';
         document.body.appendChild(dialog); dialog.showModal();
+        dialog.querySelector('[data-left]').value='0';
+        dialog.querySelector('[data-right]').value='100';
+        dialog.querySelector('h2 + p').textContent='ارفع صورة مقصوصة على الجدول مثل المثال، بجميع الأعمدة التسعة. القراءة قد تخطئ أو تفوّت صفوفًا؛ راجع العدد والبيانات. سعر الوحدة يحسب من إجمالي السطر ÷ الكمية، ولا يتم حفظ الطلب تلقائيًا.';
         const rawDetails=document.createElement('details'),rawSummary=document.createElement('summary'),rawText=document.createElement('textarea');
         rawSummary.textContent='النص الخام للتشخيص والمراجعة';rawText.readOnly=true;rawText.style.cssText='width:100%;min-height:140px';rawDetails.append(rawSummary,rawText);dialog.appendChild(rawDetails);
         const url=URL.createObjectURL(file), img=dialog.querySelector('img'); img.src=url;
@@ -97,7 +100,7 @@
                 const englishWords=extractWords(english.data);
                 rawText.value+='\n\n--- English ---\n'+(english.data.text||'');
                 // Preserve Arabic descriptive cells while retrying Latin/numeric columns.
-                const latinColumn=w=>{const x=((w.bbox.x0+w.bbox.x1)/2-width*.03)/(width*.92);return x<.22||(x>=.33&&x<.54)||(x>=.755&&x<.875);};
+                const latinColumn=w=>{const x=(w.bbox.x0+w.bbox.x1)/2/width;return x<.215||(x>=.328&&x<.554)||(x>=.777&&x<.889);};
                 const combined=[...words.filter(w=>!latinColumn(w)),...englishWords.filter(latinColumn)];
                 if(parse(combined,width).length)words=combined;
                 else if(!words.length)words=englishWords;
