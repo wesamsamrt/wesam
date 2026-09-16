@@ -2959,6 +2959,104 @@ function normalizeExcelHeader(value) {
     return String(value || "").trim().toLocaleLowerCase("ar-SA").replace(/[\s_\-()]/g, "");
 }
 
+// تفويض الأحداث يجعل اختيار المنتج يعمل في الصف الأول والصفوف المضافة أيضًا.
+let productLookupTimer;
+productFormCard.addEventListener("input", event => {
+    const input = event.target;
+    if (input.id !== "productCode" && input.dataset.productField !== "productCode") return;
+    clearTimeout(productLookupTimer);
+    productLookupTimer = setTimeout(() => lookupProductEntry(input), 700);
+});
+productFormCard.addEventListener("change", event => {
+    const input = event.target;
+    if (input.id !== "productCode" && input.dataset.productField !== "productCode") return;
+    clearTimeout(productLookupTimer);
+    lookupProductEntry(input);
+});
+
+function lookupProductEntry(input) {
+    if (editingProductId || !input.isConnected) return;
+    const row = input.closest(".product-form-grid");
+    if (!row) return;
+    const normalize = value => String(value ?? "").trim().toLocaleLowerCase("ar-SA");
+    const code = normalize(input.value);
+    if (!code) return;
+    const warehouse = getProductRowControl(row, "productWarehouse")?.value || selectedWarehouse;
+    const matches = adminProductsData.filter(product => product.warehouse === warehouse && normalize(product.product_code) === code);
+    if (!matches.length) return;
+    document.getElementById("productEntryLookup")?.remove();
+    const dialog = document.createElement("dialog");
+    dialog.id = "productEntryLookup";
+    dialog.style.cssText = "width:min(600px,90vw);padding:24px;border:1px solid #dedbef;border-radius:18px;direction:rtl;max-height:80vh;overflow:auto";
+    const close = () => { dialog.close(); dialog.remove(); };
+    dialog.addEventListener("cancel", () => dialog.remove());
+    const fill = product => {
+        if (normalize(input.value) !== code || !row.isConnected) { close(); return; }
+        const values = {
+            productCode: product.product_code, productCategory: product.category,
+            productProductType: product.product_type, productType: product.type,
+            productCompany: product.company, productModel: product.model,
+            productColor: product.color, productStorageLocation: product.storage_location,
+            productPrice: product.price, productQuantity: product.quantity,
+            productCompatibilityType: product.compatibility_type || "device",
+            compatibleDevices: (product.compatible_devices || []).join("\n")
+        };
+        Object.entries(values).forEach(([field, value]) => {
+            const control = getProductRowControl(row, field);
+            if (control) control.value = value ?? "";
+        });
+        if (row.classList.contains("product-extra-row")) setExtraRowCompatibility(row);
+        else updateProductCompatibilityFields();
+        close();
+        getProductRowControl(row, "productQuantity")?.focus();
+        productFormMessage.textContent = "تمت تعبئة بيانات الصنف المسجل. راجع الكمية والسعر قبل الحفظ؛ الحفظ هنا يضيف منتجًا جديدًا.";
+    };
+    const choose = (candidates, stage = 0) => {
+        const fields = ["model", "color"];
+        if (stage < fields.length) {
+            const field = fields[stage];
+            const groups = new Map();
+            candidates.forEach(product => {
+                const key = normalize(product[field]);
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(product);
+            });
+            if (groups.size === 1) return choose(candidates, stage + 1);
+            render(field === "model" ? "اختر الموديل" : "اختر اللون", [...groups.values()].map(group => ({
+                label: String(group[0][field] || (field === "model" ? "بدون موديل" : "بدون لون")),
+                action: () => choose(group, stage + 1)
+            })));
+        } else if (candidates.length === 1) fill(candidates[0]);
+        else render("اختر الصنف المطابق", candidates.map(product => ({
+            label: [product.category, product.product_type, product.type, product.company, `الموقع: ${product.storage_location || "—"}`, `رقم السجل: ${product.id}`].filter(Boolean).join(" · "),
+            action: () => fill(product)
+        })));
+    };
+    const render = (title, choices) => {
+        dialog.replaceChildren();
+        const heading = document.createElement("h3");
+        heading.textContent = `${title} — ${input.value}`;
+        dialog.append(heading);
+        choices.forEach(choice => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "add-product-row";
+            button.style.cssText = "display:block;width:100%;margin:8px 0;text-align:right";
+            button.textContent = choice.label;
+            button.addEventListener("click", choice.action);
+            dialog.append(button);
+        });
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.textContent = "إلغاء";
+        cancel.addEventListener("click", close);
+        dialog.append(cancel);
+        if (!dialog.open) dialog.showModal();
+    };
+    document.body.append(dialog);
+    choose(matches);
+}
+
 function importProductsFromExcel(file) {
     if (!file || !window.XLSX) {
         alert("تعذر قراءة ملف Excel. تحقق من اتصال الإنترنت ثم أعد المحاولة.");
