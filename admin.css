@@ -2844,3 +2844,14 @@ body {
 .shortage-stats-head .shortage-last-movement{margin-bottom:5px;color:#5d579e;font-weight:700}.shortage-stats-head .shortage-last-movement b{color:#322a92}
 .shortage-forecast{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:15px;padding:16px 18px;border:1px solid #b9d0ff;border-radius:15px;background:linear-gradient(135deg,#edf4ff,#f6f2ff)}.shortage-forecast>div:first-child{display:grid;gap:5px}.shortage-forecast span{color:#5556a0;font-size:11px;font-weight:800}.shortage-forecast h3{margin:0;color:#263c85;font-size:17px}.shortage-forecast p{margin:0;color:#6c7189;font-size:11px}.shortage-forecast-order{display:grid;grid-template-columns:auto auto;align-items:baseline;gap:3px;min-width:130px;padding:9px 13px;border-radius:12px;background:#fff;text-align:center}.shortage-forecast-order span{grid-column:1/-1;color:#6b6f86}.shortage-forecast-order strong{color:#5743d3;font-size:31px;line-height:1}.shortage-forecast-order small{color:#777c8e;font-size:11px}@media (max-width:720px){.shortage-forecast{align-items:stretch;flex-direction:column}.shortage-forecast-order{align-self:flex-start}}
 .product-export-menu-list[hidden] { display: none !important; }
+.purchase-ocr-review{width:95vw;max-width:1700px;max-height:90vh;overflow:auto;border:1px solid #ddd9ff;border-radius:18px;padding:24px;direction:rtl;color:#302b50;font-family:inherit}
+.purchase-ocr-review::backdrop{background:#20203599}
+.purchase-ocr-review img{display:block;max-width:100%;max-height:65vh;object-fit:contain;margin:16px auto}
+.purchase-ocr-table{overflow:auto;margin:18px 0}
+.purchase-ocr-table table{border-collapse:collapse;min-width:1600px;width:100%}
+.purchase-ocr-table th,.purchase-ocr-table td{padding:8px;border:1px solid #e8e5fa}
+.purchase-ocr-table th{background:#efebff}
+.purchase-ocr-review input{padding:8px;border:1px solid #dcd6fa;border-radius:6px;font-family:inherit}
+.purchase-ocr-table input{width:130px}
+.purchase-ocr-review button{padding:10px 16px;margin:8px;border:0;border-radius:8px;background:#6453eb;color:white;font-family:inherit;cursor:pointer}
+.purchase-ocr-review button:disabled{opacity:.45;cursor:default}

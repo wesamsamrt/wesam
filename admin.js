@@ -6180,67 +6180,21 @@ function normalizeOcrText(value) {
         .replace(/[٠-٩]/g, digit => "٠١٢٣٤٥٦٧٨٩".indexOf(digit));
 }
 
-function addOcrMatchedProducts(ocrText) {
-    const normalizedText = normalizeOcrText(ocrText);
-    const matched = manualPurchaseProducts.filter(product => {
-        const code = normalizeOcrText(product.product_code);
-        return code.length >= 3 && normalizedText.includes(code);
-    });
-    if (!matched.length) return 0;
-    matched.forEach(product => {
-        const existing = manualPurchaseOrderDraft.find(item => String(item.id) === String(product.id));
-        if (!existing) {
-            manualPurchaseOrderDraft.push({ ...product, available_quantity: Number(product.quantity || 0), purchase_quantity: 1, purchase_price: Number(product.price || 0) });
-        }
-    });
-    renderManualPurchaseDraft();
-    renderManualPurchaseProducts();
-    return matched.length;
-}
-
 async function importManualPurchaseInvoiceImage(file) {
     if (!file || !purchaseOrderEditor) return;
-    if (!window.Tesseract) {
-        alert("تعذر تحميل قارئ الصورة المجاني. تأكد من اتصال الإنترنت ثم أعد المحاولة.");
-        return;
-    }
-    const trigger = purchaseOrderEditor.querySelector("[data-import-purchase-image]");
-    if (trigger) { trigger.disabled = true; trigger.textContent = "جاري قراءة الصورة..."; }
-    const dialog = document.createElement("div");
-    dialog.className = "ocr-invoice-dialog";
-    dialog.innerHTML = `<section class="ocr-invoice-box" role="dialog" aria-modal="true"><button type="button" data-close aria-label="إغلاق">×</button><h3>قراءة صورة الفاتورة مجانًا</h3><p id="ocrInvoiceProgress">جاري قراءة النص من الصورة داخل المتصفح… قد يستغرق الأمر قليلًا في أول استخدام.</p><textarea id="ocrInvoiceText" placeholder="سيظهر النص المستخرج هنا للمراجعة" disabled></textarea><div class="ocr-invoice-actions"><button type="button" data-add-ocr disabled>إضافة الأصناف المطابقة للطلب</button><button type="button" data-close>إلغاء</button></div></section>`;
-    document.body.appendChild(dialog);
-    const close = () => dialog.remove();
-    dialog.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", close));
-    try {
-        const result = await window.Tesseract.recognize(file, "ara+eng", {
-            logger: message => {
-                const progress = dialog.querySelector("#ocrInvoiceProgress");
-                if (progress && message.status) progress.textContent = `${message.status} ${message.progress ? `${Math.round(message.progress * 100)}%` : ""}`;
-            }
-        });
-        const text = String(result?.data?.text || "").trim();
-        const textArea = dialog.querySelector("#ocrInvoiceText");
-        const progress = dialog.querySelector("#ocrInvoiceProgress");
-        if (textArea) { textArea.disabled = false; textArea.value = text; }
-        if (progress) progress.textContent = text ? "راجع النص ثم أضف الأصناف التي طابقها النظام بكود المنتج. الكمية تبدأ بـ 1 لتراجعها قبل الحفظ." : "لم نتمكن من قراءة نص واضح من الصورة. جرّب صورة أوضح.";
-        const addButton = dialog.querySelector("[data-add-ocr]");
-        if (addButton && text) {
-            addButton.disabled = false;
-            addButton.addEventListener("click", () => {
-                const count = addOcrMatchedProducts(textArea?.value || "");
-                if (!count) { if (progress) progress.textContent = "لم نجد كود منتج مطابقًا في مخزونك. راجع النص أو أضف الصنف يدويًا."; return; }
-                close();
-                alert(`تمت إضافة ${count} أصناف مطابقة كمسودة. راجع الكميات والسعر قبل الحفظ.`);
-            });
+    if (!window.PurchaseInvoiceOCR) return alert("تعذر تحميل قارئ الفاتورة. حدّث الصفحة وحاول مجددًا.");
+    const warehouse = selectedWarehouse;
+    const draft = manualPurchaseOrderDraft;
+    await window.PurchaseInvoiceOCR.review(file, manualPurchaseProducts, rows => {
+        if (warehouse !== selectedWarehouse || draft !== manualPurchaseOrderDraft) {
+            alert("تغير طلب الشراء أثناء القراءة. أعد استيراد الصورة في الطلب الحالي.");
+            return;
         }
-    } catch (error) {
-        console.error("OCR error:", error);
-        const progress = dialog.querySelector("#ocrInvoiceProgress");
-        if (progress) progress.textContent = "تعذرت قراءة الصورة. جرّب صورة أوضح وبإضاءة جيدة.";
-    } finally {
-        if (trigger) { trigger.disabled = false; trigger.textContent = "📷 استيراد من صورة فاتورة"; }
-    }
+        // Keep each invoice line separate, even when a code repeats across variants.
+        manualPurchaseOrderDraft.push(...rows);
+        renderManualPurchaseDraft();
+        renderManualPurchaseProducts();
+    });
 }
 
 function renderManualPurchaseDraft() {
