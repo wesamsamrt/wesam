@@ -772,6 +772,7 @@ async function loadAllTransferWarehouseProducts(warehouse, fields, onlyAvailable
         let query = supabaseClient
             .from("products")
             .select(fields)
+            .eq("is_archived", false)
             .eq("warehouse", warehouse)
             .order("id", { ascending: true })
             .range(from, from + pageSize - 1);
@@ -1363,7 +1364,7 @@ async function renderFinanceSystem(moduleKey = "overview") {
         financeSystemContent.querySelector("#openFinancialPermissions")?.addEventListener("click", () => accountsButton?.click()); return;
     }
     if (moduleKey === "pos") {
-        const [{ data: accounts, error: accountsError }, { data: products, error: productsError }] = await Promise.all([supabaseClient.rpc("list_finance_accounts", { p_warehouse: selectedWarehouse }), supabaseClient.from("products").select("id,product_code,company,type,model,color,quantity,price").eq("warehouse", selectedWarehouse).gt("quantity", 0).order("id", { ascending: false }).limit(500)]);
+        const [{ data: accounts, error: accountsError }, { data: products, error: productsError }] = await Promise.all([supabaseClient.rpc("list_finance_accounts", { p_warehouse: selectedWarehouse }), supabaseClient.from("products").select("id,product_code,company,type,model,color,quantity,price").eq("warehouse", selectedWarehouse).eq("is_archived", false).gt("quantity", 0).order("id", { ascending: false }).limit(500)]);
         if (accountsError || productsError) throw accountsError || productsError;
         const list = products || []; let cart = [];
         const renderCart = () => { const target = financeSystemContent.querySelector("#financePosCart"); if (!target) return; const total = cart.reduce((sum, i) => sum + i.quantity * i.price, 0); target.innerHTML = cart.map((i,n) => `<article><div><strong>${transferText(i.name)}</strong><small>${i.quantity} × ${formatAdminCurrency(i.price)}</small></div><b>${formatAdminCurrency(i.quantity*i.price)}</b><button type="button" data-remove-pos="${n}">×</button></article>`).join("") || '<div class="message">السلة فارغة.</div>'; target.insertAdjacentHTML("beforeend", `<div class="finance-pos-total">الإجمالي: <strong>${formatAdminCurrency(total)}</strong></div>`); target.querySelectorAll("[data-remove-pos]").forEach(b=>b.addEventListener("click",()=>{cart.splice(Number(b.dataset.removePos),1);renderCart();})); };
@@ -2542,6 +2543,7 @@ async function loadAdminProducts() {
             } = await supabaseClient
                 .from("products")
                 .select("*")
+                .eq("is_archived", false)
                 .eq("warehouse", selectedWarehouse)
                 .order("id", {
                     ascending: false
@@ -2703,6 +2705,8 @@ function renderAdminProducts(products) {
 
                 <button
                     class="delete-product"
+                    title="أرشفة الصنف مع الاحتفاظ بطلباته وتحليلاته"
+                    aria-label="أرشفة الصنف"
                     onclick="deleteProduct(${product.id})"
                 >
                     🗑️
@@ -3196,7 +3200,7 @@ deleteTypedProductButton?.addEventListener("click", () => {
     };
 
     if (!values.product_code) {
-        return alert("اكتب كود المنتج أولًا لتحديد الصنف المراد حذفه.");
+        return alert("اكتب كود المنتج أولًا لتحديد الصنف المراد أرشفته.");
     }
 
     const normalize = value => String(value || "").trim().toLocaleLowerCase("ar-SA");
@@ -3895,7 +3899,7 @@ async function deleteProduct(id) {
     const dialog = document.createElement("div");
     dialog.id = "productDeleteConfirmDialog";
     dialog.className = "product-delete-confirm-dialog";
-    dialog.innerHTML = `<section class="product-delete-confirm-box" role="dialog" aria-modal="true" aria-label="تأكيد حذف المنتج"><button type="button" class="product-delete-dialog-close" data-close aria-label="إغلاق">×</button><h3>تأكيد حذف المنتج</h3><p>للحذف النهائي، اكتب البيانات التالية مطابقة تمامًا للمنتج. لا يمكن التراجع عن الحذف.</p><div class="product-delete-fields">${fields.map((field, index) => `<label>${transferText(field.label)}<small>${transferText(field.value)}</small><input type="text" autocomplete="off" data-delete-field="${index}"></label>`).join("")}</div><div class="product-delete-confirm-actions"><button type="button" data-close>إلغاء</button><button type="button" class="confirm-delete" data-confirm disabled>حذف المنتج نهائيًا</button></div></section>`;
+    dialog.innerHTML = `<section class="product-delete-confirm-box" role="dialog" aria-modal="true" aria-label="تأكيد أرشفة المنتج"><button type="button" class="product-delete-dialog-close" data-close aria-label="إغلاق">×</button><h3>تأكيد أرشفة المنتج</h3><p>للأرشفة، اكتب بيانات المنتج للتأكيد. سيختفي من المنتجات المتاحة وتبقى طلباته وتحليلاته محفوظة.</p><div class="product-delete-fields">${fields.map((field, index) => `<label>${transferText(field.label)}<small>${transferText(field.value)}</small><input type="text" autocomplete="off" data-delete-field="${index}"></label>`).join("")}</div><div class="product-delete-confirm-actions"><button type="button" data-close>إلغاء</button><button type="button" class="confirm-delete" data-confirm disabled>أرشفة المنتج</button></div></section>`;
     document.body.appendChild(dialog);
     const close = () => dialog.remove();
     const confirmButton = dialog.querySelector("[data-confirm]");
@@ -3906,9 +3910,9 @@ async function deleteProduct(id) {
     confirmButton.addEventListener("click", async () => {
         if (!matches()) return;
         confirmButton.disabled = true;
-        confirmButton.textContent = "جاري الحذف...";
-        const { error } = await supabaseClient.from("products").delete().eq("id", id);
-        if (error) { confirmButton.disabled = false; confirmButton.textContent = "حذف المنتج نهائيًا"; alert(`تعذر حذف المنتج: ${error.message}`); return; }
+        confirmButton.textContent = "جاري الأرشفة...";
+        const { error } = await supabaseClient.rpc("archive_product", { p_product_id: id });
+        if (error) { confirmButton.disabled = false; confirmButton.textContent = "أرشفة المنتج"; alert(`تعذر أرشفة المنتج: ${error.message}`); return; }
         close();
         if (Number(editingProductId) === Number(id)) {
             productFormCard.style.display = "none";
@@ -3918,7 +3922,7 @@ async function deleteProduct(id) {
             clearProductForm();
         }
         await loadAdminProducts();
-        alert("تم حذف المنتج بنجاح ✅");
+        alert("تمت أرشفة المنتج؛ طلباته وتحليلاته السابقة محفوظة ✅");
     });
 }
 
@@ -6489,7 +6493,7 @@ document.getElementById("requestShortagesTransfer")?.addEventListener("click", a
     // نختار تلقائياً المخزن الذي يملك أكبر مجموع من كميات الأصناف المحددة.
     const productCodes = [...new Set(selectedItems.map(item => item.product_code).filter(Boolean))];
     const { data: candidates, error: candidatesError } = productCodes.length
-        ? await supabaseClient.from("products").select("warehouse, product_code, company, model, color, quantity").in("product_code", productCodes).gt("quantity", 0)
+        ? await supabaseClient.from("products").select("warehouse, product_code, company, model, color, quantity").in("product_code", productCodes).eq("is_archived", false).gt("quantity", 0)
         : { data: [], error: null };
     if (candidatesError) { alert(`تعذر تحديد المخزن الأنسب: ${candidatesError.message}`); return; }
     const warehouseScores = new Map();
@@ -9322,6 +9326,7 @@ addOrderItemButton.addEventListener("click", async function () {
             const { data, error } = await supabaseClient
                 .from("products")
                 .select("*")
+                .eq("is_archived", false)
                 .eq("warehouse", selectedWarehouse)
                 .order("id", { ascending: false })
                 .range(from, from + pageSize - 1);

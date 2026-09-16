@@ -96,7 +96,7 @@ async function loadProductDetails() {
         return;
     }
 
-    let query = supabaseClient.from("products").select("*").eq("warehouse", warehouse);
+    let query = supabaseClient.from("products").select("*").eq("warehouse", warehouse).eq("is_archived", false);
     query = code ? query.eq("product_code", code) : query.eq("id", id);
     if (company) query = query.eq("company", company);
     const { data, error } = await query.order("id", { ascending: true });

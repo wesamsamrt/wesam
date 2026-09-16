@@ -334,7 +334,8 @@ async function loadProducts() {
     let query = supabaseClient
         .from("products")
         .select("*")
-        .eq("warehouse", customerWarehouse);
+        .eq("warehouse", customerWarehouse)
+        .eq("is_archived", false);
 
     if (category) {
         query = query.eq("category", category);
