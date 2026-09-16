@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script src="driver-theme-bootstrap.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#2f4ff0">
 <title>WESAM SMART</title>
@@ -15,7 +16,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="products.js?v=20260916-product-archive"></script>
+<script src="products.js?v=20260916-driver-light"></script>
 <script src="offers-videos/playlist.js"></script>
 
 <style>
@@ -2259,8 +2260,8 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
 <body>
 
 <div class="store-intro-overlay waiting-account" id="storeIntroOverlay" role="dialog" aria-label="مقدمة متجر وسام سمارت">
-  <video class="store-intro-video" id="storeIntroVideo" autoplay playsinline preload="auto">
-    <source src="store-intro.mp4" type="video/mp4">
+  <video class="store-intro-video" id="storeIntroVideo" playsinline preload="none">
+    <source data-src="store-intro.mp4" type="video/mp4">
   </video>
   <button class="store-intro-skip" id="storeIntroSkip" type="button">تخطي المقدمة</button>
 </div>
@@ -2289,6 +2290,8 @@ body:not(.driver-classic-theme) .wesam-footer{display:block}
     overlay.classList.remove("waiting-account");
     document.body.classList.add("store-intro-open");
     video.muted = false;
+    const source=video.querySelector('source[data-src]');
+    if(source&&!source.src){source.src=source.dataset.src;video.load();}
     video.volume = 1;
     const playback = video.play();
     if (playback && typeof playback.catch === "function") {
@@ -3837,6 +3840,7 @@ async function searchProducts(value) {
 
         // يبدّل شكل الصفحة الرئيسية حسب نوع الحساب دون المساس بأي وظيفة أو بيانات.
         function applyHomepageTheme(isLinkedDriver) {
+            window.rememberDriverTheme?.(isLinkedDriver);
 
             const darkThemeStyles = document.getElementById("darkTechThemeStyles");
 
@@ -4099,7 +4103,9 @@ function setupOfferVideoPlaylist() {
     playCurrentVideo();
 }
 
-setupOfferVideoPlaylist();
+document.addEventListener('homepage-account-ready', event => {
+    if (!event.detail?.isDriver) setupOfferVideoPlaylist();
+}, { once: true });
 </script>
 <script>
 // يجلب المنتجات من مخزن التسوق الحالي ويقسمها إلى صفوف حسب product_type فقط.

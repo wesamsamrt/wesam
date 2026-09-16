@@ -66,6 +66,7 @@ async function applyProductsPageTheme(user, driverIdentity = null) {
         driverIdentity = data;
     }
     const isDriver = Boolean(driverIdentity?.is_driver);
+    window.rememberDriverTheme?.(isDriver);
     setCustomerDesktopMobileViewport(isDriver);
     document.body.classList.toggle("driver-classic-theme", isDriver);
 }
@@ -292,13 +293,17 @@ function setProductsLoadingScreen(visible) {
     const loader = document.getElementById("productsLoadingScreen");
     if (!loader) return;
     const video = loader.querySelector("video");
-    if (isLinkedDriverShopping) {
+    if (!customerWarehouseResolved || isLinkedDriverShopping || document.body.classList.contains("driver-classic-theme")) {
         loader.classList.add("is-hidden");
         video?.pause();
         return;
     }
     loader.classList.toggle("is-hidden", !visible);
-    if (visible) video?.play().catch(() => {});
+    if (visible && video) {
+        const source=video.querySelector('source[data-src]');
+        if(source&&!source.src){source.src=source.dataset.src;video.load();}
+        video.play().catch(() => {});
+    } else video?.pause();
 }
 
 async function loadProducts() {
