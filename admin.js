@@ -2436,10 +2436,18 @@ function fillAdminProductFilter(select, values, placeholder, selectedValue = "")
         });
 }
 
-// تصفيات متدرجة: الماركة أولاً، ثم الموديل، ثم اللون.
+function getAdminProductSearchResults() {
+    const search = String(adminProductSearch?.value || "").toLowerCase().trim();
+    return getProductsForSelectedWarehouse().filter(product => !search || [
+        product.product_code, product.model, product.company, product.color,
+        product.category, product.product_type, product.type, product.storage_location
+    ].filter(Boolean).join(" ").toLowerCase().includes(search));
+}
+
+// Search scopes brands; the selected brand scopes models, then colors.
 function refreshAdminProductFilters() {
     if (!adminProductCompanyFilter || !adminProductModelFilter || !adminProductColorFilter) return;
-    const products = getProductsForSelectedWarehouse();
+    const products = getAdminProductSearchResults();
     const currentCompany = adminProductCompanyFilter.value;
     fillAdminProductFilter(adminProductCompanyFilter, products.map(product => adminProductFilterValue(product, "company")), "كل الماركات", currentCompany);
 
@@ -2457,15 +2465,11 @@ function refreshAdminProductFilters() {
 }
 
 function applyAdminProductFilters() {
-    const search = String(adminProductSearch?.value || "").toLowerCase().trim();
     const company = adminProductCompanyFilter?.value || "";
     const model = adminProductModelFilter?.value || "";
     const color = adminProductColorFilter?.value || "";
-    const filtered = getProductsForSelectedWarehouse().filter(product => {
-        const text = [product.product_code, product.model, product.company, product.color, product.category, product.product_type, product.type, product.storage_location]
-            .filter(Boolean).join(" ").toLowerCase();
-        return (!search || text.includes(search)) &&
-            (!company || adminProductFilterValue(product, "company") === company) &&
+    const filtered = getAdminProductSearchResults().filter(product => {
+        return (!company || adminProductFilterValue(product, "company") === company) &&
             (!model || adminProductFilterValue(product, "model") === model) &&
             (!color || adminProductFilterValue(product, "color") === color);
     });
@@ -2734,7 +2738,10 @@ function renderAdminProducts(products) {
 
 /* البحث */
 
-adminProductSearch.addEventListener("input", applyAdminProductFilters);
+adminProductSearch.addEventListener("input", () => {
+    refreshAdminProductFilters();
+    applyAdminProductFilters();
+});
 adminProductCompanyFilter?.addEventListener("change", () => {
     if (adminProductModelFilter) adminProductModelFilter.value = "";
     if (adminProductColorFilter) adminProductColorFilter.value = "";
@@ -3191,7 +3198,11 @@ deleteTypedProductButton?.addEventListener("click", async () => {
         const values = Object.fromEntries(Object.entries(fields).map(([field, control]) => [field, normalize(getProductRowControl(row, control)?.value)]));
         if (!values.product_code) return alert(`الصف ${index + 1}: اكتب كود المنتج قبل الأرشفة.`);
         const warehouse = getProductRowControl(row, "productWarehouse")?.value || selectedWarehouse;
-        const matches = adminProductsData.filter(product => product.warehouse === warehouse && Object.entries(values).every(([field, value]) => !value || normalize(product[field]) === value));
+        // Empty model/color means exactly no model/color, never all variants of a code.
+        const exactFields = ["product_code", "model", "color"];
+        const matches = adminProductsData.filter(product => product.warehouse === warehouse && Object.entries(values).every(([field, value]) =>
+            exactFields.includes(field) ? normalize(product[field]) === value : !value || normalize(product[field]) === value
+        ));
         if (matches.length !== 1) return alert(`الصف ${index + 1}: ${matches.length ? "يوجد أكثر من صنف مطابق؛ حدد الموديل واللون وباقي البيانات." : "لا يوجد صنف مطابق."} لم تتم أرشفة أي صنف.`);
         ids.push(matches[0].id);
     }
