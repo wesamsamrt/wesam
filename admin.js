@@ -3015,7 +3015,7 @@ function lookupProductEntry(input) {
         else updateProductCompatibilityFields();
         close();
         getProductRowControl(row, "productQuantity")?.focus();
-        productFormMessage.textContent = "تمت تعبئة بيانات الصنف المسجل. راجع الكمية والسعر قبل الحفظ؛ الحفظ هنا يضيف منتجًا جديدًا.";
+        productFormMessage.textContent = "الصنف الموجود: الحفظ يستبدل كميته بالكمية المكتوبة، ولا يجمعها ولا يضيف نسخة. باقي بياناته لا تتغير.";
     };
     const choose = (candidates, stage = 0) => {
         const fields = ["model", "color"];
@@ -3431,7 +3431,7 @@ saveProductButton.addEventListener(
 
 async function saveNewProduct() {
 
-    if (!editingProductId && getProductEntryRows().length > 1) {
+    if (!editingProductId) {
         return saveMultipleNewProducts();
     }
 
@@ -3769,10 +3769,9 @@ async function saveMultipleNewProducts() {
     saveProductButton.disabled = true;
     saveProductButton.textContent = "جاري حفظ الأصناف...";
 
-    const result = await supabaseClient
-        .from("products")
-        .insert(preparedRows.map(entry => entry.payload))
-        .select();
+    const result = await supabaseClient.rpc("save_products_replace_quantity", {
+        p_items: preparedRows.map(entry => entry.payload)
+    });
 
     if (result.error) {
         console.error(result.error);
@@ -3788,7 +3787,7 @@ async function saveMultipleNewProducts() {
         return file ? uploadProductImage(product.id, file) : Promise.resolve();
     }));
 
-    productFormMessage.textContent = `تمت إضافة ${result.data?.length || preparedRows.length} أصناف بنجاح ✅`;
+    productFormMessage.textContent = `تم حفظ ${result.data?.length || preparedRows.length} أصناف: استبدال كمية المطابق وإضافة الجديد ✅`;
     productFormMessage.style.color = "#2e9d69";
     clearProductForm();
     await loadAdminProducts();
