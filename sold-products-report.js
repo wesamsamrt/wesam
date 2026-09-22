@@ -14,11 +14,34 @@
     const page=document.createElement('section');page.id='soldProductsPage';page.hidden=true;
     page.innerHTML='<div class="orders-admin-header"><button type="button" data-back class="back-admin">رجوع للمبيعات</button><div><h2>المنتجات المباعة حسب التاريخ</h2><p>حسب تاريخ إنشاء الطلب بتوقيت السعودية، وحالته الحالية تم الشحن أو تم التسليم فقط. كل سطر يمثل صنفًا في طلب، ولا تُدمج الموديلات والألوان.</p></div></div><div class="sales-filters"><label>من تاريخ<input type="date" data-from></label><label>إلى تاريخ<input type="date" data-to></label><button type="button" data-load>عرض المنتجات</button></div><p data-message role="status"></p><div style="overflow:auto" data-results></div>';
     host.appendChild(page);
+    const exportButton=document.createElement('button');
+    exportButton.type='button';exportButton.textContent='تصدير Excel';exportButton.disabled=true;
+    page.querySelector('.sales-filters').appendChild(exportButton);
+    let exportSnapshot=null;
+    exportButton.onclick=()=>{
+        if(!exportSnapshot?.rows.length||exportSnapshot.warehouse!==selectedWarehouse)return;
+        if(!window.XLSX)return alert('تعذر تحميل أداة Excel؛ حدّث الصفحة وحاول مجددًا.');
+        const data=exportSnapshot.rows.map(row=>({
+            'رقم الطلب':row.orderId,'التاريخ':row.orderDate,'الحالة':row.orderStatus,
+            'كود المنتج':String(row.product_code??''),'التصنيف':row.category||'',
+            'نوع المنتج':row.product_type||'','النوع':row.type||'','الشركة':row.company||'',
+            'الموديل':row.model||'','اللون':row.color||'',
+            'الكمية':Number(row.quantity||0),'سعر الوحدة':Number(row.price||0),
+            'الإجمالي':Number((Number(row.quantity||0)*Number(row.price||0)).toFixed(2))
+        }));
+        const book=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(data);
+        sheet['!cols']=[12,14,22,18,20,22,40,22,22,16,12,14,16].map(wch=>({wch}));
+        book.Workbook={Views:[{RTL:true}]};
+        XLSX.utils.book_append_sheet(book,sheet,'المنتجات المباعة');
+        const name=`المنتجات-المباعة-${exportSnapshot.warehouse}-${exportSnapshot.start}-${exportSnapshot.end}.xlsx`.replace(/[\\/:*?"<>|]/g,'-');
+        XLSX.writeFile(book,name);
+    };
     const style=document.createElement('style');style.textContent='#salesAdmin.sold-products-mode > :not(#soldProductsPage){display:none!important}#soldProductsPage table{width:100%;min-width:1100px;border-collapse:collapse;background:white}#soldProductsPage th,#soldProductsPage td{padding:12px;border:1px solid #ebe7f8;text-align:right}#soldProductsPage th{background:#eee9ff}';document.head.appendChild(style);
     const from=page.querySelector('[data-from]'),to=page.querySelector('[data-to]'),message=page.querySelector('[data-message]'),results=page.querySelector('[data-results]');
     let request=0;
     async function load(){
         const ticket=++request;results.replaceChildren();
+        exportSnapshot=null;exportButton.disabled=true;
         if(!from.value||!to.value||from.value>to.value){message.textContent='حدد فترة صحيحة؛ تاريخ البداية لا يتجاوز النهاية.';return;}
         const warehouse=selectedWarehouse,start=from.value,end=to.value;
         if(!warehouse){message.textContent='اختر المخزن أولًا.';return;}
@@ -31,6 +54,7 @@
             const qty=rows.reduce((s,r)=>s+Number(r.quantity||0),0),amount=rows.reduce((s,r)=>s+Number(r.quantity||0)*Number(r.price||0),0);
             message.textContent=`مخزن ${warehouse} · ${new Set(rows.map(r=>r.orderId)).size} طلب · ${rows.length} سطر · ${qty} قطعة · قيمة الأصناف: ${amount.toFixed(2)} ر.س`;
             if(!rows.length){results.textContent='لا توجد منتجات مباعة ضمن الفترة المحددة بالحالات المطلوبة.';return;}
+            exportSnapshot={rows,warehouse,start,end};exportButton.disabled=false;
             const columns={orderId:'رقم الطلب',orderDate:'التاريخ',orderStatus:'الحالة',product_code:'كود المنتج',category:'التصنيف',product_type:'نوع المنتج',type:'النوع',company:'الشركة',model:'الموديل',color:'اللون',quantity:'الكمية',price:'سعر الوحدة',lineTotal:'الإجمالي'};
             const table=document.createElement('table'),head=table.createTHead().insertRow(),body=table.createTBody();
             Object.values(columns).forEach(label=>{const th=document.createElement('th');th.textContent=label;head.appendChild(th);});
