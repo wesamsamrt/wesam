@@ -3074,6 +3074,7 @@ function importProductsFromExcel(file) {
             const workbook = XLSX.read(event.target.result, { type: "array" });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const sourceRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: false });
+            const numericRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: true });
             if (!sourceRows.length) return alert("ملف Excel لا يحتوي على صفوف.");
             const aliases = {
                 productCode: ["كودالمنتج", "الكود", "productcode", "product_code", "code"],
@@ -3084,7 +3085,7 @@ function importProductsFromExcel(file) {
                 productCompany: ["الشركة", "الماركة", "العلامة", "company", "brand"],
                 productModel: ["الموديل", "model"],
                 productColor: ["اللون", "color"],
-                productQuantity: ["الكمية", "الكميةالمتوفرة", "quantity", "qty"],
+                productQuantity: ["الكمية", "الكميه", "كمية", "كميه", "الكميةالمتوفرة", "الكميةالمتاحة", "المخزون", "quantity", "qty"],
                 productPrice: ["السعر", "سعرالوحدة", "السعرر.س", "سعرالوحدةر.س", "price", "unitprice"]
             };
             const resolveColumns = row => {
@@ -3101,6 +3102,17 @@ function importProductsFromExcel(file) {
             if (!hasRequired) {
                 return alert("تأكد من وجود أعمدة: التصنيف، نوع المنتج، والنوع في أول صف من ملف Excel.");
             }
+            if (!columns.productQuantity) return alert("أضف عمودًا باسم «الكمية» في ملف Excel واكتب كمية كل صنف، ثم أعد الاستيراد.");
+            const quantities = numericRows.map(source => {
+                const value = source[columns.productQuantity];
+                const text = String(value ?? "").trim()
+                    .replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+                    .replace(/[۰-۹]/g, digit => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+                    .replace(/[٬,\s]/g, "").replace(/٫/g, ".");
+                return text === "" ? NaN : Number(text);
+            });
+            const invalidQuantity = quantities.findIndex(value => !Number.isSafeInteger(value) || value < 0);
+            if (invalidQuantity !== -1) return alert(`كمية الصنف رقم ${invalidQuantity + 1} غير صالحة. اكتب عددًا صحيحًا من صفر فأكثر؛ لم يتم تغيير النموذج.`);
             clearProductForm();
             sourceRows.forEach((source, index) => {
                 if (index > 0) addProductEntryRow();
@@ -3116,6 +3128,7 @@ function importProductsFromExcel(file) {
                     control.value = text;
                 };
                 Object.entries(columns).forEach(([field, column]) => { if (column) set(field, source[column]); });
+                set("productQuantity", quantities[index]);
                 set("productWarehouse", selectedWarehouse);
                 set("productCompatibilityType", "device");
             });
